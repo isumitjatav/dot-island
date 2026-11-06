@@ -1,7 +1,7 @@
 # Nothing Island — Charging Animation Implementation Specification
 **Target Device:** Nothing Phone (4a), Android 17 / API 37  
 **Package:** `com.nothing.island.ai`  
-**Execution Target:** Phase 3 / R9 — Charging Animation Engine  
+**Execution Target:** Phase 3 — Charging Animation & Studio Milestone (Note: R9 is strictly reserved for Call Intelligence)  
 **Prerequisites:** Accepted Phase 2 Design System Baseline, R8 Battery Intelligence Checkpoint  
 **Architecture Guardrail:** Strict Single `TYPE_ACCESSIBILITY_OVERLAY` Window Model (100% Jetpack Compose)  
 **Date:** November 2026  
@@ -10,13 +10,14 @@
 
 ## 1. Architectural Blueprint & Core Principles
 
-This specification defines the architectural blueprint and visual engine for Nothing Island's **Kinetic Charging Animation Engine** and **Charging Studio**.
+This specification defines the implementation architecture, parametric motion equations, and visual design for Nothing Island's **Kinetic Charging Animation Engine** and **Charging Studio**.
 
 ### Guiding Principles:
-1. **Zero External Lottie or Proprietary Binaries:** All visual effects, waves, particles, and arcs are generated programmatically via Jetpack Compose `Canvas`, `Animatable`, `Brush`, and `PathEffect`. This achieves instantaneous 120fps hardware-accelerated rendering and eliminates megabytes of APK overhead.
+1. **Zero External Lottie or Proprietary Binaries:** All visual effects, waves, particles, and arcs are generated programmatically via Jetpack Compose `Canvas`, `Animatable`, `Brush`, and `PathEffect`. This achieves instantaneous hardware-accelerated rendering and eliminates megabytes of APK overhead.
 2. **Nothing OS Design Authenticity:** Every theme embraces Nothing's signature industrial aesthetic: Dot Matrix typography, Glyph lighting strips, monochromatic contrast (`#000000`, `#FFFFFF`), and surgical Nothing Red accents (`#D71921`).
 3. **Strict Window Integrity:** Renders exclusively within the established single `TYPE_ACCESSIBILITY_OVERLAY` overlay window (`IslandOverlayView.kt`). No fullscreen activities, lock-screen overlays, or intrusive dialogs are permitted.
 4. **Dynamic Wattage Scaling:** Motion frequency and intensity dynamically scale with live charging wattage (e.g. 45W Super Fast vs 15W Standard vs 5W USB).
+5. **Measurable Performance Criteria:** Execution must satisfy verifiable frame-timing budgets ($\le 8.333\text{ ms}$ at 120 Hz) with zero draw-loop memory allocations and full reduced-motion accessibility support.
 
 ```mermaid
 flowchart TD
@@ -75,25 +76,98 @@ enum class ChargingStyle(
     val id: String,
     val displayName: String,
     val category: ChargingCategory,
-    val description: String
+    val description: String,
+    val evidenceOrigin: String
 ) {
     // Category 1: Nothing Signature
-    GLYPH_ARC("glyph_arc", "Glyph Arc", ChargingCategory.SIGNATURE, "Segmented Glyph lighting ring with orbiting white arc"),
-    DOT_MATRIX_REACTOR("dot_matrix_reactor", "Dot Matrix", ChargingCategory.SIGNATURE, "LED dot-matrix ring pulsating around the camera lens"),
-    WIREFRAME_ORBIT("wireframe_orbit", "Wireframe Orbit", ChargingCategory.SIGNATURE, "Dual counter-rotating technical wireframe rings"),
-    NOTHING_RED_SURGE("nothing_red_surge", "Red Surge", ChargingCategory.SIGNATURE, "Iconic Nothing Red energy wave tracking charge level"),
+    GLYPH_ARC(
+        "glyph_arc",
+        "Glyph Arc",
+        ChargingCategory.SIGNATURE,
+        "Segmented Glyph lighting ring with orbiting white arc",
+        "Adapts radial energy from Ref A #27 & #20"
+    ),
+    DOT_MATRIX_REACTOR(
+        "dot_matrix_reactor",
+        "Dot Matrix",
+        ChargingCategory.SIGNATURE,
+        "LED dot-matrix ring pulsating around the camera lens",
+        "Adapts circular particle logic from Ref A #24 & Ref B ap2"
+    ),
+    WIREFRAME_ORBIT(
+        "wireframe_orbit",
+        "Wireframe Orbit",
+        ChargingCategory.SIGNATURE,
+        "Dual counter-rotating technical wireframe rings",
+        "Adapts technical orbit geometry from Ref A #16 & #12"
+    ),
+    NOTHING_RED_SURGE(
+        "nothing_red_surge",
+        "Red Surge",
+        ChargingCategory.SIGNATURE,
+        "Iconic Nothing Red energy wave tracking charge level",
+        "Adapts directional surge from Ref A #28 & Ref A Wave #8"
+    ),
 
     // Category 2: Fluid & Elemental
-    LIQUID_MERCURY("liquid_mercury", "Liquid Mercury", ChargingCategory.ELEMENTAL, "Monochrome fluid reservoir with buoyant meniscus physics"),
-    ELECTRIC_PULSE("electric_pulse", "Electric Pulse", ChargingCategory.ELEMENTAL, "High-frequency neon electrical discharge shimmer"),
-    CYBER_HORIZON("cyber_horizon", "Cyber Horizon", ChargingCategory.ELEMENTAL, "Dual cyan laser lines sweeping laterally across the notch"),
-    PLASMA_FLOW("plasma_flow", "Plasma Flow", ChargingCategory.ELEMENTAL, "Multi-stop angular sweep gradient with continuous rotation"),
+    LIQUID_MERCURY(
+        "liquid_mercury",
+        "Liquid Mercury",
+        ChargingCategory.ELEMENTAL,
+        "Monochrome fluid reservoir with buoyant meniscus physics",
+        "Adapts wave reservoir from Ref A #10 & Ref A Wave #1"
+    ),
+    ELECTRIC_PULSE(
+        "electric_pulse",
+        "Electric Pulse",
+        ChargingCategory.ELEMENTAL,
+        "High-frequency neon electrical discharge shimmer",
+        "Adapts lightning jitter from Ref A #11, #22 & #23"
+    ),
+    CYBER_HORIZON(
+        "cyber_horizon",
+        "Cyber Horizon",
+        ChargingCategory.ELEMENTAL,
+        "Dual cyan laser lines sweeping laterally across the notch",
+        "Adapts horizontal beam sweep from Ref A #30 & Ref B #15"
+    ),
+    PLASMA_FLOW(
+        "plasma_flow",
+        "Plasma Flow",
+        ChargingCategory.ELEMENTAL,
+        "Multi-stop angular sweep gradient with continuous rotation",
+        "Adapts rotational gradient from Ref A #2 & Ref A Wave #5"
+    ),
 
     // Category 3: Technical & Minimalist
-    DIGITAL_GAUGE("digital_gauge", "Digital Gauge", ChargingCategory.MINIMALIST, "Precision 360-degree calibrated technical tick dial"),
-    WATTAGE_REACTOR("wattage_reactor", "Wattage Reactor", ChargingCategory.MINIMALIST, "Kinetic power bars scaling directly with charging speed"),
-    MINIMALIST_BOLT("minimalist_bolt", "Minimalist Bolt", ChargingCategory.MINIMALIST, "Subtle high-contrast lightning glyph with pulse glow"),
-    BATTERY_CELL("battery_cell", "Battery Cell", ChargingCategory.MINIMALIST, "Classic battery enclosure with segmented dot fill");
+    DIGITAL_GAUGE(
+        "digital_gauge",
+        "Digital Gauge",
+        ChargingCategory.MINIMALIST,
+        "Precision 360-degree calibrated technical tick dial",
+        "Adapts progressive meter from Ref A #32 & #34"
+    ),
+    WATTAGE_REACTOR(
+        "wattage_reactor",
+        "Wattage Reactor",
+        ChargingCategory.MINIMALIST,
+        "Kinetic power bars scaling directly with charging speed",
+        "Adapts power bolt indicator from Ref A #36 & Ref B ap2"
+    ),
+    MINIMALIST_BOLT(
+        "minimalist_bolt",
+        "Minimalist Bolt",
+        ChargingCategory.MINIMALIST,
+        "Subtle high-contrast lightning glyph with pulse glow",
+        "Direct adoption of clean indicator from Ref A #33 & Ref B ap2"
+    ),
+    BATTERY_CELL(
+        "battery_cell",
+        "Battery Cell",
+        ChargingCategory.MINIMALIST,
+        "Classic battery enclosure with segmented dot fill",
+        "Direct adoption of battery enclosure from Ref A #34 & #35"
+    );
 
     companion object {
         fun fromId(id: String): ChargingStyle = entries.find { it.id == id } ?: GLYPH_ARC
@@ -122,7 +196,7 @@ data class ChargingThemeDefinition(
 ## 3. Detailed Specifications for the 12 Curated Themes
 
 ### Theme 1: `GLYPH_ARC` (Nothing Signature)
-* **Concept:** Inspired by the Nothing Phone's physical Glyph interface. Renders 3 concentric segmented arcs around the camera cut-out with an orbiting bright pulse head.
+* **Concept:** Inspired by the physical Glyph interface. Renders 3 concentric segmented arcs around the camera cut-out with an orbiting bright pulse head.
 * **Colors:** Background segments: `Color(0x33FFFFFF)`; Orbiting Arc: `Color(0xFFFFFFFF)`; Accent Core: `NothingColors.RedAccent`.
 * **Motion Physics:**
   * Orbit Angle: $\theta(t) = (360^\circ \times \frac{t}{T_{\text{cycle}}}) \pmod{360^\circ}$
@@ -223,20 +297,45 @@ data class ChargingThemeDefinition(
 
 ---
 
-## 4. UI Layout & Component Architecture
+## 4. Reference Effect Coverage & Exclusion Audit
 
-### 4.1 Compact Overlay State (`NothingCompactChargingPill.kt`)
-* **Anchor:** Centralized around the front camera cutout (default Nothing Phone 4a offset: $X = 0$, $Y = 24\text{dp}$).
-* **Dimensions:**
-  * Width: $160\text{dp}$ (standard) expanding to $190\text{dp}$ for wattage telemetry.
-  * Height: $38\text{dp}$.
-  * Corner Radius: $19\text{dp}$ (perfect squircle pill).
+### 4.1 Traceability of Reference Effects to Curated Themes
+
+| Curated Theme | Reference Effects Covered | Preserved Animation Mechanics |
+|---|---|---|
+| `GLYPH_ARC` | Ref A #27 (Morning Star), Ref A #20 (Ball) | Rotational sweep around punch hole with trailing head attenuation |
+| `DOT_MATRIX_REACTOR`| Ref A #24 (Crystal Shower), Ref B `ap2` | Circular sequential illumination and synchronized brightness breathing |
+| `WIREFRAME_ORBIT` | Ref A #16 (Robot wireframe), Ref A #12 (Beetle) | Dual counter-rotating orbits at $\pm 25^\circ$ angles |
+| `NOTHING_RED_SURGE` | Ref A #28 (Spear), Ref A Wave #8, Ref B #9 | Directional perimeter wave tracking battery percentage |
+| `LIQUID_MERCURY` | Ref A #10 (Shark Liquid), Ref A IDs 0–21 | Sinusoidal fluid wave with buoyant meniscus physics |
+| `ELECTRIC_PULSE` | Ref A #11 (Flash), Ref A #22 & #23 (Charge Bolt) | High-frequency perimeter jitter and electrical discharge arcing |
+| `CYBER_HORIZON` | Ref A #30 (Freeze Bolt), Ref B #15 (Matrix Border) | Lateral horizontal laser lines expanding from camera cutout |
+| `PLASMA_FLOW` | Ref A #2 (Cyber Dark), Ref A #5, Ref A #23 | Multi-stop angular sweep gradient with continuous rotation |
+| `DIGITAL_GAUGE` | Ref A #32 (Minimalist), Ref A #34 (Battery Cell) | Progressive 270-degree radial gauge fill |
+| `WATTAGE_REACTOR` | Ref A #36 (Bolt Glyph), Ref B `ap2` | Dynamic lightning bolt indicator scaling with charging speed |
+| `MINIMALIST_BOLT` | Ref A #33 (Plug), Ref B `ap2` (Apple style) | Clean pulse breathing (alpha 0.5f..1.0f) over 800ms cycle |
+| `BATTERY_CELL` | Ref A #34, #35 (Battery 1 & 2), Ref B `ap2` | Segmented horizontal enclosure tracking battery blocks |
+
+### 4.2 Excluded Reference Effects (24 Items)
+The following 24 reference items are intentionally excluded from the production theme suite:
+* **Copyright / Trademark IP Liabilities:** `1_amongUs` (direct legal risk).
+* **Off-Brand Cartoon Mascots & Clipart:** `0_ghost`, `2_crab`, `3_car`, `4_bee`, `6_emoji`, `7_snail`, `8_hand`, `9_waterMelon`, `12_bettle`, `14_fruit`, `17_shoes`, `19_ninja`, `20_ball`, `21_juice`.
+* **Fantasy Novelty & Floral Graphics:** `15_magicWand`, `25_Potion`, `26_Leaf`, `29_Elixir`, `31_Pedals`.
+* **Transient Seasonal Novelties:** `13_pumpkin`, `18_snowMan`, `101_makar_sankranti`, `102_republic_day`.
+
+---
+
+## 5. UI Layout & Component Architecture
+
+### 5.1 Compact Overlay State (`NothingCompactChargingPill.kt`)
+* **Anchor:** Centralized around front camera cutout ($X = 0$, $Y = 24\text{dp}$).
+* **Dimensions:** Width: $160\text{dp}$ (expanding to $190\text{dp}$ when wattage is shown), Height: $38\text{dp}$, Corner Radius: $19\text{dp}$.
 * **Hierarchy:**
-  1. `Box` (Root capsule with `#000000` background and subtle `#22FFFFFF` border).
-  2. `NothingChargingCanvas` (Renders selected kinetic theme centered on the punch hole).
+  1. `Box` (Root squircle capsule, `#000000` background, subtle `#22FFFFFF` border).
+  2. `NothingChargingCanvas` (Hardware-accelerated kinetic canvas).
   3. `Row` (Left: Lightning Icon + Status; Right: Battery Percentage in Nothing Dot-Matrix typography).
 
-### 4.2 Expanded Telemetry Card (`NothingExpandedChargingCard.kt`)
+### 5.2 Expanded Telemetry Card (`NothingExpandedChargingCard.kt`)
 * **Trigger:** Auto-expands on power connection for `autoExpandDurationMs` (default: 3500ms), or when tapped by the user.
 * **Dimensions:** Width: $340\text{dp}$, Height: $140\text{dp}$, Corner Radius: $28\text{dp}$.
 * **Content:**
@@ -247,7 +346,7 @@ data class ChargingThemeDefinition(
     * Center Cell: Voltage / Current (`"9.1 V / 4.9 A"`).
     * Right Cell: Estimated Time to Full (`"22 min left"`).
 
-### 4.3 Charging Studio Gallery (`ChargingStudioScreen.kt`)
+### 5.3 Charging Studio Gallery (`ChargingStudioScreen.kt`)
 * **Layout:**
   * Top Sticky Preview Well (`NothingCard`): Shows a simulated Nothing Phone (4a) punch hole rendering the currently selected theme at live device battery level.
   * Switch: `"Enable Charging Animation"` with description.
@@ -261,7 +360,38 @@ data class ChargingThemeDefinition(
 
 ---
 
-## 5. Persistence & DataStore Schema
+## 6. Measurable Performance & Acceptance Criteria
+
+To guarantee smooth rendering at 120 Hz on Nothing Phone (4a):
+
+### 6.1 Target Frame Budget & Frame Timing
+* **Display Refresh Rate:** 120 Hz.
+* **Target Frame Budget:** $\le 8.333\text{ ms}$ per frame ($1000\text{ ms} / 120 = 8.333\text{ ms}$).
+* **Measurement Methodology:** Executed via `adb shell dumpsys gfxinfo com.nothing.island.ai framestats` over a 60-second continuous charging animation cycle.
+* **Acceptance Thresholds:**
+  * **90th Percentile Frame Time:** $\le 6.5\text{ ms}$
+  * **95th Percentile Frame Time:** $\le 7.8\text{ ms}$
+  * **99th Percentile Frame Time:** $\le 8.33\text{ ms}$
+  * **Jank Rate (Frames exceeding 8.33 ms):** $< 1.0\%$
+
+### 6.2 CPU & GPU Profiling
+* **Draw Loop Memory Allocations:** Exactly **0 bytes / frame** inside `DrawScope` and Canvas render blocks. All `Path`, `Paint`, `Brush`, and `Matrix` objects must be pre-allocated and cached.
+* **CPU Utilization:** Total process CPU usage $\le 3.5\%$ during active charging overlay on Nothing Phone (4a).
+* **GPU Composition:** Maximum 1 hardware-accelerated overdraw layer.
+
+### 6.3 Thermal & Battery Impact
+* **Thermal Delta:** Surface temperature rise $\Delta T < 0.8^\circ\text{C}$ after 15 minutes of active charging overlay.
+* **Power Draw:** Average active overlay current consumption overhead $\le 12\text{ mA}$.
+
+### 6.4 Reduced-Motion Accessibility Behaviour
+* System setting `Settings.Global.TRANSITION_ANIMATION_SCALE` and `ANIMATOR_DURATION_SCALE` must be observed.
+* When scale is `0.0f` (Reduced Motion enabled):
+  * Continuous rotation, arcing, and particle streams are automatically halted.
+  * Replaces motion with a static Dot Matrix indicator showing battery percentage and wattage with a steady Glyph glow.
+
+---
+
+## 7. Persistence & DataStore Schema
 
 All settings are persisted using Jetpack DataStore via `IslandPreferencesRepository.kt`:
 
@@ -276,9 +406,9 @@ All settings are persisted using Jetpack DataStore via `IslandPreferencesReposit
 
 ---
 
-## 6. Implementation Sequencing & Phased Execution Plan
+## 8. Implementation Sequencing & Phased Execution Plan
 
-The implementation is structured into 4 sequential stages for Phase 3 / R9:
+The implementation is structured into 4 sequential stages for the Phase 3 Charging Milestone:
 
 ```mermaid
 gantt
@@ -320,4 +450,4 @@ gantt
 * Physical device verification on Nothing Phone (4a): verify 120Hz frame stability, power plug/unplug transitions, and battery telemetry accuracy.
 
 ---
-*Specification approved for Phase 3 / R9 development.*
+*Specification approved for Phase 3 Charging Milestone development. Call Intelligence remains reserved for R9.*
