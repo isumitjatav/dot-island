@@ -37,7 +37,8 @@ data class NotificationPreferences(
     val hideSensitiveContent: Boolean = true,                    // Mask private notifications
     val animationStyle: NotificationAnimationStyle = NotificationAnimationStyle.NOTHING_SNAP,
     val excludedPackages: Set<String> = emptySet(),               // Blacklisted package names
-    val syncDismissWithAndroid: Boolean = false                  // Default: OFF. When true, user dismissal syncs to Android shade
+    val syncDismissWithAndroid: Boolean = false,                 // Default: OFF. When true, user dismissal syncs to Android shade
+    val swipeToDismissEnabled: Boolean = true                     // REQ-49: Direct horizontal swipe-to-dismiss gesture
 ) {
     companion object {
         val DEFAULTS = NotificationPreferences()

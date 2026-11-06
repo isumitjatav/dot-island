@@ -80,6 +80,7 @@ class NotificationPreferencesDataStoreUnitTest {
         assertEquals(4500L, initial.displayDurationMs)
         assertEquals(NotificationPreviewMode.FULL, initial.previewMode)
         assertTrue(initial.compactExpansionEnabled)
+        assertTrue("Swipe to dismiss enabled by default", initial.swipeToDismissEnabled)
         assertFalse(initial.allowSilentNotifications)
         assertFalse(initial.allowOngoingNotifications)
         assertFalse(initial.showOnLockscreen)
@@ -124,6 +125,21 @@ class NotificationPreferencesDataStoreUnitTest {
         val updated = repository.notificationPreferencesFlow.first()
         assertTrue(updated.allowOngoingNotifications)
         assertTrue(updated.allowSilentNotifications)
+    }
+
+    @Test
+    fun testUpdateNotificationSwipeToDismissPersists() = testScope.runTest {
+        repository.updateNotificationSwipeDismiss(false)
+        testScheduler.advanceUntilIdle()
+
+        val updated = repository.notificationPreferencesFlow.first()
+        assertFalse(updated.swipeToDismissEnabled)
+
+        repository.updateNotificationSwipeDismiss(true)
+        testScheduler.advanceUntilIdle()
+
+        val restored = repository.notificationPreferencesFlow.first()
+        assertTrue(restored.swipeToDismissEnabled)
     }
 
     @Test

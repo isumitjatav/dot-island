@@ -41,6 +41,10 @@ class MediaR7BatchUnitTest {
         assertFalse(defaults.reducedMotion)
         assertEquals(4.5f, defaults.autoExpandDurationSeconds, 0.001f)
         assertTrue(defaults.isAutoExpandEnabled)
+        assertTrue("Background blur enabled by default", defaults.backgroundBlurEnabled)
+        assertTrue("Fast forward buttons enabled by default", defaults.fastForwardButtonsEnabled)
+        assertTrue("Only show while playing enabled by default", defaults.onlyShowWhilePlaying)
+        assertTrue("Excluded packages empty by default", defaults.excludedPackages.isEmpty())
     }
 
     @Test

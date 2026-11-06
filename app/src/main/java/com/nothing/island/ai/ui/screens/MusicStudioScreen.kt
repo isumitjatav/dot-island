@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,8 +35,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nothing.island.ai.NothingDarkGray
+import com.nothing.island.ai.NothingRed
+import com.nothing.island.ai.NothingWhite
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.media.MusicVisualizerStyle
+import com.nothing.island.ai.ui.components.AppBlacklistDialog
 import com.nothing.island.ai.ui.components.IslandPreview
 import com.nothing.island.ai.ui.components.IslandPreviewMode
 import com.nothing.island.ai.ui.components.NothingCard
@@ -44,12 +49,14 @@ import com.nothing.island.ai.ui.components.NothingSectionHeader
 import com.nothing.island.ai.ui.components.NothingSegmentedControl
 import com.nothing.island.ai.ui.components.NothingSwitchRow
 import com.nothing.island.ai.ui.theme.NothingTokens
+import kotlinx.coroutines.launch
 
 /**
  * Nothing OS 3.x Music Studio Screen
  *
  * Dedicated design laboratory for configuring media playback aesthetics,
- * vinyl artwork rotation, waveform visualizers, and fast-forward transport buttons.
+ * vinyl artwork rotation, waveform visualizers, fast-forward transport buttons,
+ * album blur, and media application filtering.
  */
 @Composable
 fun MusicStudioScreen(
@@ -59,11 +66,24 @@ fun MusicStudioScreen(
     val repository = remember { IslandPreferencesRepository.getInstance(context) }
     val musicPrefs by repository.liveMusicPreferences.collectAsState()
     val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
 
-    var showFastForwardButtons by remember { mutableStateOf(true) }
     var longPressVolumeEnabled by remember { mutableStateOf(true) }
-    var albumPhotoAsBg by remember { mutableStateOf(false) }
-    var onlyShowWhilePlaying by remember { mutableStateOf(true) }
+    var showBlacklistDialog by remember { mutableStateOf(false) }
+
+    if (showBlacklistDialog) {
+        AppBlacklistDialog(
+            title = "Blocked Music Apps",
+            subtitle = "Suppress media island from selected players",
+            excludedPackages = musicPrefs.excludedPackages,
+            onTogglePackage = { pkg ->
+                coroutineScope.launch {
+                    repository.toggleMusicPackageExclusion(pkg)
+                }
+            },
+            onDismiss = { showBlacklistDialog = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -123,9 +143,13 @@ fun MusicStudioScreen(
             NothingSwitchRow(
                 title = "Enable Music Player",
                 description = "Dock ongoing media playback to the front camera cutout",
-                checked = true,
-                onCheckedChange = { /* Toggle */ },
-                badgeText = "ACTIVE"
+                checked = musicPrefs.isAutoExpandEnabled,
+                onCheckedChange = { isChecked ->
+                    coroutineScope.launch {
+                        repository.updateMusicPreferences(musicPrefs.copy(isAutoExpandEnabled = isChecked))
+                    }
+                },
+                badgeText = if (musicPrefs.isAutoExpandEnabled) "ACTIVE" else "OFF"
             )
         }
 
@@ -154,7 +178,9 @@ fun MusicStudioScreen(
                 items = rotationOptions,
                 selectedItem = musicPrefs.albumRotationEnabled,
                 onItemSelected = { enabled ->
-                    /* Repository update */
+                    coroutineScope.launch {
+                        repository.updateMusicPreferences(musicPrefs.copy(albumRotationEnabled = enabled))
+                    }
                 },
                 labelProvider = { enabled ->
                     if (enabled) "ROTATION ON (VINYL)" else "ROTATION OFF (STATIC)"
@@ -207,7 +233,9 @@ fun MusicStudioScreen(
                                         interactionSource = remember { MutableInteractionSource() },
                                         indication = null
                                     ) {
-                                        /* Repository update */
+                                        coroutineScope.launch {
+                                            repository.updateMusicPreferences(musicPrefs.copy(visualizerStyle = style))
+                                        }
                                     }
                                     .padding(vertical = 10.dp, horizontal = 8.dp),
                                 contentAlignment = Alignment.Center
@@ -238,9 +266,37 @@ fun MusicStudioScreen(
                 NothingSwitchRow(
                     title = "Show Fast-Forward Buttons",
                     description = "Displays 10-second skip forward and rewind buttons in player",
-                    checked = showFastForwardButtons,
-                    onCheckedChange = { showFastForwardButtons = it },
-                    badgeText = "REF UI"
+                    checked = musicPrefs.fastForwardButtonsEnabled,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch {
+                            repository.updateMusicFastForwardButtons(isChecked)
+                        }
+                    },
+                    badgeText = "REQ-19"
+                )
+
+                NothingSwitchRow(
+                    title = "Album Photo as Player Bg",
+                    description = "Render sampled blurred album artwork as player card background",
+                    checked = musicPrefs.backgroundBlurEnabled,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch {
+                            repository.updateMusicBackgroundBlur(isChecked)
+                        }
+                    },
+                    badgeText = "REQ-18"
+                )
+
+                NothingSwitchRow(
+                    title = "Only show while Playing Audio",
+                    description = "Hide the Island pill during pauses or when media is idle",
+                    checked = musicPrefs.onlyShowWhilePlaying,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch {
+                            repository.updateMusicOnlyShowWhilePlaying(isChecked)
+                        }
+                    },
+                    badgeText = "REQ-21"
                 )
 
                 NothingSwitchRow(
@@ -248,22 +304,93 @@ fun MusicStudioScreen(
                     description = "Press and hold notch, then swipe left/right to adjust volume",
                     checked = longPressVolumeEnabled,
                     onCheckedChange = { longPressVolumeEnabled = it },
-                    badgeText = "GESTURE"
+                    badgeText = "REQ-20"
                 )
+            }
+        }
 
-                NothingSwitchRow(
-                    title = "Album Photo as Player Bg",
-                    description = "Render sampled blurred album artwork as player card background",
-                    checked = albumPhotoAsBg,
-                    onCheckedChange = { albumPhotoAsBg = it }
-                )
+        Spacer(modifier = Modifier.height(14.dp))
 
-                NothingSwitchRow(
-                    title = "Only show while Playing Audio",
-                    description = "Hide the Island pill during pauses or video playback",
-                    checked = onlyShowWhilePlaying,
-                    onCheckedChange = { onlyShowWhilePlaying = it }
+        // Section: App Blacklist (REQ-22)
+        NothingSectionHeader(title = "APPLICATION FILTERING")
+        NothingCard(
+            variant = NothingCardVariant.STANDARD,
+            onClick = { showBlacklistDialog = true }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Blocked Music Applications",
+                        color = NothingTokens.NothingTextPrimary,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Suppress media sessions from selected playback apps",
+                        color = NothingTokens.NothingTextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+                Text(
+                    text = "${musicPrefs.excludedPackages.size} APPS >",
+                    color = NothingTokens.NothingTextTertiary,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Section: Reset to Defaults (REQ-15)
+        NothingSectionHeader(title = "HARDWARE RESTORATION")
+        NothingCard(
+            variant = NothingCardVariant.STANDARD,
+            onClick = {
+                coroutineScope.launch {
+                    repository.resetMusicPreferencesToDefaults()
+                }
+            }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Reset Music Settings",
+                        color = NothingRed,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "Restore all media parameters to Nothing Phone (4a) baseline",
+                        color = NothingTokens.NothingTextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NothingDarkGray)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "RESET",
+                        color = NothingWhite,
+                        fontSize = 10.5.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

@@ -56,7 +56,11 @@ data class MusicPreferences(
     val glowIntensity: Float = 0.6f,        // 0.0f to 1.0f
     val reducedMotion: Boolean = false,
     val autoExpandDurationSeconds: Float = 4.5f, // 2.0f to 10.0f
-    val isAutoExpandEnabled: Boolean = true
+    val isAutoExpandEnabled: Boolean = true,
+    val backgroundBlurEnabled: Boolean = true,   // REQ-18: Blurred album photo as player background
+    val fastForwardButtonsEnabled: Boolean = true, // REQ-19: 10s skip and rewind buttons
+    val onlyShowWhilePlaying: Boolean = true,      // REQ-21: Only show while playing audio
+    val excludedPackages: Set<String> = emptySet() // REQ-22: Blocked apps for music blacklist
 ) {
     companion object {
         val DEFAULTS = MusicPreferences()

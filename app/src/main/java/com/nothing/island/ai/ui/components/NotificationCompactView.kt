@@ -3,6 +3,7 @@ package com.nothing.island.ai.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -15,10 +16,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,9 +51,12 @@ import com.nothing.island.ai.islandProgressBorder
 fun NotificationCompactView(
     event: IslandEvent.NotificationPosted,
     onTap: () -> Unit,
+    onSwipeDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val pillShape = RoundedCornerShape(18.dp)
+    var totalDrag by remember { mutableFloatStateOf(0f) }
+    val swipeThresholdPx = 40f
 
     val rightWingText = if (event.hasProgress && event.progressState == DownloadProgressState.DOWNLOADING && event.maxProgress > 0) {
         val pct = ((event.progress.toFloat() / event.maxProgress.toFloat()) * 100).toInt().coerceIn(0, 100)
@@ -75,6 +83,26 @@ fun NotificationCompactView(
                 progress = event.progress,
                 maxProgress = event.maxProgress,
                 accentColor = NothingWhite
+            )
+            .then(
+                if (onSwipeDismiss != null) {
+                    Modifier.pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                totalDrag += dragAmount
+                            },
+                            onDragEnd = {
+                                if (kotlin.math.abs(totalDrag) > swipeThresholdPx) {
+                                    onSwipeDismiss()
+                                }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f }
+                        )
+                    }
+                } else Modifier
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },

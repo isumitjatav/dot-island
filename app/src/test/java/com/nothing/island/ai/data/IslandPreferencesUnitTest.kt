@@ -302,4 +302,47 @@ class IslandPreferencesUnitTest {
         assertEquals("Corner radius in px must be 54", 54, cornerRadiusPx)
         assertEquals("Touch bridge height in px must be 174", 174, touchBridgeHeightPx)
     }
+
+    // -------------------------------------------------------------
+    // Test 11: Music Preferences Persistence (REQ-18, REQ-19, REQ-21, REQ-22)
+    // -------------------------------------------------------------
+    @Test
+    fun test11_musicPreferencesDataStorePersistence() = testScope.runTest {
+        val initial = repository.musicPreferencesFlow.first()
+        assertTrue(initial.backgroundBlurEnabled)
+        assertTrue(initial.fastForwardButtonsEnabled)
+        assertTrue(initial.onlyShowWhilePlaying)
+        assertTrue(initial.excludedPackages.isEmpty())
+
+        // Test background blur update
+        repository.updateMusicBackgroundBlur(false)
+        testScheduler.advanceUntilIdle()
+        assertFalse(repository.musicPreferencesFlow.first().backgroundBlurEnabled)
+
+        // Test fast forward buttons update
+        repository.updateMusicFastForwardButtons(false)
+        testScheduler.advanceUntilIdle()
+        assertFalse(repository.musicPreferencesFlow.first().fastForwardButtonsEnabled)
+
+        // Test only show while playing update
+        repository.updateMusicOnlyShowWhilePlaying(false)
+        testScheduler.advanceUntilIdle()
+        assertFalse(repository.musicPreferencesFlow.first().onlyShowWhilePlaying)
+
+        // Test excluded packages update and toggle
+        repository.updateMusicExcludedPackages(setOf("com.spotify.music"))
+        testScheduler.advanceUntilIdle()
+        assertTrue(repository.musicPreferencesFlow.first().excludedPackages.contains("com.spotify.music"))
+
+        repository.toggleMusicPackageExclusion("com.google.android.apps.youtube.music")
+        testScheduler.advanceUntilIdle()
+        assertEquals(2, repository.musicPreferencesFlow.first().excludedPackages.size)
+        assertTrue(repository.musicPreferencesFlow.first().excludedPackages.contains("com.google.android.apps.youtube.music"))
+
+        // Untoggle spotify
+        repository.toggleMusicPackageExclusion("com.spotify.music")
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, repository.musicPreferencesFlow.first().excludedPackages.size)
+        assertFalse(repository.musicPreferencesFlow.first().excludedPackages.contains("com.spotify.music"))
+    }
 }

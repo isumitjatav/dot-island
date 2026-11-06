@@ -311,7 +311,13 @@ fun IslandOverlayView(
                     onTap = {
                         Log.d("IslandTouch", "NotificationCompactView tapped -> expand notification-focused view (State B)")
                         onExpandNotificationFocused()
-                    }
+                    },
+                    onSwipeDismiss = if (notificationPreferences.swipeToDismissEnabled) {
+                        {
+                            Log.d("IslandTouch", "NotificationCompactView swiped -> dismiss event ${activeNotification.id}")
+                            onDismissEvent(activeNotification.id)
+                        }
+                    } else null
                 )
             } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && (!currentTrack.isPlaying || activitySwitcherInterface == IslandInterface.BATTERY))) {
                 // COMPACT BATTERY & CHARGING (Milestone R8)
@@ -458,6 +464,7 @@ fun IslandOverlayView(
                                     Log.d("IslandTouch", "NotificationCard DISMISS tapped for key=$key")
                                     onDismissHistoryEntry(key)
                                 },
+                                onClearAll = if (projectedHistory.size > 1) onClearHistory else null,
                                 onOpenContent = onOpenContent,
                                 onExecuteAction = onExecuteAction,
                                 onSendReply = onSendReply,
@@ -478,6 +485,7 @@ fun IslandOverlayView(
                                     Log.d("IslandTouch", "NotificationCard DISMISS tapped for key=$key")
                                     onDismissHistoryEntry(key)
                                 },
+                                onClearAll = if (projectedHistory.size > 1) onClearHistory else null,
                                 onOpenContent = onOpenContent,
                                 onExecuteAction = onExecuteAction,
                                 onSendReply = onSendReply,

@@ -1,7 +1,9 @@
 package com.nothing.island.ai.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,13 +15,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +34,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nothing.island.ai.NothingDarkGray
+import com.nothing.island.ai.NothingRed
+import com.nothing.island.ai.NothingWhite
 import com.nothing.island.ai.data.IslandPreferencesRepository
+import com.nothing.island.ai.notifications.NotificationPreferences
 import com.nothing.island.ai.notifications.NotificationPreviewMode
+import com.nothing.island.ai.ui.components.AppBlacklistDialog
 import com.nothing.island.ai.ui.components.IslandPreview
 import com.nothing.island.ai.ui.components.IslandPreviewMode
 import com.nothing.island.ai.ui.components.NothingCard
@@ -40,12 +50,14 @@ import com.nothing.island.ai.ui.components.NothingSegmentedControl
 import com.nothing.island.ai.ui.components.NothingStepperSlider
 import com.nothing.island.ai.ui.components.NothingSwitchRow
 import com.nothing.island.ai.ui.theme.NothingTokens
+import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * Nothing OS 3.x Notification Studio Screen
  *
  * Dedicated design laboratory for configuring notification presentation modes,
- * auto-expansion policies, typography steppers, and application privacy.
+ * auto-expansion policies, typography steppers, swipe-to-dismiss, and application privacy.
  */
 @Composable
 fun NotificationStudioScreen(
@@ -55,10 +67,26 @@ fun NotificationStudioScreen(
     val repository = remember { IslandPreferencesRepository.getInstance(context) }
     val notifPrefs by repository.liveNotificationPreferences.collectAsState()
     val scrollState = rememberScrollState()
+    val coroutineScope = rememberCoroutineScope()
 
-    var titleSizeSp by remember { mutableStateOf(14f) }
-    var subtextSizeSp by remember { mutableStateOf(12f) }
-    var autoExpandDnd by remember { mutableStateOf(false) }
+    var titleSizeSp by remember { mutableFloatStateOf(14f) }
+    var subtextSizeSp by remember { mutableFloatStateOf(12f) }
+    var autoExpandDnd by remember { mutableStateOf(notifPrefs.allowSilentNotifications) }
+    var showBlacklistDialog by remember { mutableStateOf(false) }
+
+    if (showBlacklistDialog) {
+        AppBlacklistDialog(
+            title = "Blocked Notifications",
+            subtitle = "Suppress island alerts from selected apps",
+            excludedPackages = notifPrefs.excludedPackages,
+            onTogglePackage = { pkg ->
+                coroutineScope.launch {
+                    repository.toggleNotificationPackageExclusion(pkg)
+                }
+            },
+            onDismiss = { showBlacklistDialog = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -77,7 +105,7 @@ fun NotificationStudioScreen(
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.layout.Box(
+                    Box(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
@@ -119,7 +147,9 @@ fun NotificationStudioScreen(
                 title = "Enable Notifications",
                 description = "Surface eligible incoming alerts on the camera cutout",
                 checked = notifPrefs.enabled,
-                onCheckedChange = { /* Connected to repository */ },
+                onCheckedChange = { isChecked ->
+                    coroutineScope.launch { repository.updateNotificationEnabled(isChecked) }
+                },
                 badgeText = if (notifPrefs.enabled) "ACTIVE" else "OFF"
             )
         }
@@ -149,7 +179,7 @@ fun NotificationStudioScreen(
                 items = modes,
                 selectedItem = notifPrefs.previewMode,
                 onItemSelected = { mode ->
-                    /* Repository update */
+                    coroutineScope.launch { repository.updateNotificationPreviewMode(mode) }
                 },
                 labelProvider = { mode ->
                     when (mode) {
@@ -165,22 +195,47 @@ fun NotificationStudioScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         // Section: Automation & Behavior
-        NothingSectionHeader(title = "AUTO-EXPANSION BEHAVIOR")
+        NothingSectionHeader(title = "AUTO-EXPANSION & GESTURES")
         NothingCard(variant = NothingCardVariant.STANDARD) {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 NothingSwitchRow(
                     title = "Automatically expand for notifications",
                     description = "Open Nothing Island when a new eligible notification arrives",
                     checked = notifPrefs.autoExpandOnNotification,
-                    onCheckedChange = { /* Repository update */ },
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch { repository.updateNotificationAutoExpand(isChecked) }
+                    },
                     badgeText = "R7.1.1"
+                )
+
+                NothingSwitchRow(
+                    title = "Direct Swipe-to-Dismiss",
+                    description = "Swipe left or right across the notification pill or card to dismiss immediately",
+                    checked = notifPrefs.swipeToDismissEnabled,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch { repository.updateNotificationSwipeDismiss(isChecked) }
+                    },
+                    badgeText = "REQ-49"
+                )
+
+                NothingSwitchRow(
+                    title = "Sync Shade Dismissal",
+                    description = "Dismissing an alert on Nothing Island also clears it from the Android shade",
+                    checked = notifPrefs.syncDismissWithAndroid,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch { repository.updateSyncDismissWithAndroid(isChecked) }
+                    },
+                    badgeText = "SHADE"
                 )
 
                 NothingSwitchRow(
                     title = "Expand during Do Not Disturb",
                     description = "Allow urgent notification popups even when DND mode is engaged",
                     checked = autoExpandDnd,
-                    onCheckedChange = { autoExpandDnd = it },
+                    onCheckedChange = { isChecked ->
+                        autoExpandDnd = isChecked
+                        coroutineScope.launch { repository.updateNotificationAllowSilent(isChecked) }
+                    },
                     badgeText = "OPTIONAL"
                 )
 
@@ -188,7 +243,29 @@ fun NotificationStudioScreen(
                     title = "Hide sensitive content",
                     description = "Mask message details when the device is locked",
                     checked = notifPrefs.hideSensitiveContent,
-                    onCheckedChange = { /* Repository update */ }
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch { repository.updateNotificationHideSensitive(isChecked) }
+                    }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Section: Display Duration Stepper
+        NothingSectionHeader(title = "POPUP TIMING")
+        NothingCard(variant = NothingCardVariant.STANDARD) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                NothingStepperSlider(
+                    value = (notifPrefs.displayDurationMs / 1000f),
+                    onValueChange = { sec ->
+                        val durationMs = (sec * 1000L).toLong()
+                        coroutineScope.launch { repository.updateNotificationDuration(durationMs) }
+                    },
+                    valueRange = 2f..10f,
+                    stepSize = 0.5f,
+                    label = "Popup Visibility Duration",
+                    formattedValue = String.format(Locale.US, "%.1f SEC", notifPrefs.displayDurationMs / 1000f)
                 )
             }
         }
@@ -225,7 +302,7 @@ fun NotificationStudioScreen(
         NothingSectionHeader(title = "APPLICATION FILTERING")
         NothingCard(
             variant = NothingCardVariant.STANDARD,
-            onClick = { /* Open App Blacklist Dialog */ }
+            onClick = { showBlacklistDialog = true }
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -253,6 +330,62 @@ fun NotificationStudioScreen(
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Section: Reset to Factory Defaults
+        NothingSectionHeader(title = "HARDWARE RESTORATION")
+        NothingCard(
+            variant = NothingCardVariant.STANDARD,
+            onClick = {
+                coroutineScope.launch {
+                    repository.updateNotificationEnabled(true)
+                    repository.updateNotificationDuration(4500L)
+                    repository.updateNotificationPreviewMode(NotificationPreviewMode.FULL)
+                    repository.updateNotificationAutoExpand(true)
+                    repository.updateNotificationSwipeDismiss(true)
+                    repository.updateNotificationHideSensitive(true)
+                    repository.updateNotificationAllowSilent(false)
+                    repository.updateSyncDismissWithAndroid(false)
+                    repository.updateNotificationExcludedPackages(emptySet())
+                }
+            }
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Reset Notification Settings",
+                        color = NothingRed,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Text(
+                        text = "Restore all notification parameters to Nothing Phone (4a) baseline (4.5s)",
+                        color = NothingTokens.NothingTextSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NothingDarkGray)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "RESET",
+                        color = NothingWhite,
+                        fontSize = 10.5.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 

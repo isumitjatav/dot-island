@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -235,6 +238,7 @@ fun NotificationCard(
     isSystemActive: Boolean = true,
     onCollapse: (() -> Unit)? = null,
     onDismiss: ((String) -> Unit)? = null,
+    onClearAll: (() -> Unit)? = null,
     onOpenContent: ((String) -> Unit)? = null,
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
@@ -270,6 +274,7 @@ fun NotificationCard(
         progressState = event.progressState,
         onCollapse = onCollapse,
         onDismiss = onDismiss,
+        onClearAll = onClearAll,
         onOpenContent = onOpenContent,
         onExecuteAction = onExecuteAction,
         onSendReply = onSendReply,
@@ -301,6 +306,7 @@ fun NotificationCard(
     progressState: DownloadProgressState = DownloadProgressState.NONE,
     onCollapse: (() -> Unit)? = null,
     onDismiss: ((String) -> Unit)? = null,
+    onClearAll: (() -> Unit)? = null,
     onOpenContent: ((String) -> Unit)? = null,
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
@@ -354,6 +360,8 @@ fun NotificationCard(
     }
 
     val cardShape = RoundedCornerShape(26.dp)
+    var totalDrag by remember { mutableFloatStateOf(0f) }
+    val swipeThresholdPx = 50f
 
     Box(
         modifier = modifier
@@ -361,6 +369,26 @@ fun NotificationCard(
             .clip(cardShape)
             .background(NothingBlack)
             .border(width = 1.dp, color = NothingBorder, shape = cardShape)
+            .then(
+                if (onDismiss != null && notificationKey != null) {
+                    Modifier.pointerInput(notificationKey) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                totalDrag += dragAmount
+                            },
+                            onDragEnd = {
+                                if (kotlin.math.abs(totalDrag) > swipeThresholdPx) {
+                                    onDismiss(notificationKey)
+                                }
+                                totalDrag = 0f
+                            },
+                            onDragCancel = { totalDrag = 0f }
+                        )
+                    }
+                } else Modifier
+            )
     ) {
         Column(
             modifier = Modifier
@@ -401,11 +429,29 @@ fun NotificationCard(
                     )
                 }
 
-                // Header controls (DISMISS, COLLAPSE, or formatted timestamp)
+                // Header controls (CLEAR ALL, DISMISS, COLLAPSE, or formatted timestamp)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    if (onClearAll != null) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NothingDarkGray)
+                                .clickable { onClearAll() }
+                                .padding(horizontal = 8.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "CLEAR ALL",
+                                color = NothingRed,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     if (onDismiss != null && notificationKey != null) {
                         Box(
                             modifier = Modifier

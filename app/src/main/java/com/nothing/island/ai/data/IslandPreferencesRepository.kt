@@ -137,6 +137,7 @@ class IslandPreferencesRepository internal constructor(
         val NOTIFICATION_EXCLUDED_PACKAGES = stringSetPreferencesKey("notif_excluded_packages")
         val NOTIFICATION_SYNC_DISMISS_ANDROID = booleanPreferencesKey("notif_sync_dismiss_android")
         val NOTIFICATION_AUTO_EXPAND = booleanPreferencesKey("notif_auto_expand")
+        val NOTIFICATION_SWIPE_DISMISS = booleanPreferencesKey("notif_swipe_dismiss_enabled")
     }
 
     object MusicPreferencesKeys {
@@ -151,6 +152,10 @@ class IslandPreferencesRepository internal constructor(
         val REDUCED_MOTION = booleanPreferencesKey("music_reduced_motion")
         val AUTO_EXPAND_DURATION_SEC = floatPreferencesKey("music_auto_expand_duration_sec")
         val IS_AUTO_EXPAND_ENABLED = booleanPreferencesKey("music_is_auto_expand_enabled")
+        val BACKGROUND_BLUR_ENABLED = booleanPreferencesKey("music_bg_blur_enabled")
+        val FAST_FORWARD_BUTTONS_ENABLED = booleanPreferencesKey("music_fast_forward_enabled")
+        val ONLY_SHOW_WHILE_PLAYING = booleanPreferencesKey("music_only_show_while_playing")
+        val MUSIC_EXCLUDED_PACKAGES = stringSetPreferencesKey("music_excluded_packages")
     }
 
     object BatteryPreferencesKeys {
@@ -492,8 +497,14 @@ class IslandPreferencesRepository internal constructor(
             hideSensitiveContent = preferences[NotificationPreferencesKeys.NOTIFICATION_HIDE_SENSITIVE] ?: true,
             animationStyle = animStyle,
             excludedPackages = preferences[NotificationPreferencesKeys.NOTIFICATION_EXCLUDED_PACKAGES] ?: emptySet(),
-            syncDismissWithAndroid = preferences[NotificationPreferencesKeys.NOTIFICATION_SYNC_DISMISS_ANDROID] ?: false
+            syncDismissWithAndroid = preferences[NotificationPreferencesKeys.NOTIFICATION_SYNC_DISMISS_ANDROID] ?: false,
+            swipeToDismissEnabled = preferences[NotificationPreferencesKeys.NOTIFICATION_SWIPE_DISMISS] ?: true
         )
+    }
+
+    suspend fun updateNotificationSwipeDismiss(enabled: Boolean) {
+        _liveNotificationPreferences.value = _liveNotificationPreferences.value.copy(swipeToDismissEnabled = enabled)
+        dataStore.edit { it[NotificationPreferencesKeys.NOTIFICATION_SWIPE_DISMISS] = enabled }
     }
 
     suspend fun updateSyncDismissWithAndroid(enabled: Boolean) {
@@ -584,7 +595,11 @@ class IslandPreferencesRepository internal constructor(
             glowIntensity = preferences[MusicPreferencesKeys.GLOW_INTENSITY] ?: MusicPreferences.DEFAULTS.glowIntensity,
             reducedMotion = preferences[MusicPreferencesKeys.REDUCED_MOTION] ?: MusicPreferences.DEFAULTS.reducedMotion,
             autoExpandDurationSeconds = preferences[MusicPreferencesKeys.AUTO_EXPAND_DURATION_SEC] ?: MusicPreferences.DEFAULTS.autoExpandDurationSeconds,
-            isAutoExpandEnabled = preferences[MusicPreferencesKeys.IS_AUTO_EXPAND_ENABLED] ?: MusicPreferences.DEFAULTS.isAutoExpandEnabled
+            isAutoExpandEnabled = preferences[MusicPreferencesKeys.IS_AUTO_EXPAND_ENABLED] ?: MusicPreferences.DEFAULTS.isAutoExpandEnabled,
+            backgroundBlurEnabled = preferences[MusicPreferencesKeys.BACKGROUND_BLUR_ENABLED] ?: MusicPreferences.DEFAULTS.backgroundBlurEnabled,
+            fastForwardButtonsEnabled = preferences[MusicPreferencesKeys.FAST_FORWARD_BUTTONS_ENABLED] ?: MusicPreferences.DEFAULTS.fastForwardButtonsEnabled,
+            onlyShowWhilePlaying = preferences[MusicPreferencesKeys.ONLY_SHOW_WHILE_PLAYING] ?: MusicPreferences.DEFAULTS.onlyShowWhilePlaying,
+            excludedPackages = preferences[MusicPreferencesKeys.MUSIC_EXCLUDED_PACKAGES] ?: emptySet()
         )
     }
 
@@ -613,10 +628,41 @@ class IslandPreferencesRepository internal constructor(
                 p[MusicPreferencesKeys.REDUCED_MOTION] = prefs.reducedMotion
                 p[MusicPreferencesKeys.AUTO_EXPAND_DURATION_SEC] = prefs.autoExpandDurationSeconds
                 p[MusicPreferencesKeys.IS_AUTO_EXPAND_ENABLED] = prefs.isAutoExpandEnabled
+                p[MusicPreferencesKeys.BACKGROUND_BLUR_ENABLED] = prefs.backgroundBlurEnabled
+                p[MusicPreferencesKeys.FAST_FORWARD_BUTTONS_ENABLED] = prefs.fastForwardButtonsEnabled
+                p[MusicPreferencesKeys.ONLY_SHOW_WHILE_PLAYING] = prefs.onlyShowWhilePlaying
+                p[MusicPreferencesKeys.MUSIC_EXCLUDED_PACKAGES] = prefs.excludedPackages
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist music preferences to DataStore", e)
         }
+    }
+
+    suspend fun updateMusicBackgroundBlur(enabled: Boolean) {
+        val updated = _liveMusicPreferences.value.copy(backgroundBlurEnabled = enabled)
+        updateMusicPreferences(updated)
+    }
+
+    suspend fun updateMusicFastForwardButtons(enabled: Boolean) {
+        val updated = _liveMusicPreferences.value.copy(fastForwardButtonsEnabled = enabled)
+        updateMusicPreferences(updated)
+    }
+
+    suspend fun updateMusicOnlyShowWhilePlaying(enabled: Boolean) {
+        val updated = _liveMusicPreferences.value.copy(onlyShowWhilePlaying = enabled)
+        updateMusicPreferences(updated)
+    }
+
+    suspend fun updateMusicExcludedPackages(packages: Set<String>) {
+        val updated = _liveMusicPreferences.value.copy(excludedPackages = packages)
+        updateMusicPreferences(updated)
+    }
+
+    suspend fun toggleMusicPackageExclusion(packageName: String) {
+        val current = _liveMusicPreferences.value.excludedPackages
+        val updatedSet = if (current.contains(packageName)) current - packageName else current + packageName
+        val updated = _liveMusicPreferences.value.copy(excludedPackages = updatedSet)
+        updateMusicPreferences(updated)
     }
 
     /**

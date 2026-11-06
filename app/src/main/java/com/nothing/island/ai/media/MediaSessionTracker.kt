@@ -11,6 +11,7 @@ import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.IslandEvent
 import com.nothing.island.ai.engine.IslandEventEngine
 import kotlinx.coroutines.CoroutineScope
@@ -74,6 +75,24 @@ class MediaSessionTracker(
     private var activeController: MediaController? = null
     private var lastKnownValidTrack: MediaTrackState? = null
 
+    private val preferencesRepository: IslandPreferencesRepository by lazy {
+        IslandPreferencesRepository.getInstance(context.applicationContext)
+    }
+
+    init {
+        scope.launch {
+            try {
+                preferencesRepository.liveMusicPreferences.collect {
+                    mainHandler.post {
+                        updateFromActiveController()
+                    }
+                }
+            } catch (_: Exception) {
+                // Safety catch for unit test environments without full Application context
+            }
+        }
+    }
+
     private val controllerCallback = object : MediaController.Callback() {
         override fun onMetadataChanged(metadata: MediaMetadata?) {
             Log.d(TAG, "Controller callback: onMetadataChanged")
@@ -125,7 +144,18 @@ class MediaSessionTracker(
      * Handles changes in the list of active media sessions.
      */
     private fun onActiveSessionsListChanged(controllers: List<MediaController>?) {
-        if (controllers.isNullOrEmpty()) {
+        val excluded = try {
+            preferencesRepository.liveMusicPreferences.value.excludedPackages
+        } catch (_: Exception) {
+            emptySet()
+        }
+
+        val eligible = controllers?.filter { controller ->
+            val pkg = controller.packageName ?: ""
+            !excluded.contains(pkg)
+        }
+
+        if (eligible.isNullOrEmpty()) {
             activeController?.unregisterCallback(controllerCallback)
             activeController = null
             setStandbyState()
@@ -133,11 +163,11 @@ class MediaSessionTracker(
         }
 
         // Prioritize currently playing controller, or fallback to first available
-        val bestController = controllers.firstOrNull {
+        val bestController = eligible.firstOrNull {
             it.playbackState?.state == PlaybackState.STATE_PLAYING
-        } ?: controllers.firstOrNull {
+        } ?: eligible.firstOrNull {
             it.playbackState?.state == PlaybackState.STATE_PAUSED
-        } ?: controllers.first()
+        } ?: eligible.first()
 
         if (bestController != activeController) {
             activeController?.unregisterCallback(controllerCallback)
@@ -159,6 +189,20 @@ class MediaSessionTracker(
             return
         }
 
+        val excluded = try {
+            preferencesRepository.liveMusicPreferences.value.excludedPackages
+        } catch (_: Exception) {
+            emptySet()
+        }
+        val pkg = controller.packageName ?: ""
+        if (excluded.contains(pkg)) {
+            Log.d(TAG, "Active controller $pkg is blacklisted, dropping controller")
+            activeController?.unregisterCallback(controllerCallback)
+            activeController = null
+            setStandbyState()
+            return
+        }
+
         val metadata = controller.metadata
         val playbackState = controller.playbackState
 
@@ -170,6 +214,16 @@ class MediaSessionTracker(
         val rawAlbum = metadata?.getString(MediaMetadata.METADATA_KEY_ALBUM) ?: ""
 
         val isPlaying = playbackState?.state == PlaybackState.STATE_PLAYING
+        val onlyShowWhilePlaying = try {
+            preferencesRepository.liveMusicPreferences.value.onlyShowWhilePlaying
+        } catch (_: Exception) {
+            true
+        }
+        if (onlyShowWhilePlaying && !isPlaying) {
+            Log.d(TAG, "onlyShowWhilePlaying is enabled and audio is not playing for $pkg -> standby")
+            setStandbyState()
+            return
+        }
         val positionMs = playbackState?.position?.coerceAtLeast(0L) ?: 0L
         val durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L
         val playbackSpeed = playbackState?.playbackSpeed ?: 1.0f
@@ -179,7 +233,6 @@ class MediaSessionTracker(
         val canSkipNext = (actions and PlaybackState.ACTION_SKIP_TO_NEXT) != 0L
         val canSkipPrev = (actions and PlaybackState.ACTION_SKIP_TO_PREVIOUS) != 0L || canSeek
 
-        val pkg = controller.packageName ?: ""
         val appName = try {
             val appInfo = packageManager.getApplicationInfo(pkg, 0)
             packageManager.getApplicationLabel(appInfo).toString()

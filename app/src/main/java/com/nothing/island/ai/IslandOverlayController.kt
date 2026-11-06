@@ -1246,6 +1246,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             for (k in activeKeys) {
                 IslandNotificationListenerService.cancelSystemNotification(k)
             }
+            IslandNotificationListenerService.cancelAllSystemNotifications()
         } else {
             Log.d(TAG, "Sync Dismissals with Android is OFF -> Android notification shade untouched for Clear All")
         }

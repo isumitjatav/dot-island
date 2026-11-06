@@ -80,6 +80,21 @@ class IslandNotificationListenerService : NotificationListenerService() {
                 false
             }
         }
+
+        /**
+         * REQ-29: Cancels all clearable active system notifications from the Android notification shade.
+         */
+        fun cancelAllSystemNotifications(): Boolean {
+            val service = instance ?: return false
+            return try {
+                service.cancelAllNotifications()
+                Log.i(TAG, "Successfully executed cancelAllNotifications()")
+                true
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to cancel all notifications", e)
+                false
+            }
+        }
     }
 
     // Serialized ingestion dispatcher enforcing FIFO callback processing

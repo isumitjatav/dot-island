@@ -1,5 +1,6 @@
 package com.nothing.island.ai.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,9 +32,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -142,6 +147,19 @@ fun MusicExpandedView(
             }
             .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
+        // REQ-18: Blurred album photo as player background
+        if (preferences.backgroundBlurEnabled && trackState.artworkBitmap != null) {
+            Image(
+                bitmap = trackState.artworkBitmap.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(28.dp)
+                    .alpha(0.25f)
+            )
+        }
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
@@ -339,14 +357,39 @@ fun MusicExpandedView(
                 )
             }
 
-            // 5. Playback Transport Controls Row
+            // 5. Playback Transport Controls Row (REQ-19: Fast-forward / rewind controls)
+            val canRewindOrPrev = (trackState.canSkipPrevious || trackState.canSeek) && !trackState.isHistorical
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // 10s Rewind Button (REQ-19)
+                if (preferences.fastForwardButtonsEnabled) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(NothingDarkGray)
+                            .clickable(enabled = canRewindOrPrev) {
+                                val target = (displayPositionMs - 10000L).coerceAtLeast(0L)
+                                onSeekTo(target)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "-10",
+                            color = if (canRewindOrPrev) NothingWhite else NothingMutedText,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(14.dp))
+                }
+
                 // Previous button
-                val canRewindOrPrev = (trackState.canSkipPrevious || trackState.canSeek) && !trackState.isHistorical
                 Box(
                     modifier = Modifier
                         .size(34.dp)
@@ -364,7 +407,7 @@ fun MusicExpandedView(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
                 // Play / Pause button
                 Box(
@@ -385,7 +428,7 @@ fun MusicExpandedView(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(20.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
                 // Next button
                 Box(
@@ -403,6 +446,31 @@ fun MusicExpandedView(
                         color = if (trackState.canSkipNext && !trackState.isHistorical) NothingWhite else NothingMutedText,
                         fontSize = 13.sp
                     )
+                }
+
+                // 10s Fast-Forward Button (REQ-19)
+                if (preferences.fastForwardButtonsEnabled) {
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(NothingDarkGray)
+                            .clickable(enabled = canRewindOrPrev && trackState.durationMs > 0L) {
+                                val target = (displayPositionMs + 10000L).coerceAtMost(trackState.durationMs)
+                                onSeekTo(target)
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "+10",
+                            color = if (canRewindOrPrev && trackState.durationMs > 0L) NothingWhite else NothingMutedText,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
