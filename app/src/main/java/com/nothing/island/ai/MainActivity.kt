@@ -25,13 +25,22 @@ import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.navigation.IslandDestination
 import com.nothing.island.ai.notifications.NotificationPreviewMode
 import com.nothing.island.ai.ui.components.NothingBottomNavigation
+import com.nothing.island.ai.ui.screens.AnimationStudioScreen
 import com.nothing.island.ai.ui.screens.AppearanceScreen
+import com.nothing.island.ai.ui.screens.ChargingStudioScreen
 import com.nothing.island.ai.ui.screens.FeaturesScreen
 import com.nothing.island.ai.ui.screens.GeminiScreen
+import com.nothing.island.ai.ui.screens.GeometryStudioScreen
+import com.nothing.island.ai.ui.screens.GestureStudioScreen
 import com.nothing.island.ai.ui.screens.HomeScreen
+import com.nothing.island.ai.ui.screens.MusicStudioScreen
+import com.nothing.island.ai.ui.screens.NotificationStudioScreen
+import com.nothing.island.ai.ui.screens.PeripheralsStudioScreen
 import com.nothing.island.ai.ui.screens.SettingsScreen
+import com.nothing.island.ai.ui.screens.StudiosHubScreen
+import com.nothing.island.ai.ui.screens.ThemeStudioScreen
 import com.nothing.island.ai.ui.theme.NothingIslandTheme
-import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
+import com.nothing.island.ai.ui.theme.NothingTokens
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -48,21 +57,26 @@ class MainActivity : ComponentActivity() {
             NothingIslandTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
-                    color = NothingPrimaryBackground
+                    color = NothingTokens.NothingBlack
                 ) {
                     val currentDestination = remember { mutableStateOf<IslandDestination>(IslandDestination.Home) }
                     val context = LocalContext.current
                     val geometry = remember { CutoutDetector.detectCutout(context) }
 
-                    // Android Back Navigation: Returns to Home from secondary screens
+                    // Intelligent Back Navigation:
+                    // Sub-studios return to Studios Hub; Primary tabs return to Home
                     BackHandler(enabled = currentDestination.value != IslandDestination.Home) {
-                        currentDestination.value = IslandDestination.Home
+                        if (IslandDestination.studioHubDestinations.contains(currentDestination.value)) {
+                            currentDestination.value = IslandDestination.Studios
+                        } else {
+                            currentDestination.value = IslandDestination.Home
+                        }
                     }
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(NothingPrimaryBackground)
+                            .background(NothingTokens.NothingBlack)
                             .statusBarsPadding()
                             .navigationBarsPadding()
                     ) {
@@ -74,10 +88,11 @@ class MainActivity : ComponentActivity() {
                         ) {
                             Crossfade(
                                 targetState = currentDestination.value,
-                                animationSpec = tween(durationMillis = 200),
+                                animationSpec = tween(durationMillis = 180),
                                 label = "ScreenTransition"
                             ) { destination ->
                                 when (destination) {
+                                    // 5 Primary Destinations
                                     is IslandDestination.Home -> {
                                         HomeScreen(
                                             hasOverlayPermission = hasOverlayPermissionState.value,
@@ -101,6 +116,69 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
+                                    is IslandDestination.Notifications -> {
+                                        NotificationStudioScreen()
+                                    }
+                                    is IslandDestination.Music -> {
+                                        MusicStudioScreen()
+                                    }
+                                    is IslandDestination.Battery -> {
+                                        ChargingStudioScreen()
+                                    }
+                                    is IslandDestination.Studios -> {
+                                        StudiosHubScreen(
+                                            onNavigateToDestination = { subDest ->
+                                                currentDestination.value = subDest
+                                            }
+                                        )
+                                    }
+
+                                    // Studios Sub-Screens
+                                    is IslandDestination.ThemeStudio -> {
+                                        ThemeStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+                                    is IslandDestination.AnimationStudio -> {
+                                        AnimationStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+                                    is IslandDestination.GestureStudio -> {
+                                        GestureStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+                                    is IslandDestination.PeripheralsStudio -> {
+                                        PeripheralsStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+                                    is IslandDestination.GeometryStudio -> {
+                                        GeometryStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+                                    is IslandDestination.Settings -> {
+                                        SettingsScreen(
+                                            geometry = geometry,
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
+
+                                    // Preserved Legacy Destinations (Backward Compatibility)
                                     is IslandDestination.Appearance -> {
                                         AppearanceScreen()
                                     }
@@ -110,20 +188,12 @@ class MainActivity : ComponentActivity() {
                                     is IslandDestination.Gemini -> {
                                         GeminiScreen()
                                     }
-                                    is IslandDestination.Settings -> {
-                                        SettingsScreen(
-                                            geometry = geometry,
-                                            onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Home
-                                            }
-                                        )
-                                    }
                                 }
                             }
                         }
 
-                        // Bottom Navigation Bar (Hidden when in Settings)
-                        if (currentDestination.value != IslandDestination.Settings) {
+                        // Bottom Navigation Bar (Surfaced for 5 Primary Destinations)
+                        if (IslandDestination.bottomNavDestinations.contains(currentDestination.value)) {
                             NothingBottomNavigation(
                                 currentDestination = currentDestination.value,
                                 onDestinationSelected = { dest ->
