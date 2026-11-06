@@ -236,6 +236,7 @@ fun NotificationCard(
     topClearanceDp: Dp = 48.dp,
     notificationKey: String? = event.id,
     isSystemActive: Boolean = true,
+    swipeToDismissEnabled: Boolean = true,
     onCollapse: (() -> Unit)? = null,
     onDismiss: ((String) -> Unit)? = null,
     onClearAll: (() -> Unit)? = null,
@@ -272,6 +273,7 @@ fun NotificationCard(
         maxProgress = event.maxProgress,
         isIndeterminate = event.isIndeterminate,
         progressState = event.progressState,
+        swipeToDismissEnabled = swipeToDismissEnabled,
         onCollapse = onCollapse,
         onDismiss = onDismiss,
         onClearAll = onClearAll,
@@ -304,6 +306,7 @@ fun NotificationCard(
     maxProgress: Int = 0,
     isIndeterminate: Boolean = false,
     progressState: DownloadProgressState = DownloadProgressState.NONE,
+    swipeToDismissEnabled: Boolean = true,
     onCollapse: (() -> Unit)? = null,
     onDismiss: ((String) -> Unit)? = null,
     onClearAll: (() -> Unit)? = null,
@@ -370,7 +373,7 @@ fun NotificationCard(
             .background(NothingBlack)
             .border(width = 1.dp, color = NothingBorder, shape = cardShape)
             .then(
-                if (onDismiss != null && notificationKey != null) {
+                if (swipeToDismissEnabled && onDismiss != null && notificationKey != null) {
                     Modifier.pointerInput(notificationKey) {
                         detectHorizontalDragGestures(
                             onDragStart = { totalDrag = 0f },

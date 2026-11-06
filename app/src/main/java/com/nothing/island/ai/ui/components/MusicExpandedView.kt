@@ -358,20 +358,25 @@ fun MusicExpandedView(
             }
 
             // 5. Playback Transport Controls Row (REQ-19: Fast-forward / rewind controls)
-            val canRewindOrPrev = (trackState.canSkipPrevious || trackState.canSeek) && !trackState.isHistorical
+            val isSeekable = trackState.canSeek && trackState.durationMs > 0L && !trackState.isHistorical
+            val showFastForwardControls = preferences.fastForwardButtonsEnabled && isSeekable
+            val canRewind = isSeekable && displayPositionMs > 0L
+            val canFastForward = isSeekable && displayPositionMs < trackState.durationMs
+            val canSkipPrev = (trackState.canSkipPrevious || isSeekable) && !trackState.isHistorical
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 10s Rewind Button (REQ-19)
-                if (preferences.fastForwardButtonsEnabled) {
+                // 10s Rewind Button (REQ-19: Only shown when session supports seeking with known duration)
+                if (showFastForwardControls) {
                     Box(
                         modifier = Modifier
                             .size(32.dp)
                             .clip(CircleShape)
                             .background(NothingDarkGray)
-                            .clickable(enabled = canRewindOrPrev) {
+                            .clickable(enabled = canRewind) {
                                 val target = (displayPositionMs - 10000L).coerceAtLeast(0L)
                                 onSeekTo(target)
                             },
@@ -379,7 +384,7 @@ fun MusicExpandedView(
                     ) {
                         Text(
                             text = "-10",
-                            color = if (canRewindOrPrev) NothingWhite else NothingMutedText,
+                            color = if (canRewind) NothingWhite else NothingMutedText,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold
@@ -395,14 +400,14 @@ fun MusicExpandedView(
                         .size(34.dp)
                         .clip(CircleShape)
                         .background(NothingDarkGray)
-                        .clickable(enabled = canRewindOrPrev) {
+                        .clickable(enabled = canSkipPrev) {
                             onSkipPrevious()
                         },
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = "⏮",
-                        color = if (canRewindOrPrev) NothingWhite else NothingMutedText,
+                        color = if (canSkipPrev) NothingWhite else NothingMutedText,
                         fontSize = 13.sp
                     )
                 }
@@ -448,8 +453,8 @@ fun MusicExpandedView(
                     )
                 }
 
-                // 10s Fast-Forward Button (REQ-19)
-                if (preferences.fastForwardButtonsEnabled) {
+                // 10s Fast-Forward Button (REQ-19: Only shown when session supports seeking with known duration)
+                if (showFastForwardControls) {
                     Spacer(modifier = Modifier.width(14.dp))
 
                     Box(
@@ -457,7 +462,7 @@ fun MusicExpandedView(
                             .size(32.dp)
                             .clip(CircleShape)
                             .background(NothingDarkGray)
-                            .clickable(enabled = canRewindOrPrev && trackState.durationMs > 0L) {
+                            .clickable(enabled = canFastForward) {
                                 val target = (displayPositionMs + 10000L).coerceAtMost(trackState.durationMs)
                                 onSeekTo(target)
                             },
@@ -465,7 +470,7 @@ fun MusicExpandedView(
                     ) {
                         Text(
                             text = "+10",
-                            color = if (canRewindOrPrev && trackState.durationMs > 0L) NothingWhite else NothingMutedText,
+                            color = if (canFastForward) NothingWhite else NothingMutedText,
                             fontSize = 9.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold

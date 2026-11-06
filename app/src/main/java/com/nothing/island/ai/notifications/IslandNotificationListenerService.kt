@@ -82,18 +82,22 @@ class IslandNotificationListenerService : NotificationListenerService() {
         }
 
         /**
-         * REQ-29: Cancels all clearable active system notifications from the Android notification shade.
+         * REQ-29: Selectively cancels the specified clearable notifications from the Android notification shade.
+         * Strictly scoped to notifications represented by Nothing Island to prevent dismissing unrelated apps.
          */
-        fun cancelAllSystemNotifications(): Boolean {
-            val service = instance ?: return false
-            return try {
-                service.cancelAllNotifications()
-                Log.i(TAG, "Successfully executed cancelAllNotifications()")
-                true
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to cancel all notifications", e)
-                false
+        fun cancelSystemNotifications(keys: Collection<String>): Int {
+            val service = instance ?: return 0
+            var count = 0
+            for (k in keys) {
+                try {
+                    service.cancelNotification(k)
+                    count++
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to cancel notification $k", e)
+                }
             }
+            Log.i(TAG, "Selective system notification cancellation: $count of ${keys.size} notifications cleared")
+            return count
         }
     }
 

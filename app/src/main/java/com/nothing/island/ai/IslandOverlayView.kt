@@ -420,23 +420,27 @@ fun IslandOverlayView(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .pointerInput(Unit) {
-                                detectHorizontalDragGestures(
-                                    onDragEnd = {
-                                        if (abs(totalNotifDrag) >= swipeThresholdPx) {
-                                            val dir = if (totalNotifDrag < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
-                                            onSwipeActivity(dir)
-                                        }
-                                        totalNotifDrag = 0f
-                                    },
-                                    onDragCancel = {
-                                        totalNotifDrag = 0f
-                                    },
-                                    onHorizontalDrag = { _, dragAmount ->
-                                        totalNotifDrag += dragAmount
+                            .then(
+                                if (!notificationPreferences.swipeToDismissEnabled) {
+                                    Modifier.pointerInput(Unit) {
+                                        detectHorizontalDragGestures(
+                                            onDragEnd = {
+                                                if (abs(totalNotifDrag) >= swipeThresholdPx) {
+                                                    val dir = if (totalNotifDrag < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
+                                                    onSwipeActivity(dir)
+                                                }
+                                                totalNotifDrag = 0f
+                                            },
+                                            onDragCancel = {
+                                                totalNotifDrag = 0f
+                                            },
+                                            onHorizontalDrag = { _, dragAmount ->
+                                                totalNotifDrag += dragAmount
+                                            }
+                                        )
                                     }
-                                )
-                            }
+                                } else Modifier
+                            )
                     ) {
                         if (presentationToRender != null) {
                             NotificationCard(
@@ -456,6 +460,7 @@ fun IslandOverlayView(
                                 maxProgress = presentationToRender.maxProgress,
                                 isIndeterminate = presentationToRender.isIndeterminate,
                                 progressState = presentationToRender.progressState,
+                                swipeToDismissEnabled = notificationPreferences.swipeToDismissEnabled,
                                 onCollapse = {
                                     Log.d("IslandTouch", "NotificationCard COLLAPSE tapped")
                                     onCollapse()
@@ -477,6 +482,7 @@ fun IslandOverlayView(
                                 accentColor = accentColor,
                                 notificationKey = activeNotification.id,
                                 isSystemActive = true,
+                                swipeToDismissEnabled = notificationPreferences.swipeToDismissEnabled,
                                 onCollapse = {
                                     Log.d("IslandTouch", "NotificationCard COLLAPSE tapped")
                                     onCollapse()

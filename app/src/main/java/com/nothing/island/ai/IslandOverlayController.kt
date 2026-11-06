@@ -1242,11 +1242,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val shouldSync = preferencesRepository.liveNotificationPreferences.value.syncDismissWithAndroid
         if (shouldSync) {
             val activeKeys = historyRepository.history.value.filter { it.isSystemActive }.map { it.key }
-            Log.i(TAG, "Sync Dismissals with Android is ON -> Requesting system dismissal for ${activeKeys.size} active alerts")
-            for (k in activeKeys) {
-                IslandNotificationListenerService.cancelSystemNotification(k)
-            }
-            IslandNotificationListenerService.cancelAllSystemNotifications()
+            Log.i(TAG, "Sync Dismissals with Android is ON -> Requesting selective system dismissal for ${activeKeys.size} active alerts")
+            val dismissedCount = IslandNotificationListenerService.cancelSystemNotifications(activeKeys)
+            Log.i(TAG, "Selective system notification dismissal completed: $dismissedCount active alerts cleared from shade")
         } else {
             Log.d(TAG, "Sync Dismissals with Android is OFF -> Android notification shade untouched for Clear All")
         }

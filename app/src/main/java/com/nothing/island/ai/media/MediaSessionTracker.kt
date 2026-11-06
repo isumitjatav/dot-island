@@ -406,9 +406,19 @@ class MediaSessionTracker(
     }
 
     fun seekTo(positionMs: Long) {
+        val track = _currentTrack.value
+        if (!track.canSeek) {
+            Log.w(TAG, "Transport action: seekTo rejected because active session does not support ACTION_SEEK_TO")
+            return
+        }
+        val safeTarget = if (track.durationMs > 0L) {
+            positionMs.coerceIn(0L, track.durationMs)
+        } else {
+            positionMs.coerceAtLeast(0L)
+        }
         try {
-            activeController?.transportControls?.seekTo(positionMs)
-            Log.d(TAG, "Transport action: seekTo $positionMs ms")
+            activeController?.transportControls?.seekTo(safeTarget)
+            Log.d(TAG, "Transport action: seekTo $safeTarget ms")
         } catch (e: Exception) {
             Log.w(TAG, "Failed to execute seekTo", e)
         }
