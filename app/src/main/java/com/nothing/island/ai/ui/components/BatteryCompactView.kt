@@ -54,9 +54,11 @@ import com.nothing.island.ai.NothingMutedText
 import com.nothing.island.ai.NothingWhite
 import com.nothing.island.ai.battery.BatteryPreferences
 import com.nothing.island.ai.battery.BatteryState
+import com.nothing.island.ai.battery.ChargingAnimationStyle
 import com.nothing.island.ai.battery.ChargingSource
 import com.nothing.island.ai.battery.ChargingStatus
 import com.nothing.island.ai.switcher.SwipeDirection
+import com.nothing.island.ai.ui.charging.ChargingAnimationHost
 
 /**
  * BatteryCompactView
@@ -137,66 +139,88 @@ fun BatteryCompactView(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Left Wing: 73dp (Battery Silhouette Icon + Lightning Bolt)
+            // 1. Left Wing: 73dp (Active Charging Animation + Battery Silhouette Icon)
             Box(
                 modifier = Modifier
                     .width(73.dp)
                     .fillMaxHeight()
-                    .padding(start = 10.dp),
+                    .padding(start = 8.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Custom Battery Gauge Icon
-                    Canvas(modifier = Modifier.size(width = 22.dp, height = 12.dp)) {
-                        val strokeW = 1.5.dp.toPx()
-                        val corner = CornerRadius(2.dp.toPx(), 2.dp.toPx())
-                        val bodyW = size.width - 3.dp.toPx()
-                        val bodyH = size.height
-
-                        // Battery Body Outline
-                        drawRoundRect(
-                            color = if (isLowBattery) Color(0xFFFFB300) else Color.White.copy(alpha = 0.85f),
-                            topLeft = Offset(0f, 0f),
-                            size = Size(bodyW, bodyH),
-                            cornerRadius = corner,
-                            style = Stroke(width = strokeW)
-                        )
-
-                        // Battery Terminal Nipple
-                        drawRoundRect(
-                            color = Color.White.copy(alpha = 0.6f),
-                            topLeft = Offset(bodyW + 1.dp.toPx(), bodyH * 0.25f),
-                            size = Size(2.dp.toPx(), bodyH * 0.5f),
-                            cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
-                        )
-
-                        // Inner Charge Level Fill
-                        val fillRatio = (batteryState.percentage.coerceIn(0, 100) / 100f)
-                        val innerPad = strokeW + 1.dp.toPx()
-                        val innerW = (bodyW - (innerPad * 2)) * fillRatio
-                        val innerH = bodyH - (innerPad * 2)
-
-                        if (innerW > 0f) {
-                            val fillColor = when {
-                                isOverheat -> Color(0xFFFF5252)
-                                isLowBattery -> Color(0xFFFFB300)
-                                isCharging -> accentColor
-                                else -> Color.White
-                            }
-                            drawRoundRect(
-                                color = fillColor,
-                                topLeft = Offset(innerPad, innerPad),
-                                size = Size(innerW, innerH),
-                                cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
+                    // Active Selected Charging Animation Host
+                    if (isCharging && preferences.chargingAnimationEnabled) {
+                        Box(
+                            modifier = Modifier.size(26.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            ChargingAnimationHost(
+                                style = preferences.animationStyle,
+                                percentage = batteryState.percentage,
+                                isCharging = isCharging,
+                                accentColor = accentColor,
+                                speed = preferences.animationSpeed,
+                                intensity = preferences.animationIntensity,
+                                glowIntensity = preferences.glowIntensity,
+                                reducedMotion = preferences.reducedMotion,
+                                modifier = Modifier.fillMaxSize()
                             )
                         }
                     }
 
-                    // Mini Charging Bolt Glyph
-                    if (isCharging) {
+                    // Battery Gauge Icon (hidden if BATTERY_CELL animation is already displaying the cell)
+                    if (!isCharging || (preferences.chargingAnimationEnabled && preferences.animationStyle != ChargingAnimationStyle.BATTERY_CELL) || (!preferences.chargingAnimationEnabled)) {
+                        Canvas(modifier = Modifier.size(width = if (isCharging && preferences.chargingAnimationEnabled) 20.dp else 22.dp, height = if (isCharging && preferences.chargingAnimationEnabled) 11.dp else 12.dp)) {
+                            val strokeW = 1.5.dp.toPx()
+                            val corner = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+                            val bodyW = size.width - 3.dp.toPx()
+                            val bodyH = size.height
+
+                            // Battery Body Outline
+                            drawRoundRect(
+                                color = if (isLowBattery) Color(0xFFFFB300) else Color.White.copy(alpha = 0.85f),
+                                topLeft = Offset(0f, 0f),
+                                size = Size(bodyW, bodyH),
+                                cornerRadius = corner,
+                                style = Stroke(width = strokeW)
+                            )
+
+                            // Battery Terminal Nipple
+                            drawRoundRect(
+                                color = Color.White.copy(alpha = 0.6f),
+                                topLeft = Offset(bodyW + 1.dp.toPx(), bodyH * 0.25f),
+                                size = Size(2.dp.toPx(), bodyH * 0.5f),
+                                cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
+                            )
+
+                            // Inner Charge Level Fill
+                            val fillRatio = (batteryState.percentage.coerceIn(0, 100) / 100f)
+                            val innerPad = strokeW + 1.dp.toPx()
+                            val innerW = (bodyW - (innerPad * 2)) * fillRatio
+                            val innerH = bodyH - (innerPad * 2)
+
+                            if (innerW > 0f) {
+                                val fillColor = when {
+                                    isOverheat -> Color(0xFFFF5252)
+                                    isLowBattery -> Color(0xFFFFB300)
+                                    isCharging -> accentColor
+                                    else -> Color.White
+                                }
+                                drawRoundRect(
+                                    color = fillColor,
+                                    topLeft = Offset(innerPad, innerPad),
+                                    size = Size(innerW, innerH),
+                                    cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
+                                )
+                            }
+                        }
+                    }
+
+                    // Fallback Mini Charging Bolt (only when charging and animations disabled)
+                    if (isCharging && !preferences.chargingAnimationEnabled) {
                         Canvas(modifier = Modifier.size(width = 9.dp, height = 14.dp)) {
                             val boltPath = Path().apply {
                                 moveTo(size.width * 0.65f, 0f)

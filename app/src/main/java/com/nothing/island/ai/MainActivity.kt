@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.lifecycleScope
+import com.nothing.island.ai.battery.ChargingAnimationStyle
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.navigation.IslandDestination
 import com.nothing.island.ai.notifications.NotificationPreviewMode
@@ -226,6 +227,27 @@ class MainActivity : ComponentActivity() {
                     IslandPreferencesRepository.getInstance(applicationContext).updateNotificationPreviewMode(mode)
                 }
             } catch (_: Exception) {}
+        }
+
+        val chargingThemeExtra = intent?.getStringExtra("set_charging_theme")
+        if (chargingThemeExtra != null) {
+            try {
+                val style = ChargingAnimationStyle.fromString(chargingThemeExtra)
+                val repo = IslandPreferencesRepository.getInstance(applicationContext)
+                val current = repo.liveBatteryPreferences.value
+                val updated = current.copy(animationStyle = style)
+                repo.updateLiveBatteryPreferences(updated)
+                lifecycleScope.launch {
+                    repo.updateBatteryPreferences(updated)
+                }
+                IslandOverlayController.getInstance(applicationContext).expandBattery()
+            } catch (_: Exception) {}
+        }
+
+        if (intent?.getBooleanExtra("collapse_island", false) == true) {
+            IslandOverlayController.getInstance(applicationContext).collapse()
+        } else if (intent?.getBooleanExtra("expand_battery", false) == true) {
+            IslandOverlayController.getInstance(applicationContext).expandBattery()
         }
     }
 

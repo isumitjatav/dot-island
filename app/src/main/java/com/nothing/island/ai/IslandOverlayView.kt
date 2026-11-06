@@ -79,6 +79,7 @@ import com.nothing.island.ai.notifications.ReplyResult
 import com.nothing.island.ai.notifications.UndoNotificationState
 import com.nothing.island.ai.battery.BatteryPreferences
 import com.nothing.island.ai.battery.BatteryState
+import com.nothing.island.ai.switcher.IslandInterface
 import com.nothing.island.ai.switcher.SwipeDirection
 import com.nothing.island.ai.ui.components.AppNotificationIcon
 import com.nothing.island.ai.ui.components.BatteryCompactView
@@ -270,7 +271,8 @@ fun IslandOverlayView(
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
-    onSwipeActivity: (SwipeDirection) -> Unit = {}
+    onSwipeActivity: (SwipeDirection) -> Unit = {},
+    activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD
 ) {
     val isExpanded = state.mode == IslandMode.EXPANDED
     val accentColor = Color(preferences.accentColorHex)
@@ -298,7 +300,8 @@ fun IslandOverlayView(
             val isBatteryActive = (activeEvent is IslandEvent.ChargingConnected ||
                     activeEvent is IslandEvent.ChargingDisconnected ||
                     (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
-                    (activeEvent is IslandEvent.BatteryWarning))
+                    (activeEvent is IslandEvent.BatteryWarning) ||
+                    (activitySwitcherInterface == IslandInterface.BATTERY))
 
             if (activeNotification != null) {
                 // COMPACT NOTIFICATION PREVIEW (Milestone R6 Phase 3)
@@ -310,7 +313,7 @@ fun IslandOverlayView(
                         onExpandNotificationFocused()
                     }
                 )
-            } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
+            } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && (!currentTrack.isPlaying || activitySwitcherInterface == IslandInterface.BATTERY))) {
                 // COMPACT BATTERY & CHARGING (Milestone R8)
                 // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag
                 BatteryCompactView(

@@ -397,6 +397,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
+                        val activeInterface by activitySwitcher.currentInterface.collectAsState()
 
                         IslandOverlayView(
                             state = masterState.toLegacyIslandState(),
@@ -411,6 +412,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
+                            activitySwitcherInterface = activeInterface,
                             onSelectHistoricalNotification = { key ->
                                 selectHistoricalNotification(key)
                             },
@@ -665,6 +667,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
+                        val activeInterface by activitySwitcher.currentInterface.collectAsState()
 
                         IslandOverlayView(
                             state = masterState.toLegacyIslandState(),
@@ -679,6 +682,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
+                            activitySwitcherInterface = activeInterface,
                             onSelectHistoricalNotification = { key ->
                                 selectHistoricalNotification(key)
                             },
