@@ -130,7 +130,35 @@ All critical baselines were verified against source code and unit tests:
 
 ---
 
-### 7. Section 7 — Exact Files Inspected & Modified
+### 7. Section 7 — Charging Functionality Regression Check
+
+Per sprint audit directives, charging animations were thoroughly examined against both defect claims:
+1. **Defect 1: Charging animations look different from the reference applications.**
+2. **Defect 2: Charging animations only work when the island is expanded.**
+
+#### 7.1 Compact State Charging Investigation
+- **What does the compact state actually render when charging?**
+  - The compact state renders a 200dp x 36dp symmetrical pill (`BatteryCompactView.kt`) centered across the front camera cutout.
+  - **Left Wing (73dp):** When `batteryState.isCharging` and `preferences.chargingAnimationEnabled` are true, a 26dp x 26dp Box embeds `ChargingAnimationHost(...)` running the currently selected kinetic animation theme (Fluid Liquid, Sonic Wave, Particle Warp, etc.), alongside a 20x11dp battery silhouette outline with a live charge-level fill bar and animated pulsing bolt.
+  - **Center Clearance (54dp):** Transparent camera punch-hole clearance.
+  - **Right Wing (73dp):** Monospace percentage readout (`e.g. 63%`) plus charging status badge (`USB`, `AC`, `WIRELESS`, or `FULL` cyan badge).
+- **Is there a separate compact charging animation or only an expanded visualizer?**
+  - Both states utilize the unified `ChargingAnimationHost` component, but with distinct spatial envelopes:
+    - **Compact Path:** Renders inside a 26dp container embedded inside the left wing of `BatteryCompactView`.
+    - **Expanded Path:** Renders inside a prominent 80dp canvas (`BatteryExpandedView.kt`), accompanied by large 32sp monospace percentage readout, live wattage, voltage, temperature, and time-to-full telemetry.
+- **Root Cause of "Expanded-Only" Perception:**
+  1. *Historical Baseline:* Prior to commit `f0b9273`, `BatteryCompactView` only hosted a static vector battery outline with an alpha-pulsing lightning bolt; the dynamic kinetic canvas was exclusively placed in `BatteryExpandedView`.
+  2. *Priority Preemption:* In Nothing Island's priority hierarchy (`IslandPriorityManager`), active media playback (`IslandEvent.Priority.MEDIA = 10`) ranks above the continuous battery fallback state (`Priority.BACKGROUND = 0`). When a phone is actively charging while media is playing, the compact pill displays the media track, not the battery animation, unless a new charging plug event fires (`IslandEvent.BatteryChargingChanged` with a 3.5s timeout) or the user manually navigates to the Battery interface.
+  3. *Scale Factor:* At 26dp x 26dp, intricate animations like Matrix Rain or Particle Warp are condensed into a small wing silhouette compared to the expansive 80dp stage in expanded view.
+- **Visual Differences with Reference Applications:**
+  - *Reference Applications (Dynamic Notch / Dynamic Island Pro):* Employ saturated, rainbow/gradient circular glow rings, glossy green iOS bubbles, and floating skeuomorphic particle rings orbiting the camera cutout.
+  - *Nothing Island:* Strictly adheres to the Nothing OS Design Language: pure monochrome (`NothingBlack`, `NothingDarkGray`, `NothingWhite`, `NothingBorder`) with intentional Nothing Red (`#D71921`) and Nothing Cyan (`#00E5FF`) accents, dot-matrix / monospace typography, and clean geometric vector shaders.
+- **Phase 3 Acceptance Status:**
+  - As explicitly instructed, **Phase 3 Charging Acceptance is NOT claimed**. The visual stylistic departure and compact scale constraints remain acknowledged pending further design alignment.
+
+---
+
+### 8. Section 8 — Exact Files Inspected & Modified
 
 | File Path | Nature of Change |
 | :--- | :--- |
@@ -140,11 +168,11 @@ All critical baselines were verified against source code and unit tests:
 | `app/src/main/java/com/nothing/island/ai/ui/components/MusicExpandedView.kt` | Dynamically hid $\pm10$s skip buttons when session does not declare `ACTION_SEEK_TO` or duration is unknown; bounded position seeking. |
 | `app/src/main/java/com/nothing/island/ai/ui/components/NotificationCard.kt` | Added `swipeToDismissEnabled` parameter and guarded gesture detection. |
 | `app/src/main/java/com/nothing/island/ai/IslandOverlayView.kt` | Delegated expanded horizontal drag gesture exclusively to `NotificationCard` when swipe-to-dismiss is enabled. |
-| `docs/evidence/sprint1_1/` | Physical device test captures covering media playback, swipe gestures, and studio toggles. |
+| `docs/evidence/sprint1_1/` | Physical device test captures covering media playback, swipe gestures, studio toggles, and live compact charging. |
 
 ---
 
-### 8. Physical Device Evidence Catalog
+### 9. Section 9 — Physical Device Evidence Catalog
 
 - `docs/evidence/sprint1_1/sprint1_1_dash.png`: Live media session with rich blurred album artwork background and active $\pm10$s controls.
 - `docs/evidence/sprint1_1/sprint1_1_media_expanded.png`: Expanded media player demonstrating precise track timing and transport buttons.
@@ -154,10 +182,12 @@ All critical baselines were verified against source code and unit tests:
 - `docs/evidence/sprint1_1/sprint1_1_swipe_disabled.png`: Studio state with Direct Swipe-to-Dismiss toggled OFF.
 - `docs/evidence/sprint1_1/sprint1_1_swipe_reenabled.png`: Studio state with Direct Swipe-to-Dismiss restored ON.
 - `docs/evidence/sprint1_1/sprint1_1_baseline_restored.png`: Baseline restoration confirmation.
+- `docs/evidence/sprint1_1/sprint1_1_charging_compact_live.png`: Physical hardware capture of 200dp compact charging pill with active silhouette animation and battery percentage.
+- `docs/evidence/sprint1_1/sprint1_1_charging_replug.png`: Hardware capture of charging connection event capsule displaying live wattage telemetry.
 
 ---
 
-### 9. Remaining Limitations & Ready for Sprint 2
+### 10. Section 10 — Remaining Limitations & Ready for Sprint 2
 
 1. **Third-Party App Non-Standard Media Sessions:** Some web-wrapper apps report static duration values (e.g. `Long.MAX_VALUE`). The bounds coercion safely handles these without crashing.
 2. **Accessibility Re-enabling on Force Stop:** As standard in AOSP Android 14+, running `am force-stop` disables accessibility services in secure settings until re-enabled by the user or ADB.
