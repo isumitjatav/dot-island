@@ -9,7 +9,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -25,15 +24,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Style 2: Electric Pulse Animation
+ * Style 6: Electric Pulse Animation (Fluid & Elemental)
  *
  * High-frequency electrical discharges with surging lightning glyphs and dynamic discharge arcs.
+ * Adapts high-voltage discharge from Reference A #11, #22 & #23.
  */
 @Composable
 fun ElectricPulseAnimation(
     percentage: Int,
     isCharging: Boolean,
-    accentColor: Color,
+    accentColor: Color = Color(0xFF00E5FF),
     speed: Float = 1.0f,
     intensity: Float = 1.0f,
     glowIntensity: Float = 0.6f,
@@ -64,25 +64,29 @@ fun ElectricPulseAnimation(
     )
 
     Box(
-        modifier = modifier.size(110.dp),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
-            val radius = (size.minDimension / 2f) - 8.dp.toPx()
+            val minDim = size.minDimension
+            val radius = (minDim / 2f) - 6.dp.toPx()
+            if (radius <= 0f) return@Canvas
+
+            val strokeWidth = (2.dp.toPx() * intensity).coerceIn(1.5f, 10f)
 
             // 1. Ambient Glow Ring
             val effectiveGlow = (surgeIntensity * glowIntensity * intensity).coerceIn(0.1f, 1f)
             drawCircle(
                 color = accentColor.copy(alpha = 0.12f * effectiveGlow),
-                radius = radius + (4.dp.toPx() * surgeIntensity),
+                radius = radius + (3.dp.toPx() * surgeIntensity),
                 center = center
             )
             drawCircle(
                 color = accentColor.copy(alpha = 0.25f * effectiveGlow),
                 radius = radius,
                 center = center,
-                style = Stroke(width = 1.5.dp.toPx())
+                style = Stroke(width = strokeWidth * 0.8f)
             )
 
             // 2. High-Frequency Discharge Arcs (Dynamic jagged branching lines)
@@ -98,48 +102,52 @@ fun ElectricPulseAnimation(
                     val endR = radius * 0.98f
 
                     val p1 = Offset(
-                        (center.x + startR * cos(angleRad)).toFloat(),
-                        (center.y + startR * sin(angleRad)).toFloat()
+                        center.x + (startR * cos(angleRad)).toFloat(),
+                        center.y + (startR * sin(angleRad)).toFloat()
                     )
                     val p2 = Offset(
-                        (center.x + midR * cos(midAngleRad)).toFloat(),
-                        (center.y + midR * sin(midAngleRad)).toFloat()
+                        center.x + (midR * cos(midAngleRad)).toFloat(),
+                        center.y + (midR * sin(midAngleRad)).toFloat()
                     )
                     val p3 = Offset(
-                        (center.x + endR * cos(angleRad)).toFloat(),
-                        (center.y + endR * sin(angleRad)).toFloat()
+                        center.x + (endR * cos(angleRad)).toFloat(),
+                        center.y + (endR * sin(angleRad)).toFloat()
                     )
 
-                    val arcPath = Path().apply {
+                    val lightningPath = Path().apply {
                         moveTo(p1.x, p1.y)
                         lineTo(p2.x, p2.y)
                         lineTo(p3.x, p3.y)
                     }
 
+                    // Electric cyan branch
                     drawPath(
-                        path = arcPath,
-                        color = Color.White.copy(alpha = (0.7f * surgeIntensity).coerceIn(0.2f, 1f)),
+                        path = lightningPath,
+                        color = accentColor.copy(alpha = 0.85f * surgeIntensity),
                         style = Stroke(
-                            width = 1.5.dp.toPx(),
+                            width = strokeWidth,
                             cap = StrokeCap.Round,
-                            join = StrokeJoin.Round
+                            join = StrokeJoin.Miter
+                        )
+                    )
+
+                    // Intense white core for lightning
+                    drawPath(
+                        path = lightningPath,
+                        color = Color.White.copy(alpha = 0.9f * surgeIntensity),
+                        style = Stroke(
+                            width = strokeWidth * 0.5f,
+                            cap = StrokeCap.Round
                         )
                     )
                 }
-            }
-
-            // 3. Central Angular Discharge Frame (Nothing OS styling)
-            val cornerCount = 8
-            for (i in 0 until cornerCount) {
-                val angle = Math.toRadians((i * 45f).toDouble())
-                val dotOffset = Offset(
-                    (center.x + (radius * 0.95f) * cos(angle)).toFloat(),
-                    (center.y + (radius * 0.95f) * sin(angle)).toFloat()
-                )
+            } else if (isCharging) {
+                // Reduced motion: steady electric outline
                 drawCircle(
-                    color = if (i % 2 == 0) accentColor else Color.White.copy(alpha = 0.4f),
-                    radius = 1.5.dp.toPx(),
-                    center = dotOffset
+                    color = accentColor,
+                    radius = radius,
+                    center = center,
+                    style = Stroke(width = strokeWidth)
                 )
             }
         }

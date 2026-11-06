@@ -9,22 +9,24 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
- * Style 5: Plasma Flow Animation
+ * Style 8: Plasma Flow Animation (Fluid & Elemental)
  *
- * Quad-orb vortex rotating along the pill contour with luminous phosphor trailing tails.
+ * Multi-stop angular sweep gradient with continuous rotation around the punch-hole.
+ * Adapts rotational gradient vortex from Reference A #2 & Reference A Wave #5.
  */
 @Composable
 fun PlasmaFlowAnimation(
@@ -37,79 +39,85 @@ fun PlasmaFlowAnimation(
     reducedMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    val durationMs = if (reducedMotion) 6000 else (2200 / speed.coerceIn(0.5f, 2.0f)).toInt()
+    val durationMs = if (reducedMotion) 6000 else (1800 / speed.coerceIn(0.5f, 2.0f)).toInt()
     val transition = rememberInfiniteTransition(label = "PlasmaFlowTransition")
 
-    val orbitRotation by transition.animateFloat(
+    val rotationAngle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = durationMs, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
-        label = "orbitRotation"
+        label = "plasmaRotation"
+    )
+
+    val breathingScale by transition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = (durationMs * 0.8f).toInt(), easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "plasmaBreathing"
     )
 
     Box(
-        modifier = modifier.size(110.dp),
+        modifier = modifier,
         contentAlignment = Alignment.Center
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
-            val orbitRadius = (size.minDimension / 2f) - 8.dp.toPx()
+            val minDim = size.minDimension
+            val radius = (minDim / 2f) - 6.dp.toPx()
+            if (radius <= 0f) return@Canvas
 
-            // 1. Orbital Ring Guide Track
+            val strokeWidth = (3.5.dp.toPx() * intensity).coerceIn(2f, 14f)
+
+            // 1. Ambient Background Track
             drawCircle(
-                color = Color.White.copy(alpha = 0.08f),
-                radius = orbitRadius,
+                color = Color.White.copy(alpha = 0.1f),
+                radius = radius,
                 center = center,
-                style = Stroke(width = 1.dp.toPx())
+                style = Stroke(width = strokeWidth * 0.8f)
             )
 
-            // 2. 4 Orbiting Plasma Nodes with Phosphor Trailing Tails
-            val nodeCount = 4
-            val tailSteps = if (reducedMotion) 2 else 5
+            // 2. Continuous Liquid-Light Plasma Vortex Sweep
+            val currentRot = if (reducedMotion || !isCharging) 0f else rotationAngle
+            val currentScale = if (reducedMotion || !isCharging) 1.0f else breathingScale
 
-            for (node in 0 until nodeCount) {
-                val baseAngle = (node * 90f) + (if (!reducedMotion) orbitRotation else 0f)
-
-                // Trailing tail particles
-                for (t in tailSteps downTo 1) {
-                    val tailAngle = baseAngle - (t * 7f)
-                    val tailRad = Math.toRadians(tailAngle.toDouble())
-                    val tailPos = Offset(
-                        (center.x + orbitRadius * cos(tailRad)).toFloat(),
-                        (center.y + orbitRadius * sin(tailRad)).toFloat()
-                    )
-                    val tailAlpha = ((1f - (t.toFloat() / (tailSteps + 1))) * 0.4f * glowIntensity).coerceIn(0.05f, 0.6f)
-                    val tailSize = (3.dp.toPx() * (1f - (t.toFloat() / (tailSteps + 2)))).coerceAtLeast(1.dp.toPx())
-
-                    drawCircle(
-                        color = accentColor.copy(alpha = tailAlpha),
-                        radius = tailSize,
-                        center = tailPos
-                    )
-                }
-
-                // Lead Plasma Node
-                val leadRad = Math.toRadians(baseAngle.toDouble())
-                val leadPos = Offset(
-                    (center.x + orbitRadius * cos(leadRad)).toFloat(),
-                    (center.y + orbitRadius * sin(leadRad)).toFloat()
-                )
-
-                // Node outer glow
+            rotate(degrees = currentRot, pivot = center) {
                 drawCircle(
-                    color = accentColor.copy(alpha = (0.35f * glowIntensity).coerceIn(0.1f, 0.7f)),
-                    radius = 5.dp.toPx() * intensity,
-                    center = leadPos
+                    brush = Brush.sweepGradient(
+                        0.0f to Color.White,
+                        0.25f to accentColor,
+                        0.5f to Color.White.copy(alpha = 0.15f),
+                        0.75f to accentColor.copy(alpha = 0.8f),
+                        1.0f to Color.White,
+                        center = center
+                    ),
+                    radius = radius * currentScale,
+                    center = center,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                 )
+            }
 
-                // Node dense core
+            // 3. Proportional Level Indicator Dot
+            val levelAngle = (percentage.coerceIn(0, 100) / 100f) * 360f - 90f
+            val rad = Math.toRadians(levelAngle.toDouble())
+            val dotX = center.x + (radius * Math.cos(rad)).toFloat()
+            val dotY = center.y + (radius * Math.sin(rad)).toFloat()
+
+            drawCircle(
+                color = Color.White,
+                radius = strokeWidth * 1.1f,
+                center = Offset(dotX, dotY)
+            )
+            if (glowIntensity > 0f) {
                 drawCircle(
-                    color = Color.White,
-                    radius = 2.5.dp.toPx(),
-                    center = leadPos
+                    color = accentColor.copy(alpha = 0.4f * glowIntensity),
+                    radius = strokeWidth * 2.2f,
+                    center = Offset(dotX, dotY)
                 )
             }
         }

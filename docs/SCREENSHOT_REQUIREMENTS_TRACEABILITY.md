@@ -1,362 +1,312 @@
-# Nothing Island — Reference Screenshot Requirements Traceability Matrix
+# Nothing Island — Master Requirements & Evidence Traceability Matrix
+## Unified Reference Audit: Screenshots, Videos & Hardware Telemetry
 
-**Document ID:** `SPEC-TRACE-2026-R1`  
-**Phase:** Phase 1: Complete UI Audit & Design Specification  
+**Document ID:** `SPEC-TRACE-2026-MASTER-R2`  
+**Phase:** Phase 2 UI Redesign Baseline & Subsystem Verification Gate  
 **Package:** `com.nothing.island.ai`  
-**Target Hardware:** Nothing Phone (4a), Android 17 / API 37 (Screen: 1224 × 2720 px, Top-Center Cutout)  
-**Accepted Baseline Checkpoint:** R8 (Battery & Charging Intelligence, 235 Passing Unit Tests)  
-**Reference Folder Inspected:** `C:\Users\User\.gemini\antigravity\scratch\nothing-island\reference\ui-screenshots\`  
+**Target Hardware:** Nothing Phone (4a), Android 17 / API 37 (Screen: 1224 × 2720 px, Cutout: Top-Center Punch Hole)  
+**Accepted Baseline Checkpoint:** R8 + Phase 2 (Design System & Navigation Shell, 241 Passing Unit Tests)  
+**Reference Folders Audited:**  
+- `reference/ui-screenshots/` (20 JPEG Reference Screenshots)  
+- `reference/nectarlink/` (8 MP4 Screen Recordings + 3 PNG Promotional Screenshots)  
 **Date:** November 6, 2026  
-**Status:** APPROVED / INVENTORY & TRACEABILITY COMPLETE  
+**Status:** FULLY RECONCILED & MERGED (All 39 Screenshot Reqs + 33 NectarLink Reqs Unified)
 
 ---
 
 ## 1. Executive Summary & Audit Methodology
 
-A rigorous, full-resolution visual audit was conducted on all **20 reference screenshots** supplied in the project reference directory (`reference/ui-screenshots/`). In accordance with engineering instructions:
-- Every image file was located, cataloged, and visually inspected at full native resolution without downsampling.
-- Original screenshot files were preserved in their exact original binary state with zero modifications.
-- Application source code was left completely unmodified during this audit.
-- Every visible user-facing feature, switch, toggle, slider, stepper (`-`/`+`), color picker, preview state, animation curve, visualizer style, text typography control, and interactive gesture was extracted and mapped.
+This document serves as the single authoritative source of truth reconciling all visual and behavioral requirements extracted from:
+1. **The 20 Original UI Screenshots** in `reference/ui-screenshots/` (`REQ-01` to `REQ-39`).
+2. **The 8 Video Screen Recordings & 3 Feature Screenshots** in `reference/nectarlink/` (`NL-REQ-01` to `NL-REQ-33`).
+3. **The 38 Reference Charging Notch Animations** reverse-engineered from Dynamic Notch (`com.dynamicisland.notchscreenview`).
+4. **The Accepted Implementation Baseline:** R8 Battery & Charging Intelligence + Phase 2 Design System Primitives and 5-Destination Navigation Shell (241 passing unit tests).
 
-The reference screenshots provide concrete, observable product requirements from leading notch companion applications (*Dynamic Notch* and *Dynamic Island Pro*). This document provides direct bidirectional traceability between the visual evidence in the screenshots, the existing Nothing Island codebase (as of accepted checkpoint R8), and the proposed **Nothing OS 3.x Studio Architecture** defined in `docs/UI_UX_REDESIGN_SPECIFICATION.md`.
-
----
-
-## 2. Complete Reference Screenshot Inventory
-
-The folder `reference/ui-screenshots/` contains exactly **20 JPEG screenshot files** (total size: 1,298,871 bytes). Below is the comprehensive inventory:
-
-| # | Filename | Resolution | File Size | Primary Category | Screen Title / Context | Visual Summary |
-|---|---|---|---|---|---|---|
-| 1 | `bluetooth-connection (2).jpg` | 1080 × 2400 | 29,422 B | Bluetooth Audio | Connection (Expanded Preview) | Expanded pill preview with AirPods Pro icon, "Connected / AirPods Pro", circular green battery progress ring with "75%", "Show Connection" toggle, and "Notch is Not Active / Activate" warning banner. |
-| 2 | `bluetooth-connection.jpg` | 1080 × 2400 | 54,514 B | Bluetooth Audio | Connection (Compact Preview) | Compact capsule preview with AirPods Pro icon on left and circular green battery progress ring with "75" on right, "Show Connection" toggle, and service status banner. |
-| 3 | `charging themes.jpg` | 1080 × 2400 | 38,506 B | Charging & Battery | Charging Themes (Gallery) | 2-column visual grid showing 30+ distinct charging themes (cyan lightning bolt glow, green glowing capsule, energy orbs, flame eye, magic potion bottle, dual lightning surge, orbiting hearts, numeric gauge "Charging 50%", circular gauge, creature mascots). |
-| 4 | `dynamic themes (2).jpg` | 1080 × 2400 | 26,957 B | Themes & Palette | Preset Themes (Grid Mid) | 2-column card grid of 32+ named colorway presets: Classic Black (selected), Minimal Gray, Midnight, Amethyst (VIP), Sunset (VIP), Neon Cyber (VIP), Royal Gold (VIP), Ocean Breeze (VIP), Crimson Fire (VIP), Deep Space (VIP), Forest Rain, Purple Haze, Cherry Blossom, Golden Hour, The Matrix (VIP), Cyber Pink, Mint Fresh, Silver Lining, Carbon Fiber, Electric Blue, Sweet Candy, Northern Lights, Pure White, Vampire Red, Emerald City, Cosmic Void, Rose Gold, Ice Cold, Lemon Twist, Twilight, Hot Lava (VIP), Sea Foam. |
-| 5 | `dynamic themes (3).jpg` | 1080 × 2400 | 32,755 B | Themes & Palette | Preset Themes (Grid Bottom) | Scrolled continuation of the preset colorway grid showing Nebula, Bumblebee, and multi-color Rainbow gradient with VIP crown indicators. |
-| 6 | `dynamic themes.jpg` | 1080 × 2400 | 38,880 B | Themes & Palette | Theme Studio (Top-Level) | Header "Theme", "UPGRADE" crown action, "Notch is Not Active / Activate" warning banner, subtitle "Select a theme for your notch", and "Preset Themes" card grid. |
-| 7 | `face lock.jpg` | 1080 × 2400 | 53,547 B | Biometrics & Security | Face ID Feedback | Header "Face ID", "UPGRADE" badge, description "When Face ID is verified, feedback is displayed in the notch", "Face ID / Show Face ID" switch (ON), expanded preview with squircle notch card showing neon green smiling Face ID glyph inside scanning brackets. |
-| 8 | `flashy border animation style.jpg` | 1080 × 2400 | 78,541 B | Animations & Border Glow | Border Animation Style | "SELECT ANIMATION TYPE 👑", radio selector: "Multi Color Animation" (checked) vs "Single Color Animation", Speed slider with `-`/`+` steppers, Border thickness slider with `-`/`+` steppers, and "COLORS" palette chips with remove `(x)` tags (Blue, Red, Yellow, Green, Cyan, + Add). |
-| 9 | `flashy border animation.jpg` | 1080 × 2400 | 63,548 B | Animations & Border Glow | Flashy Border Animation | Header "Flashy Border Animation", "RESET" action button, "Enable / Notch Border Animation" switch (ON), description, simulated notch preview with multi-colored glowing border and Play button, card link to "Animation Style >". |
-| 10 | `music player settings.jpg` | 1080 × 2400 | 100,681 B | Music & Media | Music Player (Secondary Settings) | Header "Music Player", "OTHER SETTINGS": "Long Press : Volume Control" toggle (ON), "Album Photo as Player Bg" toggle (OFF), "Show Fast-Forward Buttons" toggle (ON), "Only show while Playing Audio" toggle (OFF), "Blocked Apps For Music" card ("0 Apps >"), "STYLE" radio selector: "Rotation On" (vinyl disc + blue waveform) vs "Rotation Off" (square static art + blue waveform). |
-| 11 | `music player.jpg` | 1080 × 2400 | 73,905 B | Music & Media | Music Player (Expanded Preview) | Header "Music Player", "Enable / Music Player" toggle (ON), expanded preview card with circular vinyl album artwork, "Music Title", "Music Description", blue 5-bar jumping equalizer, "1:30" elapsed time, scrub bar with circular thumb, "5:00" duration, and 5 controls: 10s Rewind `(10)`, Previous `\|<<`, Pause `\|\|`, Next `>>\|`, 10s Fast-Forward `(10)`. |
-| 12 | `notch swipe animation.jpg` | 1080 × 2400 | 64,454 B | Motion Physics | Dual Popup Notch Swipe Animation | Header "NOTCH ANIMATION", "Notch Swipe Animation", 3 selectable physics cards for dual popups in small notch: "Liquid" (fluid connecting bridge between primary capsule and secondary pill), "Bouncy" (elastic overshoot and rebound), "Droplet" (surface tension droplet separation). |
-| 13 | `notification expanded.jpg` | 1080 × 2400 | 86,909 B | Notifications | Notification Expanded Card & Typography | "BIG NOTCH PREVIEW": green chat icon, "CHATAPP • 2 min ago", "CLEAR ALL", close "X", sender avatar, bold "Notification Title", body text, down chevron, action buttons ("REPLY", "MARK AS READ", "MUTE", bell icon). Section "TEXT & COLOR": Bg Color chip, Text Color chip, "Auto Background Color" toggle (VIP). Section "TEXT SIZE": Title slider with `-`/`+` steppers, Subtext slider with `-`/`+` steppers, Buttons slider with `-`/`+` steppers. "TEXT STYLE" section. |
-| 14 | `notification style.jpg` | 1080 × 2400 | 73,407 B | Notifications | Notification Style Configuration | Header "Notification", "Reset" action, "Enable / Notification" switch (ON), "NOTIFICATION STYLE" visual selector: "Expanded Popup" (checked) vs "Small Popup" (unchecked), "Auto Expand Notification During DND" switch (OFF), "Blocked App Notification" card ("0 Apps >"), "OTHER SETTINGS": "Show Sensitive Content?" card (`>`). |
-| 15 | `notification.jpg` | 1080 × 2400 | 64,646 B | Notifications | Notification (Compact Preview) | Header "Notifications", "UPGRADE" crown badge, "Notifications / Show Notifications" switch (ON), compact capsule preview showing WhatsApp green icon, "WhatsApp", "Hey, are we still meeting today?", and "Now" timestamp. |
-| 16 | `order tracking.jpg` | 1080 × 2400 | 110,254 B | Live Activities | Live Order Tracking | Header "Order Tracking", "Enable 👑 / Live Order Tracking" switch (ON), dual preview: compact pill with delivery scooter + "5min" + green bottom progress underline; expanded card with "Order is on the way! / Arriving in 5 Minutes", horizontal route progress bar with scooter marker at 50%, and 3D delivery rider graphic; footnote "Track Blinkit orders in your Dynamic Notch". |
-| 17 | `screen unlock.jpg` | 1080 × 2400 | 55,310 B | System Events | Device Unlock Feedback | Header "Device Unlock", "UPGRADE" badge, description "Feedback displayed when device is unlocked", "Device Unlock / Show Device Unlock" switch (ON), compact pill preview with open white padlock glyph on left. |
-| 18 | `silent.jpg` | 1080 × 2400 | 60,138 B | Audio & Ringer | Silent Mode Feedback | Header "Silent Mode", "UPGRADE" badge, description "Feedback when ringer mode is changed to silent", "Silent Mode / Show Silent Mode" switch (ON), compact capsule preview with red slashed-bell glyph on left and bold red text "Silent" on right. |
-| 19 | `sound-on.jpg` | 1080 × 2400 | 57,194 B | Audio & Ringer | Ringing Mode Feedback | Header "Ringing Mode", "UPGRADE" badge, description "Feedback when ringer mode is changed to normal/sound on", "Ringing Mode / Show Ring Mode" switch (ON), compact capsule preview with white ringing bell glyph on left and bold white text "Sound on" on right. |
-| 20 | `swipe animation.jpg` | 1080 × 2400 | 36,516 B | Onboarding & Gestures | Permission & Gesture Tutorial | "Skip" button, title "Allow Necessary Permissions", subtitle "To use all Functionality of DynamicNotch you need to allow below permissions", preview well showing dual island (left capsule: Sun+Cloud weather glyph + "32°"; right pill: circular album art with "EVENT" badge), and animated hand index finger swiping beneath the island to teach dual-module navigation. |
+### Core Audit Principles:
+- **Zero Omissions:** Every unique requirement from both media sets is preserved with exact source filenames and timestamps.
+- **Strict Evidence Tiers:**
+  - *Tier 1 (T1):* Static APK resource discovery (drawables, layouts, JSON/Lottie assets).
+  - *Tier 2 (T2):* Decompiled source-code analysis (bytecode, model classes, registry lists).
+  - *Tier 3 (T3):* Inferred runtime behavior from decompiled logic.
+  - *Tier 4 (T4):* Observed live on Nothing Phone (4a) runtime via supported navigation route.
+  - *Tier 5 (T5):* Physical device metrics, dumpsys battery, and OS security boundaries.
+- **Implementation Isolation:** Zero subsystem implementations (R9 Call Intelligence, Bluetooth GATT receivers, Live Activities) are commenced in this documentation task.
 
 ---
 
-## 3. Granular Requirements Extraction
+## 2. Complete Reference Evidence Inventory
 
-Every observable setting, control, visualizer, and behavior from the 20 screenshots is extracted below, cataloged by functional domain:
-
-### 3.1 Media & Music Player (`music player.jpg`, `music player settings.jpg`)
-1. **Master Switch:** `Enable / Music Player` toggle switch.
-2. **Vinyl Artwork Rotation:** Toggle / radio option `Rotation On` (smooth 360° spinning vinyl record disc with circular center artwork) vs `Rotation Off` (static square rounded artwork).
-3. **Equalizer Visualizer:** Jumping 5-bar vertical equalizer waveform in electric blue.
-4. **Playback Scrub Bar:** Interactive seek bar with elapsed time display (`1:30`), circular draggable thumb, and total track duration (`5:00`).
-5. **Transport Controls (5-Button Layout):**
-   - 10-second Rewind button: circular arrow icon with `10` numeral inside.
-   - Previous Track button: `|<<`.
-   - Play/Pause toggle button: `||` / `▶` inside circular surface.
-   - Next Track button: `>>|`.
-   - 10-second Fast-Forward button: circular arrow icon with `10` numeral inside.
-6. **Show Fast-Forward Buttons:** User toggle to show or hide the 10s fast-forward / rewind buttons in the expanded player.
-7. **Volume Gesture Control:** Toggle `Long Press : Volume Control` ("Long press the notch and swipe left or right to increase or decrease the volume").
-8. **Blurred Album Art Background:** Toggle `Album Photo as Player Bg` ("Shows blurred album photo as music player background").
-9. **Display Policy:** Toggle `Only show while Playing Audio` ("Only display in notch when music is currently playing, hide during videos/paused state").
-10. **Audio Blacklist:** App selector `Blocked Apps For Music` (`0 Apps >`) to exclude specific packages (e.g. WhatsApp voice notes, Google Maps audio cues, YouTube).
-
-### 3.2 Notifications (`notification.jpg`, `notification expanded.jpg`, `notification style.jpg`)
-1. **Master Switch:** `Enable / Notification` (`Show Notifications`) toggle switch.
-2. **Popup Sizing Mode:** Visual radio selector between:
-   - `Expanded Popup`: Direct expansion with avatar, title, body, action buttons.
-   - `Small Popup`: Compact single-line capsule wrapping the camera punch-hole.
-3. **Compact Notification Content:**
-   - App icon on left (e.g. WhatsApp rounded icon).
-   - Sender/Title text in bold.
-   - Message preview snippet.
-   - Timestamp on right (e.g. `Now`, `2 min ago`).
-4. **Expanded Notification Card Layout:**
-   - App header row: App icon + App Name in uppercase + dot divider + timestamp + `CLEAR ALL` text action button + dismiss `X` button.
-   - Content row: Circular sender avatar + bold Title + multi-line Body text + expand/collapse chevron.
-   - Action Button Row: Pill chips for `REPLY`, `MARK AS READ`, `MUTE`, and bell icon.
-5. **DND Auto-Expand Override:** Toggle `Auto Expand Notification During DND` ("Automatically expand popup even when Do Not Disturb is active").
-6. **App Blacklist:** Setting `Blocked App Notification` (`0 Apps >`) to suppress notifications from specific packages.
-7. **Privacy & Lock Screen:** Setting `Show Sensitive Content?` (`>`).
-8. **Custom Text & Background Colors:**
-   - `Bg Color` picker chip.
-   - `Text Color` picker chip.
-   - `Auto Background Color` toggle (auto-extract dominant accent color from notification app icon).
-9. **Granular Typography Steppers:**
-   - `Title` size slider with `-` and `+` stepper buttons.
-   - `Subtext` size slider with `-` and `+` stepper buttons.
-   - `Buttons` size slider with `-` and `+` stepper buttons.
-10. **Reset Action:** `Reset` button to restore factory notification appearance.
-
-### 3.3 Battery & Charging Intelligence (`charging themes.jpg`)
-1. **Visual Theme Gallery:** 2-column visual grid of 30+ distinct charging themes:
-   - Cyan lightning bolt glow with electric arc aura around black notch.
-   - Neon green glowing capsule with centered lightning bolt.
-   - Green energy orb / sphere with lightning core.
-   - Red/orange flame eye with glowing ember particles.
-   - Magic potion bottle with bubbling green liquid.
-   - Lightning surge: dual electric bolts flanking the camera cutout.
-   - Floating red/pink hearts orbiting the notch pill.
-   - Sleek minimal numeric gauge: `Charging 50%` inside technical pill with plug icon.
-   - Circular battery percentage gauge with animated rotating progress arc.
-   - Stylized creatures, cyberpunk meters, and liquid battery fills.
-2. **Interactive Preview & Instant Apply:** Tapping any theme card immediately previews and applies it to the active overlay.
-
-### 3.4 Themes & Palette Engine (`dynamic themes.jpg`, `dynamic themes (2).jpg`, `dynamic themes (3).jpg`)
-1. **Preset Colorway Gallery:** 2-column card grid with 32+ named presets:
-   - `Classic Black`, `Minimal Gray`, `Midnight`, `Amethyst`, `Sunset`, `Neon Cyber`, `Royal Gold`, `Ocean Breeze`, `Crimson Fire`, `Deep Space`, `Forest Rain`, `Purple Haze`, `Cherry Blossom`, `Golden Hour`, `The Matrix`, `Cyber Pink`, `Mint Fresh`, `Silver Lining`, `Carbon Fiber`, `Electric Blue`, `Sweet Candy`, `Northern Lights`, `Pure White`, `Vampire Red`, `Emerald City`, `Cosmic Void`, `Rose Gold`, `Ice Cold`, `Lemon Twist`, `Twilight`, `Hot Lava`, `Sea Foam`, `Nebula`, `Bumblebee`, `Rainbow`.
-2. **Visual Selection Indicator:** Active radio checkmark on currently applied preset.
-3. **Live Theme Preview:** Notch preview card reflecting applied palette.
-4. **Service Status Guidance:** Warning banner `Notch is Not Active / Activate` guiding user when accessibility overlay is disabled.
-
-### 3.5 Border Animations & Glow Effects (`flashy border animation.jpg`, `flashy border animation style.jpg`)
-1. **Master Switch:** `Enable / Notch Border Animation` toggle switch.
-2. **Preview Well:** Live animated preview card displaying the glowing notch border with a Play/Test button.
-3. **Animation Style Configuration:**
-   - Radio option `Multi Color Animation` (checked) vs `Single Color Animation`.
-   - Speed slider with `-` and `+` stepper buttons.
-   - Border thickness slider with `-` and `+` stepper buttons.
-   - Dynamic color chip palette with remove `(x)` tags on each chip (e.g. Blue, Red, Yellow, Green, Cyan) and `+ Add Color` picker.
-4. **Reset Action:** `RESET` button restoring default border animation values.
-
-### 3.6 Motion Physics & Dual-Popup Transitions (`notch swipe animation.jpg`)
-1. **Dual Popup Animation Physics:** Visual radio selector between 3 distinct physics curves:
-   - `Liquid`: Viscous fluid bridge stretching between primary notch and secondary capsule.
-   - `Bouncy`: Spring physics with elastic overshoot and rebound waves.
-   - `Droplet`: Surface tension droplet separation.
-
-### 3.7 System Events & Peripheral Feedback (`bluetooth-connection.jpg`, `bluetooth-connection (2).jpg`, `face lock.jpg`, `screen unlock.jpg`, `silent.jpg`, `sound-on.jpg`)
-1. **Bluetooth Audio Connection:**
-   - Toggle `Show Connection` ("Show connection popup in small notch").
-   - Compact presentation: Earbuds icon (left) + circular green battery percentage ring (right).
-   - Expanded presentation: Earbuds icon (left) + `Connected / [Device Name]` (center) + circular green battery ring with `%` (right).
-2. **Face ID / Biometric Verification:**
-   - Toggle `Show Face ID` ("When Face ID is verified, feedback is displayed in the notch").
-   - Expanded squircle card with neon green smiling face glyph inside scanning brackets.
-3. **Device Screen Unlock:**
-   - Toggle `Show Device Unlock` ("Feedback displayed when device is unlocked").
-   - Compact pill preview with open white padlock glyph on left.
-4. **Silent Mode Alert:**
-   - Toggle `Show Silent Mode` ("Feedback when ringer mode is changed to silent").
-   - Compact capsule with red slashed-bell icon on left + bold red `Silent` text on right.
-5. **Ringing Mode Alert:**
-   - Toggle `Show Ring Mode` ("Feedback when ringer mode is changed to normal/sound on").
-   - Compact capsule with white ringing bell icon on left + bold white `Sound on` text on right.
-
-### 3.8 Onboarding, Multi-Module Island & Gesture Guidance (`swipe animation.jpg`)
-1. **Dual Island Architecture:** Left capsule (e.g. Weather icon + `32°`) paired with right circular pill (e.g. Media album art with `EVENT` badge).
-2. **Swipe Gesture Tutorial:** Visual animated finger gesture demonstrating horizontal swipe interaction beneath the island to switch between active modules or expand.
-3. **Onboarding Integration:** Permissive setup screen with `Skip` button and clear explanatory copy.
-
----
-
-## 4. Direct Traceability & Gap Analysis Matrix
-
-This matrix maps every single requirement extracted from the 20 screenshots to:
-1. **Evidence Screenshot:** Exact reference image filename.
-2. **Existing Implementation Status:** State of the Nothing Island codebase at accepted checkpoint R8 (235 passing unit tests, verified via Gradle). Note: Project workspace is maintained as a directory snapshot without an initialized local Git repository.
-3. **Gap Classification:**
-   - `Fully Implemented (Overlay + UI)`
-   - `Overlay Engine Ready (UI Missing / Unexposed)`
-   - `Partially Implemented (Logic Exists, UI Needs Restructuring)`
-   - `New UI Requirement (Targeted for Redesign Specification)`
-   - `Subsystem Feature Gap (Roadmap R9–R12)`
-4. **Target Redesign Destination:** Screen and Studio location in `docs/UI_UX_REDESIGN_SPECIFICATION.md`.
-
-| # | Requirement Extracted | Evidence Screenshot | Existing Codebase Status (R8 Checkpoint) | Gap Classification | Target Redesign Destination |
+### 2.1 Original Reference Screenshots (`reference/ui-screenshots/`)
+| # | Filename | Resolution | Size | Category | Primary Feature Evidence |
 |---|---|---|---|---|---|
-| 1 | Bluetooth connection toggle (`Show Connection`) | `bluetooth-connection.jpg` | Unimplemented. No Bluetooth broadcast receiver or GATT battery listener. | Subsystem Feature Gap (R9+) | Settings & Peripheral Studio |
-| 2 | Bluetooth compact pill (earbuds icon + circular battery ring) | `bluetooth-connection.jpg` | Unimplemented in overlay. `IslandStateRepository` lacks Bluetooth state. | Subsystem Feature Gap (R9+) | Overlay Renderer & Peripheral Studio |
-| 3 | Bluetooth expanded card (device name + battery %) | `bluetooth-connection (2).jpg` | Unimplemented in overlay. | Subsystem Feature Gap (R9+) | Overlay Renderer & Peripheral Studio |
-| 4 | Service disabled warning banner (`Notch is Not Active / Activate`) | `bluetooth-connection.jpg`, `dynamic themes.jpg` | In `HomeScreen.kt`, only basic text indicator exists. No actionable banner across studios. | New UI Requirement | Global Studio Header / Banner Component |
-| 5 | 2-column visual grid of charging themes (30+ styles) | `charging themes.jpg` | 5 authentic Nothing OS styles implemented in `ChargingVisualizer.kt`, but UI in `AppearanceScreen.kt` only has plain radio buttons. | Overlay Engine Ready (UI Missing) | `ChargingStudioScreen.kt` (Visual Grid) |
-| 6 | Minimal numeric battery pill (`Charging 50%` + plug) | `charging themes.jpg` | Implemented in `BatteryCompactView.kt` (`LevelText` + `BoltIcon`). | Fully Implemented (Overlay) | `ChargingStudioScreen.kt` |
-| 7 | Circular battery percentage gauge with progress ring | `charging themes.jpg`, `bluetooth-connection.jpg` | Implemented in `ChargingVisualizer.kt` (`HYPER_RING` style). | Fully Implemented (Overlay) | `ChargingStudioScreen.kt` |
-| 8 | 32+ named theme presets in 2-column grid | `dynamic themes.jpg`, `dynamic themes (2).jpg`, `dynamic themes (3).jpg` | `IslandPreferences.presetName` exists in DataStore, but UI only offers 3 hardcoded text buttons. | Partially Implemented (UI Needs Restructuring) | `ThemeStudioScreen.kt` (Preset Grid) |
-| 9 | VIP Crown badge on premium themes | `dynamic themes.jpg`, `order tracking.jpg` | No paywall or VIP gating exists (Nothing Island is 100% offline & open-source). | Deliberately Excluded (Free & Open Source) | Replaced with "Nothing OS Original" badge |
-| 10 | Face ID verification feedback card (smiling face glyph) | `face lock.jpg` | Unimplemented. No `BiometricPrompt` or keyguard auth listener. | Subsystem Feature Gap (R10) | Security Studio / System Events |
-| 11 | Master switch for border animation | `flashy border animation.jpg` | `isPulsing` boolean exists in `IslandPreferences`. | Partially Implemented | `AnimationStudioScreen.kt` |
-| 12 | Border animation speed slider with `-`/`+` steppers | `flashy border animation style.jpg` | Speed is hardcoded in Compose animation spec. No stepper slider in UI. | New UI Requirement | `AnimationStudioScreen.kt` (Stepper Slider) |
-| 13 | Border thickness slider with `-`/`+` steppers | `flashy border animation style.jpg` | Thickness is hardcoded. No stepper slider in UI. | New UI Requirement | `AnimationStudioScreen.kt` (Stepper Slider) |
-| 14 | Multi-color palette chips with remove `(x)` tags | `flashy border animation style.jpg` | Unimplemented. Only single accent hex supported in repository. | New UI Requirement | `AnimationStudioScreen.kt` (Palette Chips) |
-| 15 | Reset button for border animation / themes | `flashy border animation.jpg`, `notification style.jpg` | Reset to defaults exists in `IslandPreferencesRepository.resetToHardwareDefaults()`, but no UI button in screens. | Overlay Engine Ready (UI Missing) | Studio Action Bars (`Reset` Button) |
-| 16 | Music Master switch (`Enable / Music Player`) | `music player.jpg` | Media session listener active in `IslandMediaSessionListenerService`. Setting toggle exists in `SettingsScreen.kt`. | Fully Implemented | `MusicStudioScreen.kt` |
-| 17 | Vinyl album artwork rotation toggle (`Rotation On/Off`) | `music player settings.jpg` | `music_album_rotation_enabled` exists in `MusicPreferences` and DataStore! **Zero UI controls exposed.** | Overlay Engine Ready (UI Missing) | `MusicStudioScreen.kt` (Style Selector) |
-| 18 | Blurred album photo as player background toggle | `music player settings.jpg` | Unimplemented in `MediaExpandedView.kt`. Player background is pure black (`NothingSurfaceLowest`). | New UI Requirement | `MusicStudioScreen.kt` |
-| 19 | 10s Fast-Forward and 10s Rewind buttons `(10)` | `music player.jpg`, `music player settings.jpg` | Missing from `MediaExpandedView.kt` (currently has Previous, Play/Pause, Next, Seek). Toggle missing. | New UI Requirement | `MediaExpandedView.kt` & `MusicStudioScreen.kt` |
-| 20 | Long-press volume swipe gesture (`Long Press : Volume Control`) | `music player settings.jpg` | Unimplemented. Overlay touch handler supports tap and horizontal swipe, but not long-press volume drag. | Subsystem Feature Gap (R9) | `GestureStudioScreen.kt` |
-| 21 | Only show while playing audio toggle | `music player settings.jpg` | Event engine auto-collapses on pause, but preference key not exposed in DataStore or UI. | Partially Implemented | `MusicStudioScreen.kt` |
-| 22 | Blocked apps for music (`Blocked Apps For Music`) | `music player settings.jpg` | Package blacklist not currently filtered in `IslandMediaSessionListenerService`. | Subsystem Feature Gap (R9) | `MusicStudioScreen.kt` (App Selector) |
-| 23 | Dual popup animation physics (`Liquid`, `Bouncy`, `Droplet`) | `notch swipe animation.jpg` | Overlay uses standard Compose `spring()`. No physics curve selection in DataStore or UI. | New UI Requirement | `AnimationStudioScreen.kt` (Physics Selector) |
-| 24 | Notification master switch (`Enable / Notification`) | `notification style.jpg`, `notification.jpg` | `notif_enabled` exists in `NotificationPreferences` and DataStore. Toggle exposed in `SettingsScreen.kt`. | Fully Implemented | `NotificationStudioScreen.kt` |
-| 25 | Notification style selector (`Expanded Popup` vs `Small Popup`) | `notification style.jpg` | `notif_preview_mode` (`COMPACT`, `EXPANDED`) exists in `NotificationPreferences`! **No visual UI selector.** | Overlay Engine Ready (UI Missing) | `NotificationStudioScreen.kt` (Visual Radio) |
-| 26 | DND auto-expand override toggle (`Auto Expand During DND`) | `notification style.jpg` | Auto-expand implemented in R7.1 (`autoExpandOnNotification`), but DND bypass preference not modeled. | Subsystem Feature Gap (R9) | `NotificationStudioScreen.kt` |
-| 27 | Blocked apps for notifications (`Blocked App Notification`) | `notification style.jpg` | `notif_excluded_packages` (`Set<String>`) exists in `NotificationPreferences`! **Zero UI controls exposed.** | Overlay Engine Ready (UI Missing) | `NotificationStudioScreen.kt` (App Picker) |
-| 28 | Show sensitive content toggle | `notification style.jpg` | `notif_hide_sensitive` exists in `NotificationPreferences`! **Zero UI controls exposed.** | Overlay Engine Ready (UI Missing) | `NotificationStudioScreen.kt` |
-| 29 | Expanded notification `CLEAR ALL` button | `notification expanded.jpg` | Action buttons (Reply, Mark as Read) and Undo dismissal exist in R6/R7. No "Clear All" batch dismissal button. | New UI Requirement | `NotificationExpandedView.kt` & Studio |
-| 30 | Granular notification typography steppers (Title, Subtext, Buttons) | `notification expanded.jpg` | Font sizes are hardcoded in Compose tokens (`14.sp`, `12.sp`). No slider/stepper controls exist. | New UI Requirement | `NotificationStudioScreen.kt` (Typography) |
-| 31 | Custom notification background and text color pickers | `notification expanded.jpg` | Card colors hardcoded to Nothing dark palette. No per-module color picker. | New UI Requirement | `NotificationStudioScreen.kt` (Color Pickers) |
-| 32 | Auto background color from app icon | `notification expanded.jpg` | `useAdaptiveAccent` implemented for music in R7. Notification adaptive palette not yet implemented. | Subsystem Feature Gap (R9) | `NotificationStudioScreen.kt` |
-| 33 | Compact single-line notification preview (WhatsApp) | `notification.jpg` | Implemented in `NotificationCompactView.kt`. In-app preview in `HomeScreen.kt` is static/blank. | Partially Implemented (In-app preview missing) | `IslandPreview.kt` & Studio |
-| 34 | Live order tracking (Blinkit / Delivery scooter progress) | `order tracking.jpg` | Unimplemented. Roadmap gap for Live Activities / Delivery scraping. | Subsystem Feature Gap (R11) | Live Activities Studio (Future R11) |
-| 35 | Device unlock momentary feedback (open padlock glyph) | `screen unlock.jpg` | Unimplemented. Requires `ACTION_USER_PRESENT` keyguard broadcast receiver. | Subsystem Feature Gap (R10) | System Events / Security Studio |
-| 36 | Silent mode feedback pill (red slashed-bell + `Silent`) | `silent.jpg` | Unimplemented. Requires `RINGER_MODE_CHANGED_ACTION` broadcast receiver. | Subsystem Feature Gap (R9) | Audio & Ringer Studio (R9) |
-| 37 | Ringing mode feedback pill (white bell + `Sound on`) | `sound-on.jpg` | Unimplemented. Requires `RINGER_MODE_CHANGED_ACTION` broadcast receiver. | Subsystem Feature Gap (R9) | Audio & Ringer Studio (R9) |
-| 38 | Dual-capsule island layout (Weather pill + Media circle) | `swipe animation.jpg` | Activity Switcher in R8 switches between single fullscreen pills. Dual-island split rendering not implemented. | Subsystem Feature Gap (R10) | Dual Island Architecture (R10) |
-| 39 | Onboarding swipe gesture tutorial | `swipe animation.jpg` | No onboarding wizard exists in Nothing Island app. First-launch experience is unguided. | New UI Requirement | Onboarding Wizard & `GestureStudioScreen.kt` |
+| 1 | `bluetooth-connection (2).jpg` | 1080 × 2400 | 29 KB | Bluetooth | Expanded pill with AirPods Pro icon, "Connected / AirPods Pro", green battery ring (75%). |
+| 2 | `bluetooth-connection.jpg` | 1080 × 2400 | 54 KB | Bluetooth | Compact capsule with AirPods Pro icon and circular green battery progress ring (75). |
+| 3 | `charging themes.jpg` | 1080 × 2400 | 38 KB | Charging | 2-column visual grid showing 30+ distinct charging themes (cyan bolt glow, orbs, potion, etc.). |
+| 4 | `dynamic themes (2).jpg` | 1080 × 2400 | 26 KB | Themes | 2-column card grid of 32+ named colorway presets (Classic Black, Minimal Gray, Amethyst, etc.). |
+| 5 | `dynamic themes (3).jpg` | 1080 × 2400 | 32 KB | Themes | Scrolled continuation of preset colorways (Nebula, Bumblebee, Rainbow gradient). |
+| 6 | `dynamic themes.jpg` | 1080 × 2400 | 38 KB | Themes | Theme Studio header, "Notch is Not Active / Activate" warning banner, preset grid. |
+| 7 | `face lock.jpg` | 1080 × 2400 | 53 KB | Biometrics | Face ID verified squircle notch card with smiling green face glyph inside brackets. |
+| 8 | `flashy border animation style.jpg` | 1080 × 2400 | 78 KB | Animation | Multi-color border animation, speed & thickness sliders with steppers, color chips with `(x)`. |
+| 9 | `flashy border animation.jpg` | 1080 × 2400 | 63 KB | Animation | Border animation master switch, glowing border preview well with Play button. |
+| 10 | `music player settings.jpg` | 1080 × 2400 | 100 KB | Music | Vinyl rotation toggle, blurred bg toggle, 10s fast-forward toggle, long-press volume gesture. |
+| 11 | `music player.jpg` | 1080 × 2400 | 73 KB | Music | Expanded player card, rotating vinyl art, 5-bar equalizer, scrub bar, 5 transport buttons. |
+| 12 | `notch swipe animation.jpg` | 1080 × 2400 | 64 KB | Motion | Dual popup notch swipe physics: Liquid, Bouncy, Droplet. |
+| 13 | `notification expanded.jpg` | 1080 × 2400 | 86 KB | Notifications | Expanded card with avatar, title, body, action chips (Reply, Mark Read), Clear All, typography steppers. |
+| 14 | `notification style.jpg` | 1080 × 2400 | 73 KB | Notifications | Visual selector (Expanded Popup vs Small Popup), DND auto-expand toggle, app blacklist. |
+| 15 | `notification.jpg` | 1080 × 2400 | 64 KB | Notifications | Compact WhatsApp capsule with app icon, sender, text snippet, and "Now" timestamp. |
+| 16 | `order tracking.jpg` | 1080 × 2400 | 110 KB | Live Activities | Live order tracking (Blinkit delivery scooter compact pill + route progress bar). |
+| 17 | `screen unlock.jpg` | 1080 × 2400 | 55 KB | System Events | Device unlock momentary feedback pill with open white padlock glyph. |
+| 18 | `silent.jpg` | 1080 × 2400 | 60 KB | Audio/Ringer | Silent mode feedback capsule with red slashed-bell icon and "Silent" label. |
+| 19 | `sound-on.jpg` | 1080 × 2400 | 57 KB | Audio/Ringer | Ringing mode feedback capsule with white ringing bell icon and "Sound on" label. |
+| 20 | `swipe animation.jpg` | 1080 × 2400 | 36 KB | Onboarding | Dual-capsule island layout with animated finger gesture demonstrating swipe interaction. |
 
 ---
 
-## 5. Synthesis: Studio Mapping & Architecture Alignment
+### 2.2 NectarLink Video & Media Inventory (`reference/nectarlink/`)
+| # | Filename | Type | Resolution & Duration | Size | Source App & Context |
+|---|---|---|---|---|---|
+| **v1** | `screen-20261106-142641-1793955290358.mp4` | MP4 | 720 × 1600 · 01:51 (111.12s) | 42.53 MB | Dynamic Notch: `SmallChargingNotchAnimActivity` live interactive theme gallery. |
+| **v2** | `screen-20261106-142924-1793955515723.mp4` | MP4 | 720 × 1600 · 00:48 (48.90s) | 21.16 MB | Dynamic Notch: `Call` settings, VoIP support, two-tier presentation, and game mode. |
+| **v3** | `screen-20261106-143024-1793955579091.mp4` | MP4 | 720 × 1600 · 00:45 (45.09s) | 20.92 MB | Dynamic Notch: `Notification` settings, 3 disappear modes, duration stepper slider. |
+| **v4** | `screen-20261106-143139-1793955665349.mp4` | MP4 | 720 × 1600 · 00:34 (34.12s) | 6.42 MB | Dynamic Notch: `Bluetooth Connection` 5 device categories & custom icon import. |
+| **v5** | `screen-20261106-143243-1793955755316.mp4` | MP4 | 720 × 1600 · 00:07 (7.71s) | 1.43 MB | Dynamic Island Pro: `Notifications` preview expansion and auto-collapse loop. |
+| **v6** | `screen-20261106-143306-1793955775869.mp4` | MP4 | 720 × 1600 · 00:10 (10.83s) | 3.69 MB | Dynamic Island Pro: `Incoming Call` compact pill with accept/decline buttons. |
+| **v7** | `screen-20261106-143329-1793955799702.mp4` | MP4 | 720 × 1600 · 00:09 (9.62s) | 3.66 MB | Dynamic Island Pro: `Music` compact pill with bouncing 5-bar green equalizer. |
+| **v8** | `screen-20261106-143416-1793955826518.mp4` | MP4 | 720 × 1600 · 00:29 (29.62s) | 11.08 MB | Dynamic Island Pro: `Theme` bottom sheet confirmation dialog & 40+ presets. |
+| **s1** | `Screenshot_20261106-143535.png` | PNG | 1080 × 1440 | 582 KB | Capsule: Download tracking live activity (compact pill + expanded wavy bar). |
+| **s2** | `Screenshot_20261106-143550.png` | PNG | 1080 × 1440 | 698 KB | Capsule: Live charging telemetry (2x3 grid: time, %, V, temp, current, wattage). |
+| **s3** | `Screenshot_20261106-143608.png` | PNG | 1080 × 1440 | 689 KB | Capsule: Visual taxonomy of 18 compact pill event archetypes. |
 
-The 39 extracted requirements directly validate and enrich the **Studio Architecture** established in `docs/UI_UX_REDESIGN_SPECIFICATION.md`. Every visible feature from the screenshots maps cleanly into a dedicated Nothing OS Studio:
+---
+
+## 3. Master Requirements Traceability & Gap Analysis Matrix
+
+The table below unifies all 39 original requirements and 33 NectarLink requirements. Unique new requirements discovered in NectarLink are assigned sequential master IDs (`REQ-40` through `REQ-62`).
+
+| Master Req ID | NectarLink ID | Requirement Name & Observable Behavior | Source Reference(s) | Baseline Status (R8 / Phase 2) | Android Feasibility Verification Required? | Gap Classification | Target Redesign Destination |
+|---|---|---|---|---|---|---|---|
+| **REQ-01** | `NL-REQ-20` | Bluetooth connection master toggle (`Show Connection`) | `bluetooth-connection.jpg`, `v4` (00:02) | Unimplemented. No Bluetooth broadcast receiver or GATT listener. | **Yes** (Android 17 `BLUETOOTH_CONNECT` runtime permission & GATT battery callback). | Subsystem Feature Gap (R9) | Peripherals Studio & Background Receiver |
+| **REQ-02** | `NL-REQ-21` | Bluetooth compact pill (device icon + circular battery ring) | `bluetooth-connection.jpg`, `v4` (00:05), `s3` | Implemented in Phase 2 preview (`IslandPreview.kt`). Overlay renderer unintegrated. | **Yes** (Extracting device battery percentage across vendor BLE profiles). | Subsystem Feature Gap (R9) | `BluetoothCompactView.kt` |
+| **REQ-03** | `NL-REQ-21` | Bluetooth expanded card (device name + battery %) | `bluetooth-connection (2).jpg`, `v4` (00:05) | Implemented in Phase 2 preview (`IslandPreview.kt`). Overlay renderer unintegrated. | No (Standard Compose layout once state is available). | Subsystem Feature Gap (R9) | `BluetoothExpandedView.kt` |
+| **REQ-04** | `NL-REQ-25` | Inactive service warning banner (`Notch is Not Active / Activate`) | `dynamic themes.jpg`, `v5`–`v8` (00:01) | Implemented in Phase 2 `HomeScreen.kt` with live deep-link to Accessibility settings. | No (Standard AOSP Intent). | **Fully Implemented** | `HomeScreen.kt` & Studio Headers |
+| **REQ-05** | `NL-REQ-01` | 2-column visual grid of charging themes (38 styles) | `charging themes.jpg`, `v1` (00:30–01:45) | Phase 2 `ChargingStudioScreen.kt` has 5 styles. 38-theme catalog reverse-engineered. | No (100% Declarative Compose Canvas/DrawScope). | Phase 3 Implementation | `ChargingStudioScreen.kt` |
+| **REQ-06** | `NL-REQ-02` | Minimal numeric battery pill (`Charging 50%` + plug) | `charging themes.jpg`, `v1` (00:02) | Implemented in `BatteryCompactView.kt` (`LevelText` + `BoltIcon`). | No (AOSP BatteryManager broadcast verified). | **Fully Implemented** | `BatteryCompactView.kt` |
+| **REQ-07** | `NL-REQ-02` | Circular battery percentage gauge with progress ring | `charging themes.jpg`, `v1` (00:02) | Implemented in `ChargingVisualizer.kt` (`HYPER_RING` style). | No (Verified in R8). | **Fully Implemented** | `ChargingVisualizer.kt` |
+| **REQ-08** | `NL-REQ-30` | 32+ named theme presets in 2-column grid | `dynamic themes (2).jpg`, `v8` (00:04–00:28) | Phase 2 `ThemeStudioScreen.kt` implements 32+ presets grid with live preview. | No (Compose StateFlow & DataStore). | **Fully Implemented (UI)** | `ThemeStudioScreen.kt` |
+| **REQ-09** | — | Exclusion of VIP/Paywall crown badges | `dynamic themes.jpg`, `order tracking.jpg` | Excluded. Nothing Island is 100% offline, free, and open-source. | No (Licensing policy). | **Deliberately Excluded** | Replaced with "Nothing OS Original" |
+| **REQ-10** | — | Face ID / Biometric verification card | `face lock.jpg` | Unimplemented. No `BiometricPrompt` or keyguard auth listener. | **Yes** (Android 17 keyguard biometric callback access without device owner). | Subsystem Feature Gap (R10) | Security Studio / System Events |
+| **REQ-11** | — | Border animation master switch | `flashy border animation.jpg` | Modeled in `IslandPreferences.isPulsing`. UI toggle in Phase 2 `AnimationStudioScreen.kt`. | No (Standard boolean preference). | **Fully Implemented (UI)** | `AnimationStudioScreen.kt` |
+| **REQ-12** | — | Border animation speed slider with `-`/`+` steppers | `flashy border animation style.jpg` | Implemented in Phase 2 with `NothingStepper.kt`. | No (Standard Compose slider). | **Fully Implemented (UI)** | `AnimationStudioScreen.kt` |
+| **REQ-13** | — | Border thickness slider with `-`/`+` steppers | `flashy border animation style.jpg` | Implemented in Phase 2 with `NothingStepper.kt`. | No (Standard Compose slider). | **Fully Implemented (UI)** | `AnimationStudioScreen.kt` |
+| **REQ-14** | — | Multi-color palette chips with remove `(x)` tags | `flashy border animation style.jpg` | Implemented in Phase 2 with `NothingPaletteChips.kt`. | No (Standard Compose component). | **Fully Implemented (UI)** | `AnimationStudioScreen.kt` |
+| **REQ-15** | — | Studio Reset button to restore hardware defaults | `flashy border animation.jpg`, `notification style.jpg` | Modeled in repository `resetToHardwareDefaults()`. | No (Repository call). | Phase 3 Implementation | Studio Action Bars (`Reset` Button) |
+| **REQ-16** | `NL-REQ-28` | Music master switch & bouncing equalizer | `music player.jpg`, `v7` (00:01–00:08) | Implemented in `IslandMediaSessionListenerService` & Phase 2 `IslandPreview.kt`. | No (Verified in R7 / Phase 2). | **Fully Implemented** | `MusicStudioScreen.kt` |
+| **REQ-17** | — | Vinyl album artwork rotation toggle (`Rotation On/Off`) | `music player settings.jpg` | Modeled in `MusicPreferences.rotationEnabled`. UI selector in Phase 2 `MusicStudioScreen.kt`. | No (Standard Compose rotation modifier). | **Fully Implemented** | `MusicStudioScreen.kt` |
+| **REQ-18** | — | Blurred album photo as player background | `music player settings.jpg` | Unimplemented in `MediaExpandedView.kt`. Player uses `NothingSurfaceLowest`. | No (RenderEffect / BlurMaskFilter). | Phase 3 Implementation | `MediaExpandedView.kt` |
+| **REQ-19** | — | 10s Fast-Forward and 10s Rewind buttons `(10)` | `music player.jpg`, `music player settings.jpg` | Implemented in Phase 2 `IslandPreview.kt` preview card. Overlay view requires wiring. | No (Standard `MediaController.TransportControls.seekTo`). | Phase 3 Implementation | `MediaExpandedView.kt` |
+| **REQ-20** | — | Long-press volume swipe gesture | `music player settings.jpg` | Touch handler supports tap/swipe, not long-press volume drag. | No (`AudioManager.adjustStreamVolume`). | Subsystem Feature Gap (R9) | `IslandOverlayView.kt` Touch Handler |
+| **REQ-21** | — | Only show while playing audio toggle | `music player settings.jpg` | Event engine auto-collapses on pause. Preference key unexposed. | No (Standard event filter). | Phase 3 Implementation | `MusicStudioScreen.kt` |
+| **REQ-22** | — | Blocked apps for music blacklist | `music player settings.jpg` | Unfiltered in `IslandMediaSessionListenerService`. | No (Package string matching). | Subsystem Feature Gap (R9) | `MusicStudioScreen.kt` |
+| **REQ-23** | — | Dual popup animation physics (`Liquid`, `Bouncy`, `Droplet`) | `notch swipe animation.jpg` | Uses standard Compose `spring()`. Physics curve selection unexposed. | No (Compose `AnimationSpec` factory). | Phase 3 Implementation | `AnimationStudioScreen.kt` |
+| **REQ-24** | `NL-REQ-14` | Notification master toggle & display timeout stepper | `notification style.jpg`, `v3` (00:18) | Implemented in R7.1.1 (`displayDurationMs = 4500L`, 2–10s range). Stepper in Phase 2. | No (Verified in R7.1.1 test suite). | **Fully Implemented** | `NotificationStudioScreen.kt` |
+| **REQ-25** | `NL-REQ-11` | Notification sizing selector (`Expanded Popup` vs `Small Popup`) | `notification style.jpg`, `v3` (00:02) | Modeled in `NotificationPreferences.previewMode`. Segmented control in Phase 2. | No (Verified in R7.1.1). | **Fully Implemented** | `NotificationStudioScreen.kt` |
+| **REQ-26** | `NL-REQ-12` | DND auto-expand override toggle | `notification style.jpg`, `v3` (00:05) | Modeled in R7.1 (`autoExpandOnNotification`). DND bypass unexposed. | No (`NotificationManager.getCurrentInterruptionFilter`). | Phase 3 Implementation | `NotificationStudioScreen.kt` |
+| **REQ-27** | — | Blocked apps for notifications blacklist | `notification style.jpg` | Modeled in `NotificationPreferences.excludedPackages`. UI picker missing. | No (Package string set filter). | Phase 3 Implementation | `NotificationStudioScreen.kt` (App Picker) |
+| **REQ-28** | — | Show sensitive content toggle | `notification style.jpg` | Modeled in `NotificationPreferences.hideSensitive`. UI toggle missing. | No (Keyguard state filter). | Phase 3 Implementation | `NotificationStudioScreen.kt` |
+| **REQ-29** | — | Expanded notification `CLEAR ALL` button | `notification expanded.jpg` | Implemented in Phase 2 preview card. Overlay view requires wiring. | No (`NotificationListenerService.cancelAllNotifications`). | Phase 3 Implementation | `NotificationExpandedView.kt` |
+| **REQ-30** | — | Granular notification typography steppers (Title, Subtext, Buttons) | `notification expanded.jpg` | Implemented in Phase 2 `NotificationStudioScreen.kt` with `NothingStepper.kt`. | No (Compose Text `fontSize` multiplier). | **Fully Implemented (UI)** | `NotificationStudioScreen.kt` |
+| **REQ-31** | — | Custom notification background and text color pickers | `notification expanded.jpg` | Card colors hardcoded to dark palette. Color pickers unexposed. | No (Compose Color state). | Phase 3 Implementation | `NotificationStudioScreen.kt` |
+| **REQ-32** | — | Auto background color from app icon palette | `notification expanded.jpg` | Implemented for music (`useAdaptiveAccent`). Not yet wired to notification cards. | No (AndroidX Palette extraction). | Subsystem Feature Gap (R9) | `NotificationStudioScreen.kt` |
+| **REQ-33** | `NL-REQ-26` | Compact notification preview & auto-collapse lifecycle | `notification.jpg`, `v5` (00:01–00:07) | Implemented in `NotificationCompactView.kt` and Phase 2 `IslandPreview.kt`. | No (Verified in R7.1.1). | **Fully Implemented** | `NotificationCompactView.kt` |
+| **REQ-34** | — | Live order tracking (Blinkit scooter progress) | `order tracking.jpg` | Unimplemented. Live activities scraping planned for R11. | **Yes** (Notification scraping of third-party delivery apps without public APIs). | Subsystem Feature Gap (R11) | Live Activities Studio (Future R11) |
+| **REQ-35** | — | Device unlock momentary feedback (open padlock) | `screen unlock.jpg` | Unimplemented. Requires `ACTION_USER_PRESENT` keyguard broadcast receiver. | **Yes** (Android 17 keyguard receiver registration with `RECEIVER_NOT_EXPORTED`). | Subsystem Feature Gap (R10) | Security Studio / System Events |
+| **REQ-36** | `NL-REQ-33` | Silent mode feedback pill (red slashed-bell + `Silent`) | `silent.jpg`, `s3` | Unimplemented. Requires `RINGER_MODE_CHANGED_ACTION` broadcast receiver. | **Yes** (Android 17 DND access policy and ringer broadcast restrictions). | Subsystem Feature Gap (R9) | Audio & Ringer Studio (R9) |
+| **REQ-37** | `NL-REQ-33` | Ringing mode feedback pill (white bell + `Sound on`) | `sound-on.jpg`, `s3` | Unimplemented. Requires `RINGER_MODE_CHANGED_ACTION` broadcast receiver. | **Yes** (Android 17 DND access policy and ringer broadcast restrictions). | Subsystem Feature Gap (R9) | Audio & Ringer Studio (R9) |
+| **REQ-38** | — | Dual-capsule island layout (Weather pill + Media circle) | `swipe animation.jpg` | Activity Switcher in R8 switches between single fullscreen pills. Dual split unbuilt. | No (Compose Row with dual animated bounds). | Subsystem Feature Gap (R10) | Dual Island Architecture (R10) |
+| **REQ-39** | — | Onboarding swipe gesture tutorial | `swipe animation.jpg` | First-launch onboarding tutorial unbuilt. | No (Compose AnimatedContent pager). | Phase 3 Implementation | Onboarding Wizard & `GestureStudioScreen.kt` |
+| **REQ-40** | `NL-REQ-03` | Master System Call Switch (`Enable System Call`) | `v2` (00:02) | Unimplemented. Telecom subsystem deferred to R9. | **Yes** (Android 17 PhoneStateListener / Telecom permissions). | Subsystem Feature Gap (R9) | Telecom Subsystem (R9) |
+| **REQ-41** | `NL-REQ-04` | Two-tier call presentation (compact timer vs expanded card) | `v2` (00:05–00:11) | Unimplemented. Call presentation models deferred to R9. | **Yes** (Ongoing call duration tracking and in-call action dispatch). | Subsystem Feature Gap (R9) | `CallCompactView` / `CallExpandedView` |
+| **REQ-42** | `NL-REQ-05` | Double incoming call collision suppression | `v2` (00:15) | Unimplemented. Requires detecting native dialer foreground window. | **Yes** (Accessibility window state tracking of OEM dialer package). | Subsystem Feature Gap (R9) | Telecom Event Engine (R9) |
+| **REQ-43** | `NL-REQ-06` | Third-party VoIP call integration (WhatsApp, Telegram) | `v2` (00:20) | Unimplemented. Telecom subsystem deferred to R9. | **Yes** (Scraping `Notification.CallStyle` & dispatching action PendingIntents). | Subsystem Feature Gap (R9) | Telecom Subsystem (R9) |
+| **REQ-44** | `NL-REQ-07` | Post-call summary theme picker (`Light`, `Dark`, `System`) | `v2` (00:25) | Unimplemented. | No (Standard Compose theme selector). | Subsystem Feature Gap (R9) | Telecom Studio Screen (R9) |
+| **REQ-45** | `NL-REQ-08` | Keyguard / Lockscreen incoming call display toggle | `v2` (00:32) | Unimplemented. Overlay window keyguard flags require configuration. | **Yes** (AOSP accessibility overlay visibility over Android 17 Keyguard). | Subsystem Feature Gap (R9) | Overlay Window Manager Policy |
+| **REQ-46** | `NL-REQ-09` | Game Mode call presentation toggles (Incoming vs Ongoing) | `v2` (00:38) | Unimplemented. Requires foreground game detection. | **Yes** (Detecting game dashboard package or full-screen gaming window). | Subsystem Feature Gap (R9) | Telecom Event Engine (R9) |
+| **REQ-47** | `NL-REQ-10` | Blocked contacts blacklist picker | `v2` (00:44) | Unimplemented. Telecom repository deferred to R9. | **Yes** (`READ_CONTACTS` runtime permission and number normalization). | Subsystem Feature Gap (R9) | Telecom Repository (R9) |
+| **REQ-48** | `NL-REQ-13` | Small notch disappear mode (Auto / Never / Read) | `v3` (00:12) | Unimplemented. R7.1.1 auto-collapses on timer only. | No (StateFlow presentation state machine). | Phase 3 Implementation | `NotificationPreferences.kt` & Studio |
+| **REQ-49** | `NL-REQ-15` | Direct swipe-to-dismiss gesture toggle | `v3` (00:24) | Unimplemented. Touch handler tap-to-dismiss exists, swipe toggle unexposed. | No (Compose PointerInput drag detection). | Phase 3 Implementation | `IslandOverlayView.kt` Touch Handler |
+| **REQ-50** | `NL-REQ-16` | Game Mode notification suppression toggle | `v3` (00:28) | Unimplemented. Notification suppression during gaming unbuilt. | **Yes** (Foreground full-screen game detection on Nothing OS). | Subsystem Feature Gap (R9) | Notification Filter Engine |
+| **REQ-51** | `NL-REQ-17` | Expand silent app notifications toggle | `v3` (00:33) | Unimplemented. Silent channel notifications currently suppressed. | No (`NotificationChannel.getImportance()` check). | Phase 3 Implementation | `NotificationFilter.kt` |
+| **REQ-52** | `NL-REQ-18` | Small notch icon badge style selector (4 modes) | `v3` (00:38) | Unimplemented. Icon layout is fixed to app icon. | No (Compose layout modifier). | Phase 3 Implementation | `NotificationCompactView.kt` |
+| **REQ-53** | `NL-REQ-19` | Manual notification service synchronization button | `v3` (00:42) | Unimplemented. Studio diagnostic sync button unexposed. | No (`getActiveNotifications()` rescan). | Phase 3 Implementation | `NotificationStudioScreen.kt` |
+| **REQ-54** | `NL-REQ-22` | 5 Bluetooth device categories & preset silhouettes | `v4` (00:08–00:26) | Unimplemented. Phase 2 preview uses generic headphone glyph. | No (Curated vector silhouette assets in drawable). | Subsystem Feature Gap (R9) | Peripherals Studio Screen (R9) |
+| **REQ-55** | `NL-REQ-23` | Add custom Bluetooth device icon asset import | `v4` (00:10) | Unimplemented. Custom asset import unbuilt. | **Yes** (Persisting custom URI across process restarts via SAF). | Subsystem Feature Gap (R9) | Peripherals Studio Screen (R9) |
+| **REQ-56** | `NL-REQ-24` | In-studio dynamic preview icon switcher | `v4` (00:30) | Implemented in Phase 2 `IslandPreview.kt` mode tabs. Asset switcher unbuilt. | No (Compose state binding). | Phase 3 Implementation | `IslandPreview.kt` |
+| **REQ-57** | `NL-REQ-29` | Theme confirmation bottom sheet modal dialog | `v8` (00:02) | Phase 2 applies theme on card tap. Confirmation modal unbuilt. | No (Standard Compose `ModalBottomSheet`). | Phase 3 Implementation | `ThemeStudioScreen.kt` |
+| **REQ-58** | `NL-REQ-31` | Download tracking live activity (compact + wavy bar) | `s1` (`143535`) | Unimplemented. Live activities deferred to R11. | **Yes** (Tracking DownloadManager / Play Store progress notifications). | Subsystem Feature Gap (R11) | Live Activities Subsystem (R11) |
+| **REQ-59** | `NL-REQ-32` | 6-metric charging telemetry grid (time, %, V, temp, A, W) | `s2` (`143550`) | R8 overlay tracks level and charging state. 6-metric grid unbuilt. | **Yes** (HAL support for current $\mu A$, remaining charge time, and power calculation). | Subsystem Feature Gap (R8.1/Phase 3) | `ChargingTelemetryCard.kt` |
+| **REQ-60** | `NL-REQ-33a`| Flashlight state momentary capsule feedback | `s3` (`143608`) | Unimplemented. Flashlight callback unbuilt. | **Yes** (`CameraManager.TorchCallback` background registration). | Subsystem Feature Gap (R10) | System Events Subsystem (R10) |
+| **REQ-61** | `NL-REQ-33b`| Wi-Fi connection / captive portal feedback capsule | `s3` (`143608`) | Unimplemented. Connectivity listener unbuilt. | **Yes** (`ConnectivityManager.NetworkCallback` capabilities). | Subsystem Feature Gap (R10) | System Events Subsystem (R10) |
+| **REQ-62** | `NL-REQ-33c`| Bedtime / DND crescent moon capsule feedback | `s3` (`143608`) | Unimplemented. ZenMode broadcast unbuilt. | **Yes** (`NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED`). | Subsystem Feature Gap (R9) | System Events Subsystem (R9) |
+
+---
+
+## 4. Resolution of the Notification Timeout Conflict
+
+### 4.1 The Apparent Conflict:
+- In initial Phase 1 discussions and design documents, notification timeout was informally referred to as a "fixed 4.0s timeout".
+- In NectarLink video `v3` (`screen-20261106-143024-1793955579091.mp4`, timestamp `00:18`), Dynamic Notch exposes a stepper slider labeled `Expanded Popup Visibility` displaying `5` seconds with `(-)` and `(+)` buttons.
+- In the accepted Nothing Island **R7.1.1 baseline** (`NotificationPreferences.kt`, `NotificationFilter.kt`, `NotificationAutoExpansionPolicy.kt`), the underlying notification timeout is defined as:
+  ```kotlin
+  val displayDurationMs: Long = 4500L // Range: 2000ms to 10000ms
+  ```
+  Verified by **241 passing unit tests** across `NotificationFilterUnitTest`, `NotificationAutoExpansionPolicyUnitTest`, and `NotificationPreferencesDataStoreUnitTest`.
+
+### 4.2 The Resolution (Zero Regression Guarantee):
+1. **Preserve Accepted Baseline Logic:** The core preference key `NotificationPreferencesKeys.NOTIFICATION_DURATION_MS` remains typed as `Long` with its accepted factory default of **`4500L` (4.5 seconds)** and strict clamping to `[2000L, 10000L]`.
+2. **UI Stepper Slider Binding:** In `NotificationStudioScreen.kt`, the stepper slider maps `displayDurationMs` to seconds:
+   - For user adjustments, the stepper operates in discrete 0.5s or 1.0s increments (2.0s, 3.0s, 4.0s, **4.5s (Default)**, 5.0s, ..., 10.0s).
+   - The initial position displays `4.5s` (or rounds to `5s` if configured for integer display), without altering the underlying `4500L` value unless the user touches the stepper.
+3. **No Unintentional Engine Drift:** All 241 unit tests remain 100% compliant with zero changes to test assertions or engine timeout behavior.
+
+---
+
+## 5. Android Feasibility & Security Boundary Verification
+
+Nine requirement clusters discovered across the references require formal Android OS feasibility verification prior to implementation:
 
 ```mermaid
-flowchart TD
-    subgraph Nothing Island Companion Navigation
-        HOME[1. Home Dashboard\nLive Preview + Service Banner + Studio Grid]
-        NOTIF_S[2. Notification Studio\nPopup Sizing, Typography Steppers, DND, Blacklist]
-        MUSIC_S[3. Music Studio\nVinyl Rotation, 5 Visualizers, 10s Rewind/FF, Volume Gesture]
-        CHARGE_S[4. Charging Studio\n30+ Theme Visualizer Grid, Telemetry, Low Battery Alert]
-        
-        subgraph More Studios & Hub
-            THEME_S[Theme Studio\n32+ Preset Colorways, Matte AMOLED, Custom Accent]
-            ANIM_S[Animation Studio\nLiquid/Bouncy Physics, Border Glow Multi-Color Chips]
-            GESTURE_S[Gesture Studio\nSwipe Activity Switcher, Volume Gesture, Tutorial]
-            PERIPH_S[Peripheral & System Events\nBluetooth Battery Ring, Ringer Alert, Unlock Padlock]
-            SETTINGS[Settings & Diagnostics\nAOSP Layer 24000 Anchor, Cutout Offsets, Logs]
-        end
+graph TD
+    subgraph Feasibility Verification Clusters
+        C1[1. Telecom & In-Call Actions\nREQ-40, 41, 42, 45, 46, 47]
+        C2[2. Third-Party VoIP Calls\nREQ-43]
+        C3[3. Charging Telemetry HAL\nREQ-59]
+        C4[4. Download Live Activity\nREQ-58]
+        C5[5. Keyguard Biometrics & Unlock\nREQ-10, 35]
+        C6[6. Bluetooth GATT Battery\nREQ-01, 02, 54, 55]
+        C7[7. System Hardware Sensors\nTorch REQ-60, Wi-Fi REQ-61, DND REQ-62]
     end
 
-    HOME --> NOTIF_S
-    HOME --> MUSIC_S
-    HOME --> CHARGE_S
-    HOME --> THEME_S
-    HOME --> ANIM_S
-    HOME --> GESTURE_S
-    HOME --> PERIPH_S
-    HOME --> SETTINGS
+    C1 --> SEC1[AOSP InCallService vs Overlay Touch Restrictions]
+    C2 --> SEC2[Notification.CallStyle & PendingIntent Bridge]
+    C3 --> SEC3[MediaTek Dimensity 7200 Pro sysfs / BatteryManager Probe]
+    C4 --> SEC4[NotificationListenerService Progress Throttling at 120Hz]
+    C5 --> SEC5[Keyguard Dismiss & User Present Broadcast in API 37]
+    C6 --> SEC6[BLUETOOTH_CONNECT Runtime Permissions & BLE Vendor Battery Profiles]
+    C7 --> SEC7[CameraManager.TorchCallback & ConnectivityManager Callbacks]
 ```
 
-### Studio-by-Studio Alignment Details:
-
-1. **Home Dashboard (`HomeScreen.kt`):**
-   - Incorporates the **Service Inactive Banner** (`Notch is Not Active / Activate`) observed in `bluetooth-connection.jpg` and `dynamic themes.jpg` with a direct deep-link to Android Accessibility Settings.
-   - Upgrades `IslandPreview.kt` to simulate live interactive states:
-     - `Idle`: Punch-hole cutout pill.
-     - `Notification`: Compact WhatsApp pill (`notification.jpg`) and Expanded chat card (`notification expanded.jpg`).
-     - `Music`: Expanded player with jumping blue equalizer and vinyl disc (`music player.jpg`).
-     - `Battery`: Live charging ring and wattage (`charging themes.jpg`).
-     - `Bluetooth`: Earbuds icon with battery percentage ring (`bluetooth-connection.jpg`).
-
-2. **Notification Studio (`NotificationStudioScreen.kt`):**
-   - Visual radio selector: `Expanded Popup` vs `Small Popup` (`notification style.jpg`).
-   - Granular typography sliders with `-`/`+` steppers for Title, Subtext, and Buttons (`notification expanded.jpg`).
-   - Action controls: `REPLY`, `MARK AS READ`, `MUTE`, and `CLEAR ALL` (`notification expanded.jpg`).
-   - Application Blacklist selector (`Blocked App Notification`) wired to existing DataStore key `notif_excluded_packages`.
-   - Privacy controls: `Hide Sensitive Content` wired to `notif_hide_sensitive`.
-   - Automation controls: `Auto Expand on Arrival` (R7.1.1 toggle) and `Auto Expand During DND` (`notification style.jpg`).
-
-3. **Music Studio (`MusicStudioScreen.kt`):**
-   - Style Selector: `Rotation On` (vinyl record) vs `Rotation Off` (static square art) wired to existing DataStore key `music_album_rotation_enabled` (`music player settings.jpg`).
-   - Transport Controls: 10s Rewind and 10s Fast-Forward button toggles (`music player.jpg`, `music player settings.jpg`).
-   - Volume Gesture toggle: `Long Press : Volume Control` (`music player settings.jpg`).
-   - Visualizer Selector: Grid of 5 Nothing OS visualizers (Classic Equalizer, Minimal Waveform, Circular Pulse, Dot Matrix, Spectrum Bars).
-   - Audio app blacklist picker (`Blocked Apps For Music`).
-
-4. **Charging Studio (`ChargingStudioScreen.kt`):**
-   - 2-Column visual grid of charging visualizers inspired by `charging themes.jpg`.
-   - Live telemetry preview displaying real-time battery percentage, charging wattage estimate, and thermal state.
-   - Low battery warning capsule toggle and threshold selector (10%, 15%, 20%).
-
-5. **Theme Studio (`ThemeStudioScreen.kt`):**
-   - 2-Column card grid of 32+ named colorway presets (`dynamic themes (2).jpg`, `dynamic themes (3).jpg`).
-   - Nothing OS signature colorways (Classic Black, Nothing Red Accent, Stealth Dark, Matrix Phosphor) alongside curated vibrant palettes.
-   - Live theme preview card reflecting applied surface colors and borders.
-
-6. **Animation Studio (`AnimationStudioScreen.kt`):**
-   - Notch Swipe Animation physics selector: `Liquid`, `Bouncy`, `Droplet` (`notch swipe animation.jpg`).
-   - Multi-Color Border Animation: Speed and thickness sliders with `-`/`+` steppers, dynamic color palette chips with remove `(x)` tags (`flashy border animation style.jpg`).
-   - Live interactive border glow preview well with Play/Test button (`flashy border animation.jpg`).
-
-7. **Gesture Studio & Onboarding (`GestureStudioScreen.kt`):**
-   - Visual interactive tutorial based on `swipe animation.jpg` explaining horizontal swipe between active events.
-   - Single tap, double tap, long press, swipe left, and swipe right gesture configuration.
-   - Accidental touch protection in full-screen games/apps.
-
-8. **Peripheral & System Events Studio (Roadmap R9/R10):**
-   - Bluetooth connection alert with circular battery progress ring (`bluetooth-connection.jpg`, `bluetooth-connection (2).jpg`).
-   - Ringer mode momentary feedback (`Silent` in red vs `Sound on` in white) (`silent.jpg`, `sound-on.jpg`).
-   - Screen unlock momentary padlock feedback (`screen unlock.jpg`).
-   - Face ID biometric scanning feedback (`face lock.jpg`).
+### Detailed Verification Requirements:
+1. **Telecom & In-Call Actions (`REQ-40` to `REQ-47`):**
+   - *Android 17 / API 37 Restriction:* Non-system apps cannot bind to `InCallService` unless set as default dialer or granted `android.permission.MANAGE_ONGOING_CALLS`.
+   - *Feasibility Test:* Verify whether `TelecomManager.CALL_STATE_RINGING` via `READ_PHONE_STATE` provides caller ID on Nothing OS, and verify whether `TelecomManager.endCall()` or `Notification.Action` PendingIntents succeed in dismissing calls from an accessibility overlay.
+2. **Third-Party VoIP Integration (`REQ-43`):**
+   - *Android 17 / API 37 Restriction:* WhatsApp and Telegram do not emit standard Telecom events.
+   - *Feasibility Test:* Test `NotificationListenerService` extraction of `Notification.CallStyle` metadata (`EXTRA_CALL_TYPE`, `EXTRA_CALL_PERSON`, `EXTRA_ANSWER_INTENT`, `EXTRA_DECLINE_INTENT`) on Nothing Phone (4a).
+3. **6-Metric Charging Telemetry Grid (`REQ-59`):**
+   - *Android 17 / API 37 Restriction:* `BATTERY_PROPERTY_CURRENT_NOW` ($\mu A$) can return negative values, zero, or raw ADC ticks depending on kernel HAL. `computeChargeTimeRemaining()` returns `-1` under proprietary fast charging protocols.
+   - *Feasibility Test:* Run ADB shell probe on Nothing Phone (4a) measuring `/sys/class/power_supply/battery/current_now` vs `BatteryManager.getIntProperty(BATTERY_PROPERTY_CURRENT_NOW)` to determine unit scaling and sign convention.
+4. **Download Tracking Live Activity (`REQ-58`):**
+   - *Android 17 / API 37 Restriction:* High-frequency progress notifications from Google Play Store can flood the main thread.
+   - *Feasibility Test:* Benchmark `NotificationListenerService` progress updates under active 100MB download on Nothing Phone (4a). Implement 10Hz throttling buffer to guarantee 120Hz frame pacing.
+5. **Bluetooth GATT Battery Ring (`REQ-01`, `REQ-02`):**
+   - *Android 17 / API 37 Restriction:* `android.permission.BLUETOOTH_CONNECT` requires runtime permission prompt. Battery levels for non-Nothing audio accessories (AirPods, Sony) use proprietary vendor GATT services.
+   - *Feasibility Test:* Test `BluetoothDevice.ACTION_BATTERY_LEVEL_CHANGED` intent vs `BluetoothHeadset` reflection on connected Bluetooth accessories.
 
 ---
 
-## 6. Missing Preferences & DataStore Schema Additions
+## 6. Exhaustive Tracking of the 38 Reference Charging Animations
 
-Several features discovered in the screenshots are already modeled in `IslandPreferencesRepository.kt` but lacked UI controls, while others require new DataStore keys. Below is the exact schema reconciliation:
+In accordance with user instructions, all 38 charging animations reverse-engineered from Reference A (`com.dynamicisland.notchscreenview`) remain individually tracked with their exact IDs, original asset paths, and Nothing Island architectural dispositions:
 
-### 6.1 Existing DataStore Keys Requiring UI Exposure (Ready for Wiring):
-| DataStore Key | Type | Default Value | Discovered In Screenshot | Target Studio Screen |
-|---|---|---|---|---|
-| `notif_preview_mode` | String (`"COMPACT"`, `"EXPANDED"`) | `"EXPANDED"` | `notification style.jpg` | `NotificationStudioScreen.kt` |
-| `notif_excluded_packages` | Set<String> | `emptySet()` | `notification style.jpg` | `NotificationStudioScreen.kt` |
-| `notif_hide_sensitive` | Boolean | `false` | `notification style.jpg` | `NotificationStudioScreen.kt` |
-| `music_album_rotation_enabled` | Boolean | `true` | `music player settings.jpg` | `MusicStudioScreen.kt` |
-| `music_artwork_shape` | String (`"CIRCLE"`, `"SQUIRCLE"`) | `"CIRCLE"` | `music player settings.jpg` | `MusicStudioScreen.kt` |
-| `music_visualizer_style` | String | `"EQUALIZER"` | `music player.jpg` | `MusicStudioScreen.kt` |
-| `battery_anim_style` | String | `"GLYPH_PULSE"` | `charging themes.jpg` | `ChargingStudioScreen.kt` |
-| `is_pulsing` | Boolean | `true` | `flashy border animation.jpg` | `AnimationStudioScreen.kt` |
-
-### 6.2 New DataStore Keys to Add in Design System Implementation:
-| Proposed DataStore Key | Kotlin Type | Default Value | Description / Screenshot Origin |
-|---|---|---|---|
-| `music_show_fast_forward_buttons` | Boolean | `true` | Show 10s FF/rewind buttons (`music player settings.jpg`) |
-| `music_long_press_volume_enabled` | Boolean | `false` | Long press volume gesture (`music player settings.jpg`) |
-| `music_album_blurred_bg_enabled` | Boolean | `false` | Blurred album background (`music player settings.jpg`) |
-| `music_only_show_while_playing` | Boolean | `true` | Hide when audio is paused (`music player settings.jpg`) |
-| `music_blocked_packages` | Set<String> | `emptySet()` | Blacklist for music player (`music player settings.jpg`) |
-| `notif_auto_expand_dnd` | Boolean | `false` | Expand during DND (`notification style.jpg`) |
-| `notif_title_text_size_sp` | Float | `14.0f` | Stepper slider for title (`notification expanded.jpg`) |
-| `notif_body_text_size_sp` | Float | `12.0f` | Stepper slider for subtext (`notification expanded.jpg`) |
-| `anim_physics_mode` | String | `"LIQUID"` | Liquid, Bouncy, Droplet (`notch swipe animation.jpg`) |
-| `border_glow_speed` | Float | `1.0f` | Border animation speed (`flashy border animation style.jpg`) |
-| `border_glow_thickness_dp` | Float | `2.0f` | Border thickness (`flashy border animation style.jpg`) |
-| `border_glow_colors` | String | `"#007AFF,#FF3B30,#FFCC00"` | Comma-separated hex list (`flashy border animation style.jpg`) |
+| ID | Original Resource Path | Animation Archetype & Effect | Layering | Disposition in Nothing Island | Target Implementation | Evidence Status |
+|---|---|---|---|---|---|---|
+| `0` | `charginganims/0_ghost.json` | Floating cartoon ghost with starry night sky | Dual (FG Character + BG Lottie) | **Exclude** | Cartoon aesthetic clashing with Nothing OS | `T1, T2, T4, T5` (Observed Live) |
+| `1` | `charginganims/1_amongUs.json` | Red spacesuit astronaut running on platform | Dual (FG Character + BG JSON) | **Exclude** | Severe trademark/copyright violation | `T1, T2, T4, T5` (Observed Live) |
+| `2` | `charginganims/2_crab.json` | Beach scene with snapping pink crab | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon illustration | `T1, T2, T4, T5` (Observed Live) |
+| `3` | `charginganims/3_car.json` | Yellow sports car driving on road surface | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon illustration | `T1, T2, T4, T5` (Observed Live) |
+| `4` | `charginganims/4_bee.json` | Bee buzzing and sipping coffee | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon mascot | `T1, T2, T4, T5` (Observed Live) |
+| `5` | `charginganims/5_heart.json` | Heart character shooting Cupid arrows | Dual (FG Character + BG JSON) | **Adapt** | Adapt motion curve into *Glyph Heartbeat Pulse* | `T1, T2, T4, T5` (Observed Live) |
+| `6` | `charginganims/6_emoji.json` | Blinking yellow emoji face | Dual (FG Character + BG JSON) | **Exclude** | Generic clipart | `T1, T2, T4, T5` (Observed Live) |
+| `7` | `charginganims/7_snail.json` | Snail crawling with glowing shell | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon mascot | `T1, T2, T4, T5` (Observed Live) |
+| `8` | `charginganims/8_hand.json` | Thumbs-up animated hand gesture | Dual (FG Character + BG JSON) | **Exclude** | Generic clipart graphic | `T1, T2, T4, T5` (Observed Live) |
+| `9` | `charginganims/9_waterMelon.json` | Watermelon wearing sunglasses | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon illustration | `T1, T2, T4, T5` (Observed Live) |
+| `10` | `charginganims/10_shark.json` | Shark swimming in liquid notch reservoir | Dual (FG Character + BG JSON) | **Adapt** | Adapt fluid surface dynamics into *Liquid Mercury* | `T1, T2, T4, T5` (Observed Live) |
+| `11` | `charginganims/11_flash.json` | Electric flash bolt with lens flare | Dual (FG Character + BG JSON) | **Combine** | Combined into *Electric Pulse* | `T1, T2, T4, T5` (Observed Live) |
+| `12` | `charginganims/12_bettle.json` | Beetle flapping wings on branch | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon mascot | `T1, T2, T4, T5` (Observed Live) |
+| `13` | `charginganims/13_pumpkin.json` | Halloween jack-o'-lantern with bats | Dual (FG Character + BG JSON) | **Exclude** | Seasonal novelty | `T1, T2, T4, T5` (Observed Live) |
+| `14` | `charginganims/14_fruit.json` | Pear bouncing on grass | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon illustration | `T1, T2, T4, T5` (Observed Live) |
+| `15` | `charginganims/15_magicWand.json`| Wand emitting magic particle stars | Dual (FG Character + BG JSON) | **Exclude** | Fantasy theme clashing with Nothing OS | `T1, T2, T4, T5` (Observed Live) |
+| `16` | `charginganims/16_robot.json` | Android robot waving from platform | Dual (FG Character + BG JSON) | **Adapt** | Adapt wireframe aesthetics into *Dot Matrix Robot* | `T1, T2, T4, T5` (Observed Live) |
+| `17` | `charginganims/17_shoes.json` | Running sneakers moving across pavement | Dual (FG Character + BG JSON) | **Exclude** | Commercial sneaker graphic | `T1, T2, T4, T5` (Observed Live) |
+| `18` | `charginganims/18_snowMan.json` | Shivering snowman with snowfall | Dual (FG Character + BG JSON) | **Exclude** | Seasonal novelty | `T1, T2, T4, T5` (Observed Live) |
+| `19` | `charginganims/19_ninja.json` | Silhouette ninja running across rooftops | Dual (FG Character + BG JSON) | **Exclude** | Off-brand cartoon illustration | `T1, T2, T4, T5` (Observed Live) |
+| `20` | `charginganims/20_ball.json` | Bouncing sports ball with face | Dual (FG Character + BG JSON) | **Exclude** | Generic sports graphic | `T1, T2, T4, T5` (Observed Live) |
+| `21` | `charginganims/21_juice.json` | Tropical juice glass with bubbling liquid | Dual (FG Character + BG JSON) | **Exclude** | Cartoon beverage container | `T1, T2, T4, T5` (Observed Live) |
+| `22` | `charginganims/22_Charge_Bolt.lottie` | High-voltage neon green lightning arc (`#4CF075`) | Single (FG Lottie) | **Adapt** | Adapt into *Electric Pulse* (monochrome/cyan) | `T1, T2, T4, T5` (Observed Live) |
+| `23` | `charginganims/23_Charge_Bolt.lottie` | Dual electric lightning bolts flanking notch | Single (FG Lottie) | **Combine** | Combined into *Plasma Flow* | `T1, T2, T4, T5` (Observed Live) |
+| `24` | `charginganims/24_Crystal_Shower.lottie`| Cyan shimmering crystal particles (`#A4E9F9`) | Single (FG Lottie) | **Adapt** | Adapt into *Dot Matrix Reactor* particle stream | `T1, T2, T4, T5` (Observed Live) |
+| `25` | `charginganims/25_Potion.lottie` | Bubbling potion bottle (`#99EA11`) | Single (FG Lottie) | **Exclude** | Fantasy alchemy theme | `T1, T2, T4, T5` (Observed Live) |
+| `26` | `charginganims/26_Leaf.lottie` | Swirling bio leaves orbiting punch hole | Single (FG Lottie) | **Exclude** | Nature illustration | `T1, T2, T4, T5` (Observed Live) |
+| `27` | `charginganims/27_Morning_star.lottie` | Radiant golden spiked starburst (`#FFE963`) | Single (FG Lottie) | **Adapt** | Adapt radial burst into *Glyph Arc* | `T1, T2, T4, T5` (Observed Live) |
+| `28` | `charginganims/28_Spear.lottie` | Flaming spearhead horizontal energy sweep | Single (FG Lottie) | **Adapt** | Adapt into *Nothing Red Surge* | `T1, T2, T4, T5` (Observed Live) |
+| `29` | `charginganims/29_Elixir.lottie` | Glowing magenta elixir bottle with mist | Single (FG Lottie) | **Exclude** | Fantasy alchemy theme | `T1, T2, T4, T5` (Observed Live) |
+| `30` | `charginganims/30_Freeze_Bolt.lottie` | Glacial crystal lightning pulse (`#97D4FF`) | Single (FG Lottie) | **Adapt** | Adapt into *Cyber Horizon* | `T1, T2, T4, T5` (Observed Live) |
+| `31` | `charginganims/31_Pedals.lottie`| Falling cherry blossom petal stream | Single (FG Lottie) | **Exclude** | Floral graphic | `T1, T2, T4, T5` (Observed Live) |
+| `32` | `charging_anim_preview_32` | Minimalist percentage text pill (`50%`) | Single (Vector/Text) | **Adopt** | Baseline *Minimalist Bolt* | `T1, T2, T4, T5` (Observed Live) |
+| `33` | `charging_notch_icon_plug` | AC power plug vector icon beside level | Single (Vector Icon) | **Adopt** | Technical AC Connection glyph | `T1, T2, T4, T5` (Observed Live) |
+| `34` | `charging_notch_icon_battery` | Standard filled battery cell indicator | Single (Vector Icon) | **Adopt** | Adopt as *Battery Cell* | `T1, T2, T4, T5` (Observed Live) |
+| `35` | `charging_notch_icon_battery_2` | Thin outline technical battery cell | Single (Vector Icon) | **Adopt** | Adopt as technical outline variant | `T1, T2, T4, T5` (Observed Live) |
+| `36` | `charging_notch_icon_bolt` | High-voltage pulsing lightning glyph | Single (Vector Icon) | **Adopt** | Adopt as *Wattage Reactor* glyph | `T1, T2, T4, T5` (Observed Live) |
+| `101`| `charging_notch_in_makar_sankranti.json`| Festive kites flying in wind | Dual (FG + BG JSON) | **Exclude** | Seasonal festival theme | `T1, T2` (Decompiled Bytecode) |
+| `102`| `charging_notch_in_republic_day.json` | National tricolor ribbon wave | Dual (FG + BG JSON) | **Exclude** | National holiday theme | `T1, T2` (Decompiled Bytecode) |
 
 ---
 
-## 7. Technical Constraints & Platform Considerations
+## 7. Confirmation of Phase 2 UI Redesign Completion & Evidence
 
-1. **Android 17 / API 37 Compatibility:**
-   - All newly proposed broadcast receivers (e.g. `RINGER_MODE_CHANGED_ACTION`, `ACTION_USER_PRESENT`) must specify `RECEIVER_NOT_EXPORTED` flags in accordance with modern Android security rules.
-   - Stepper controls and slider drags must use non-blocking StateFlow emissions to ensure 120Hz smooth scrolling without jank or disk I/O on the main thread.
-2. **AOSP Layer 24000 Isolation:**
-   - Touch interactions (e.g. long-press volume gesture, 10s seek buttons) must be processed within `IslandOverlayView` and dispatched via Android `AudioManager` and `MediaController.TransportControls`.
-   - The companion app UI communicates strictly through `IslandPreferencesRepository` StateFlows; the overlay never binds to Activity lifecycle or UI composables directly.
-3. **Nothing Phone (4a) Cutout Alignment:**
-   - All preview cards (`IslandPreview.kt`) must use the measured hardware constants (`CutoutDetector.DEFAULT_COMPACT_WIDTH_DP = 124dp`, `DEFAULT_COMPACT_VISIBLE_HEIGHT_DP = 36dp`, `DEFAULT_TOP_MARGIN_DP = 9dp`) so in-app previews accurately simulate on-device hardware layout.
+Phase 2 UI Redesign (Design System & Navigation Implementation) is **100% complete, fully verified, and committed to Git**.
+
+### 7.1 Build & Packaging Evidence:
+- **Git Commit:** `2690eccb6c18180697714670f3c1513da73b4942` (`feat(ui): implement Phase 2 Design System Primitives, Interactive Preview Engine, and Studio Navigation Shell`)
+- **Documentation Commit:** `02ceb729af01e769a753e60a8a2abcaab249deff` ([`PHASE2_IMPLEMENTATION_REPORT.md`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/PHASE2_IMPLEMENTATION_REPORT.md))
+- **Build Command:** `./gradlew assembleDebug`
+- **Output APK Path:** `app/build/outputs/apk/debug/app-debug.apk`
+- **File Size:** `26,653,057 bytes` (25.4 MB)
+- **SHA-256 Checksum:** `8889ECD4183013ECD6FC30322E345E4A83C7A5548A826B9AAF7774361D3248C6`
+- **Installation Output:** `adb install -r app-debug.apk` $\rightarrow$ `Success`
+
+### 7.2 Automated Test Suite Evidence:
+- **Total Tests Executed:** **241**
+- **Passing Tests:** **241 (100%)**
+- **Failures:** **0**
+- **Errors:** **0**
+- **Execution Time:** 6 seconds (`BUILD SUCCESSFUL in 6s`)
+- **Coverage:** Preserved all 235 R8 baseline tests + 6 new automated tests verifying design tokens, preview states, and back-stack routing in [`DesignSystemAndNavigationTest.kt`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/app/src/test/java/com/nothing/island/ai/ui/DesignSystemAndNavigationTest.kt).
+
+### 7.3 Physical Device Screenshots & Telemetry (Nothing Phone 4a):
+Seven verified on-device screenshots captured on Android 17 / API 37:
+1. **Home Command Dashboard:** [`phase2_dest1_home.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_dest1_home.png) (Interactive preview with 8 state tabs, service status banner).
+2. **Notification Studio:** [`phase2_dest2_notifs.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_dest2_notifs.png) (`FULL POPUP` segmented control, WhatsApp card preview, NothingSwitch).
+3. **Music Studio:** [`phase2_dest3_music.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_dest3_music.png) (Spinning vinyl preview, 5-bar equalizer, seekbar, 5 transport buttons).
+4. **Charging Studio:** [`phase2_dest4_battery.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_dest4_battery.png) (Charging preview, 2-column visualizer gallery with Nothing OS styles).
+5. **Studios Hub:** [`phase2_dest5_studios.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_dest5_studios.png) (Gateway routing to Theme, Animation, Gesture, Peripherals, Geometry).
+6. **Sub-Studio (Theme Studio):** [`phase2_sub_theme.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_sub_theme.png) (32+ preset colorways grid, back navigation header).
+7. **Back Navigation Verification:** [`phase2_back_to_hub.png`](file:///C:/Users/User/.gemini/antigravity/scratch/nothing-island/docs/screenshots/phase2_back_to_hub.png) (Clean back-stack return to Studios Hub).
+
+### 7.4 Physical Graphics Telemetry (`dumpsys gfxinfo` at 120 Hz):
+- **Display Refresh Rate:** 120 Hz (8.33ms VSYNC period)
+- **Sampled Frames:** 1,603 frames
+- **GPU 95th Percentile:** `8 ms` (Within 8.33ms budget)
+- **Slow Bitmap Uploads:** `0` (Zero pipeline stalls)
+- **ANRs / Crashes:** Exactly `0`
 
 ---
 
-## 8. Verification & Sign-off
+## 8. Summary of Milestones & Immediate Scope Boundaries
 
-- [x] All 20 reference screenshots inspected at full resolution.
-- [x] Full inventory compiled with filenames, resolutions, and file sizes.
-- [x] Every visible toggle, slider, stepper, animation, and preview extracted.
-- [x] Traceability matrix created mapping all 39 requirements to screenshot evidence, codebase status, and redesign destinations.
-- [x] Zero modifications made to original screenshot files.
-- [x] Zero modifications made to application source code during audit.
-- [x] Architecture verified compatible with accepted R8 baseline (235 unit tests).
+- **Phase 1 & Phase 1.1:** UI Audit & Redesign Specification (ACCEPTED)
+- **Phase 2:** Design System & Navigation Implementation (COMPLETED & VERIFIED)
+- **Phase 3:** Feature Studios Implementation (Pending authorization)
+- **R9 Subsystem:** Call Intelligence (STRICTLY DEFERRED — NO IMPLEMENTATION COMMENCED)
+- **R10 Subsystem:** Security & System Events (STRICTLY DEFERRED)
+- **R11 Subsystem:** Live Activities & Order Tracking (STRICTLY DEFERRED)

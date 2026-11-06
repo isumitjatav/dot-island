@@ -4,35 +4,137 @@ import androidx.compose.ui.graphics.Color
 
 /**
  * Visual presentation styles for Nothing Island Charging Animation Studio.
+ * Includes the 12 Nothing-native charging styles and legacy aliases.
  */
-enum class ChargingAnimationStyle {
-    /**
-     * Default: Concentric orbiting energy rings with particle ticks around the cutout.
-     */
-    ENERGY_RING,
+enum class ChargingAnimationStyle(
+    val id: String,
+    val displayName: String,
+    val category: String = "NOTHING SIGNATURE",
+    val description: String = ""
+) {
+    // 12 Nothing-native charging styles
+    GLYPH_ARC(
+        "glyph_arc",
+        "Glyph Arc",
+        "NOTHING SIGNATURE",
+        "Segmented Glyph lighting ring with orbiting white arc"
+    ),
+    DOT_MATRIX_REACTOR(
+        "dot_matrix_reactor",
+        "Dot Matrix",
+        "NOTHING SIGNATURE",
+        "LED dot-matrix ring pulsating around the camera lens"
+    ),
+    WIREFRAME_ORBIT(
+        "wireframe_orbit",
+        "Wireframe Orbit",
+        "NOTHING SIGNATURE",
+        "Dual counter-rotating technical wireframe rings"
+    ),
+    NOTHING_RED_SURGE(
+        "nothing_red_surge",
+        "Red Surge",
+        "NOTHING SIGNATURE",
+        "Iconic Nothing Red energy wave tracking charge level"
+    ),
+    LIQUID_MERCURY(
+        "liquid_mercury",
+        "Liquid Mercury",
+        "FLUID & ELEMENTAL",
+        "Monochrome fluid reservoir with buoyant meniscus physics"
+    ),
+    ELECTRIC_PULSE(
+        "electric_pulse",
+        "Electric Pulse",
+        "FLUID & ELEMENTAL",
+        "High-frequency neon electrical discharge shimmer"
+    ),
+    CYBER_HORIZON(
+        "cyber_horizon",
+        "Cyber Horizon",
+        "FLUID & ELEMENTAL",
+        "Dual cyan laser lines sweeping laterally across the notch"
+    ),
+    PLASMA_FLOW(
+        "plasma_flow",
+        "Plasma Flow",
+        "FLUID & ELEMENTAL",
+        "Multi-stop angular sweep gradient with continuous rotation"
+    ),
+    DIGITAL_GAUGE(
+        "digital_gauge",
+        "Digital Gauge",
+        "TECHNICAL & MINIMAL",
+        "Precision 360-degree calibrated technical tick dial"
+    ),
+    WATTAGE_REACTOR(
+        "wattage_reactor",
+        "Wattage Reactor",
+        "TECHNICAL & MINIMAL",
+        "Kinetic power bars scaling directly with charging speed"
+    ),
+    MINIMALIST_BOLT(
+        "minimalist_bolt",
+        "Minimalist Bolt",
+        "TECHNICAL & MINIMAL",
+        "Subtle high-contrast lightning glyph with pulse glow"
+    ),
+    BATTERY_CELL(
+        "battery_cell",
+        "Battery Cell",
+        "TECHNICAL & MINIMAL",
+        "Classic battery enclosure with segmented dot fill"
+    ),
 
-    /**
-     * Dynamic jagged electrical arcing and surging light pulses along the perimeter.
-     */
-    ELECTRIC_PULSE,
-
-    /**
-     * Fluid wave fill rising to battery percentage with surface ripple physics.
-     */
-    LIQUID_ENERGY,
-
-    /**
-     * Multi-layered ambient breathing aura with Nothing Red / chromatic glow.
-     */
-    CHARGING_AURA,
-
-    /**
-     * Orbiting plasma orbs circulating in an elliptical vortex around the punch-hole.
-     */
-    PLASMA_FLOW;
+    // Legacy entries preserved for backward compatibility
+    @Deprecated("Mapped to GLYPH_ARC")
+    ENERGY_RING(
+        "energy_ring",
+        "Energy Ring",
+        "LEGACY",
+        "Concentric orbiting energy rings"
+    ),
+    @Deprecated("Mapped to LIQUID_MERCURY")
+    LIQUID_ENERGY(
+        "liquid_energy",
+        "Liquid Energy",
+        "LEGACY",
+        "Fluid wave fill rising to battery percentage"
+    ),
+    @Deprecated("Mapped to NOTHING_RED_SURGE")
+    CHARGING_AURA(
+        "charging_aura",
+        "Charging Aura",
+        "LEGACY",
+        "Multi-layered ambient breathing halo"
+    );
 
     companion object {
-        val DEFAULT = ENERGY_RING
+        val DEFAULT = GLYPH_ARC
+
+        val ACTIVE_12: List<ChargingAnimationStyle> = listOf(
+            GLYPH_ARC,
+            DOT_MATRIX_REACTOR,
+            WIREFRAME_ORBIT,
+            NOTHING_RED_SURGE,
+            LIQUID_MERCURY,
+            ELECTRIC_PULSE,
+            CYBER_HORIZON,
+            PLASMA_FLOW,
+            DIGITAL_GAUGE,
+            WATTAGE_REACTOR,
+            MINIMALIST_BOLT,
+            BATTERY_CELL
+        )
+
+        fun fromString(name: String?): ChargingAnimationStyle {
+            if (name == null) return DEFAULT
+            return try {
+                valueOf(name)
+            } catch (_: Exception) {
+                entries.find { it.id.equals(name, ignoreCase = true) } ?: DEFAULT
+            }
+        }
     }
 }
 
@@ -42,7 +144,7 @@ enum class ChargingAnimationStyle {
 data class BatteryPreferences(
     val enabled: Boolean = true,
     val chargingAnimationEnabled: Boolean = true,
-    val animationStyle: ChargingAnimationStyle = ChargingAnimationStyle.ENERGY_RING,
+    val animationStyle: ChargingAnimationStyle = ChargingAnimationStyle.GLYPH_ARC,
     val animationSpeed: Float = 1.0f,               // 0.5f to 2.0f
     val animationIntensity: Float = 1.0f,           // 0.5f to 1.5f
     val accentColorHex: Long = 0xFFD71920L,         // Nothing Red default

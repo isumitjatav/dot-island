@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -49,6 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nothing.island.ai.battery.ChargingAnimationStyle
+import com.nothing.island.ai.ui.charging.ChargingAnimationHost
 import com.nothing.island.ai.ui.theme.NothingTokens
 
 /**
@@ -640,12 +643,12 @@ private fun PreviewMusicExpanded() {
 private fun PreviewChargingPill() {
     Box(
         modifier = Modifier
-            .width(160.dp)
+            .width(180.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(NothingTokens.NothingBlack)
             .border(1.dp, NothingTokens.NothingGreen, RoundedCornerShape(18.dp))
-            .padding(horizontal = 10.dp),
+            .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -653,7 +656,18 @@ private fun PreviewChargingPill() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("⚡", fontSize = 12.sp)
+            Box(
+                modifier = Modifier.size(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ChargingAnimationHost(
+                    style = ChargingAnimationStyle.GLYPH_ARC,
+                    percentage = 68,
+                    isCharging = true,
+                    accentColor = NothingTokens.NothingGreen,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             Text(
                 text = "CHARGING 68%",
                 color = NothingTokens.NothingGreen,
