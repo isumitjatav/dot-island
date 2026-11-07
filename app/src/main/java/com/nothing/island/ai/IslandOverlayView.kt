@@ -89,6 +89,8 @@ import com.nothing.island.ai.ui.components.MusicExpandedView
 import com.nothing.island.ai.ui.components.NotificationCard
 import com.nothing.island.ai.ui.components.NotificationCardResolver
 import com.nothing.island.ai.ui.components.NotificationCompactView
+import com.nothing.island.ai.ui.components.SystemAlertPill
+import com.nothing.island.ai.gestures.GesturePreferences
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -272,7 +274,8 @@ fun IslandOverlayView(
     onSkipPrevious: () -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
     onSwipeActivity: (SwipeDirection) -> Unit = {},
-    activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD
+    activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD,
+    gesturePreferences: GesturePreferences = GesturePreferences()
 ) {
     val isExpanded = state.mode == IslandMode.EXPANDED
     val accentColor = Color(preferences.accentColorHex)
@@ -303,7 +306,23 @@ fun IslandOverlayView(
                     (activeEvent is IslandEvent.BatteryWarning) ||
                     (activitySwitcherInterface == IslandInterface.BATTERY))
 
-            if (activeNotification != null) {
+            val isSystemAlertActive = (activeEvent is IslandEvent.RingerModeChanged ||
+                    activeEvent is IslandEvent.TorchStateChanged ||
+                    activeEvent is IslandEvent.WifiStateChanged ||
+                    activeEvent is IslandEvent.DndStateChanged ||
+                    activeEvent is IslandEvent.BatteryThresholdWarning ||
+                    activeEvent is IslandEvent.DeviceUnlocked)
+
+            if (isSystemAlertActive) {
+                // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
+                SystemAlertPill(
+                    event = activeEvent!!,
+                    modifier = Modifier
+                        .width(220.dp)
+                        .height(36.dp)
+                        .clickable { onToggleExpand() }
+                )
+            } else if (activeNotification != null) {
                 // COMPACT NOTIFICATION PREVIEW (Milestone R6 Phase 3)
                 // 200dp symmetrical pill centered across camera punch-hole
                 NotificationCompactView(

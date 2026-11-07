@@ -14,6 +14,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.nothing.island.ai.CutoutDetector
+import com.nothing.island.ai.gestures.GestureAction
+import com.nothing.island.ai.gestures.GesturePreferences
+import com.nothing.island.ai.gestures.NotchDisappearMode
 import com.nothing.island.ai.battery.BatteryPreferences
 import com.nothing.island.ai.battery.ChargingAnimationStyle
 import com.nothing.island.ai.media.ArtworkShape
@@ -174,6 +177,19 @@ class IslandPreferencesRepository internal constructor(
         val BATTERY_AUTO_EXPAND_ON_PLUGGED = booleanPreferencesKey("battery_auto_expand_on_plugged")
     }
 
+    object GesturePreferencesKeys {
+        val SINGLE_TAP_ACTION = stringPreferencesKey("gesture_single_tap_action")
+        val LONG_PRESS_ACTION = stringPreferencesKey("gesture_long_press_action")
+        val SWIPE_LEFT_ACTION = stringPreferencesKey("gesture_swipe_left_action")
+        val SWIPE_RIGHT_ACTION = stringPreferencesKey("gesture_swipe_right_action")
+        val SWIPE_DOWN_ACTION = stringPreferencesKey("gesture_swipe_down_action")
+        val LONG_PRESS_DURATION_MS = longPreferencesKey("gesture_long_press_duration_ms")
+        val DND_AUTO_EXPAND_OVERRIDE = booleanPreferencesKey("dnd_auto_expand_override")
+        val HIDE_SENSITIVE_ON_KEYGUARD = booleanPreferencesKey("hide_sensitive_on_keyguard")
+        val NOTCH_DISAPPEAR_MODE = stringPreferencesKey("notch_disappear_mode")
+        val EXPAND_SILENT_NOTIFICATIONS = booleanPreferencesKey("expand_silent_notifications")
+    }
+
     /**
      * Immutable Flow emitting preferences stored in DataStore.
      * Catches IOExceptions cleanly and emits emptyPreferences() as safe fallback.
@@ -244,6 +260,23 @@ class IslandPreferencesRepository internal constructor(
         .distinctUntilChanged()
 
     /**
+     * Immutable Flow emitting gesture and behavior preferences stored in DataStore.
+     */
+    val gesturePreferencesFlow: Flow<GesturePreferences> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                Log.e(TAG, "Error reading gesture preferences from DataStore, falling back to safe defaults", exception)
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            mapGesturePreferences(preferences)
+        }
+        .distinctUntilChanged()
+
+    /**
      * Live calibration StateFlow.
      * Immediately updated when sliders move to provide real-time overlay feedback
      * without thrashing disk I/O on every frame.
@@ -260,10 +293,14 @@ class IslandPreferencesRepository internal constructor(
     private val _liveBatteryPreferences = MutableStateFlow(BatteryPreferences())
     val liveBatteryPreferences: StateFlow<BatteryPreferences> = _liveBatteryPreferences.asStateFlow()
 
+    private val _liveGesturePreferences = MutableStateFlow(GesturePreferences())
+    val liveGesturePreferences: StateFlow<GesturePreferences> = _liveGesturePreferences.asStateFlow()
+
     private var syncJob: Job? = null
     private var notificationSyncJob: Job? = null
     private var musicSyncJob: Job? = null
     private var batterySyncJob: Job? = null
+    private var gestureSyncJob: Job? = null
 
     init {
         // Synchronize live StateFlow with persisted DataStore values on launch
@@ -287,6 +324,11 @@ class IslandPreferencesRepository internal constructor(
                 _liveBatteryPreferences.value = persisted
             }
         }
+        gestureSyncJob = scope.launch {
+            gesturePreferencesFlow.collect { persisted ->
+                _liveGesturePreferences.value = persisted
+            }
+        }
     }
 
     /**
@@ -297,6 +339,7 @@ class IslandPreferencesRepository internal constructor(
         notificationSyncJob?.cancel()
         musicSyncJob?.cancel()
         batterySyncJob?.cancel()
+        gestureSyncJob?.cancel()
     }
 
     private fun mapPreferences(preferences: Preferences): IslandPreferences {
@@ -755,5 +798,123 @@ class IslandPreferencesRepository internal constructor(
         val defaults = BatteryPreferences()
         _liveBatteryPreferences.value = defaults
         updateBatteryPreferences(defaults)
+    }
+
+    private fun mapGesturePreferences(preferences: Preferences): GesturePreferences {
+        val singleTap = try {
+            GestureAction.valueOf(preferences[GesturePreferencesKeys.SINGLE_TAP_ACTION] ?: GestureAction.EXPAND_COLLAPSE.name)
+        } catch (_: Exception) {
+            GestureAction.EXPAND_COLLAPSE
+        }
+        val longPress = try {
+            GestureAction.valueOf(preferences[GesturePreferencesKeys.LONG_PRESS_ACTION] ?: GestureAction.NOTIFICATIONS_HUB.name)
+        } catch (_: Exception) {
+            GestureAction.NOTIFICATIONS_HUB
+        }
+        val swipeLeft = try {
+            GestureAction.valueOf(preferences[GesturePreferencesKeys.SWIPE_LEFT_ACTION] ?: GestureAction.NONE.name)
+        } catch (_: Exception) {
+            GestureAction.NONE
+        }
+        val swipeRight = try {
+            GestureAction.valueOf(preferences[GesturePreferencesKeys.SWIPE_RIGHT_ACTION] ?: GestureAction.NONE.name)
+        } catch (_: Exception) {
+            GestureAction.NONE
+        }
+        val swipeDown = try {
+            GestureAction.valueOf(preferences[GesturePreferencesKeys.SWIPE_DOWN_ACTION] ?: GestureAction.NONE.name)
+        } catch (_: Exception) {
+            GestureAction.NONE
+        }
+        val disappearMode = try {
+            NotchDisappearMode.valueOf(preferences[GesturePreferencesKeys.NOTCH_DISAPPEAR_MODE] ?: NotchDisappearMode.AUTO.name)
+        } catch (_: Exception) {
+            NotchDisappearMode.AUTO
+        }
+
+        return GesturePreferences(
+            singleTapAction = singleTap,
+            longPressAction = longPress,
+            swipeLeftAction = swipeLeft,
+            swipeRightAction = swipeRight,
+            swipeDownAction = swipeDown,
+            longPressDurationMs = preferences[GesturePreferencesKeys.LONG_PRESS_DURATION_MS] ?: 500L,
+            dndAutoExpandOverride = preferences[GesturePreferencesKeys.DND_AUTO_EXPAND_OVERRIDE] ?: false,
+            hideSensitiveOnKeyguard = preferences[GesturePreferencesKeys.HIDE_SENSITIVE_ON_KEYGUARD] ?: true,
+            notchDisappearMode = disappearMode,
+            expandSilentNotifications = preferences[GesturePreferencesKeys.EXPAND_SILENT_NOTIFICATIONS] ?: false
+        )
+    }
+
+    /**
+     * Updates in-memory live gesture preferences immediately for zero-latency feedback.
+     */
+    fun updateLiveGesturePreferences(prefs: GesturePreferences) {
+        _liveGesturePreferences.value = prefs
+    }
+
+    /**
+     * Persists updated gesture preferences to DataStore.
+     */
+    suspend fun updateGesturePreferences(prefs: GesturePreferences) {
+        _liveGesturePreferences.value = prefs
+        try {
+            dataStore.edit { p ->
+                p[GesturePreferencesKeys.SINGLE_TAP_ACTION] = prefs.singleTapAction.name
+                p[GesturePreferencesKeys.LONG_PRESS_ACTION] = prefs.longPressAction.name
+                p[GesturePreferencesKeys.SWIPE_LEFT_ACTION] = prefs.swipeLeftAction.name
+                p[GesturePreferencesKeys.SWIPE_RIGHT_ACTION] = prefs.swipeRightAction.name
+                p[GesturePreferencesKeys.SWIPE_DOWN_ACTION] = prefs.swipeDownAction.name
+                p[GesturePreferencesKeys.LONG_PRESS_DURATION_MS] = prefs.longPressDurationMs
+                p[GesturePreferencesKeys.DND_AUTO_EXPAND_OVERRIDE] = prefs.dndAutoExpandOverride
+                p[GesturePreferencesKeys.HIDE_SENSITIVE_ON_KEYGUARD] = prefs.hideSensitiveOnKeyguard
+                p[GesturePreferencesKeys.NOTCH_DISAPPEAR_MODE] = prefs.notchDisappearMode.name
+                p[GesturePreferencesKeys.EXPAND_SILENT_NOTIFICATIONS] = prefs.expandSilentNotifications
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to persist gesture preferences to DataStore", e)
+        }
+    }
+
+    suspend fun setSingleTapAction(action: GestureAction) {
+        dataStore.edit { it[GesturePreferencesKeys.SINGLE_TAP_ACTION] = action.name }
+    }
+
+    suspend fun setLongPressAction(action: GestureAction) {
+        dataStore.edit { it[GesturePreferencesKeys.LONG_PRESS_ACTION] = action.name }
+    }
+
+    suspend fun setSwipeLeftAction(action: GestureAction) {
+        dataStore.edit { it[GesturePreferencesKeys.SWIPE_LEFT_ACTION] = action.name }
+    }
+
+    suspend fun setSwipeRightAction(action: GestureAction) {
+        dataStore.edit { it[GesturePreferencesKeys.SWIPE_RIGHT_ACTION] = action.name }
+    }
+
+    suspend fun setSwipeDownAction(action: GestureAction) {
+        dataStore.edit { it[GesturePreferencesKeys.SWIPE_DOWN_ACTION] = action.name }
+    }
+
+    suspend fun setDndAutoExpandOverride(enabled: Boolean) {
+        dataStore.edit { it[GesturePreferencesKeys.DND_AUTO_EXPAND_OVERRIDE] = enabled }
+    }
+
+    suspend fun setHideSensitiveOnKeyguard(enabled: Boolean) {
+        dataStore.edit { it[GesturePreferencesKeys.HIDE_SENSITIVE_ON_KEYGUARD] = enabled }
+    }
+
+    suspend fun setNotchDisappearMode(mode: NotchDisappearMode) {
+        dataStore.edit { it[GesturePreferencesKeys.NOTCH_DISAPPEAR_MODE] = mode.name }
+    }
+
+    suspend fun setExpandSilentNotifications(enabled: Boolean) {
+        dataStore.edit { it[GesturePreferencesKeys.EXPAND_SILENT_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun resetGesturePreferencesToDefaults() {
+        val defaults = GesturePreferences()
+        _liveGesturePreferences.value = defaults
+        updateGesturePreferences(defaults)
     }
 }

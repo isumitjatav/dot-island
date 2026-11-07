@@ -48,6 +48,10 @@ import com.nothing.island.ai.notifications.PrivacySafeNotificationPresentation
 import com.nothing.island.ai.switcher.IslandActivitySwitcher
 import com.nothing.island.ai.switcher.IslandInterface
 import com.nothing.island.ai.switcher.SwipeDirection
+import com.nothing.island.ai.hardware.TorchCallbackHandler
+import com.nothing.island.ai.hardware.NetworkCallbackHandler
+import com.nothing.island.ai.receiver.SystemEventsReceiver
+import com.nothing.island.ai.gestures.GesturePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -145,6 +149,14 @@ class IslandOverlayController private constructor(private val appContext: Contex
     val mediaTracker: MediaSessionTracker = MediaSessionTracker.getInstance(appContext, eventEngine, audioOutputTracker)
     val batteryMonitor: BatteryMonitor = BatteryMonitor.getInstance(appContext, eventEngine, preferencesRepository)
     val activitySwitcher = IslandActivitySwitcher()
+
+    val torchHandler = TorchCallbackHandler(appContext) { event ->
+        eventEngine.emit(event)
+    }
+    val networkHandler = NetworkCallbackHandler(appContext) { event ->
+        eventEngine.emit(event)
+    }
+    private var systemEventsReceiver: SystemEventsReceiver? = null
 
     private var autoExpandJob: Job? = null
     private var batteryAutoExpandJob: Job? = null
@@ -315,6 +327,21 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 launchBatteryAutoExpansionObserver(scope, pm)
                 batteryMonitor.startMonitoring()
 
+                // Sprint 2 Batch 1: Hardware callbacks & System events
+                torchHandler.start()
+                networkHandler.start()
+                if (systemEventsReceiver == null) {
+                    systemEventsReceiver = SystemEventsReceiver { event ->
+                        eventEngine.emit(event)
+                    }
+                    val filter = SystemEventsReceiver.createIntentFilter()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_EXPORTED)
+                    } else {
+                        appContext.registerReceiver(systemEventsReceiver, filter)
+                    }
+                }
+
                 // Smart Music Auto-expansion observer
                 scope.launch {
                     var previousTrackKey: String? = null
@@ -393,6 +420,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val notifPrefs by preferencesRepository.liveNotificationPreferences.collectAsState()
                         val musicPrefs by preferencesRepository.liveMusicPreferences.collectAsState()
                         val batteryPrefs by preferencesRepository.liveBatteryPreferences.collectAsState()
+                        val gesturePrefs by preferencesRepository.liveGesturePreferences.collectAsState()
                         val batteryState by batteryMonitor.batteryState.collectAsState()
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
                         val history by projectedHistory.collectAsState()
@@ -482,7 +510,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onSwipeActivity = { direction ->
                                 handleActivitySwipe(direction)
-                            }
+                            },
+                            gesturePreferences = gesturePrefs
                         )
                     }
                 }
@@ -585,6 +614,21 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 launchBatteryAutoExpansionObserver(scope, pm)
                 batteryMonitor.startMonitoring()
 
+                // Sprint 2 Batch 1: Hardware callbacks & System events
+                torchHandler.start()
+                networkHandler.start()
+                if (systemEventsReceiver == null) {
+                    systemEventsReceiver = SystemEventsReceiver { event ->
+                        eventEngine.emit(event)
+                    }
+                    val filter = SystemEventsReceiver.createIntentFilter()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_EXPORTED)
+                    } else {
+                        appContext.registerReceiver(systemEventsReceiver, filter)
+                    }
+                }
+
                 // Smart Music Auto-expansion observer
                 scope.launch {
                     var previousTrackKey: String? = null
@@ -663,6 +707,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val notifPrefs by preferencesRepository.liveNotificationPreferences.collectAsState()
                         val musicPrefs by preferencesRepository.liveMusicPreferences.collectAsState()
                         val batteryPrefs by preferencesRepository.liveBatteryPreferences.collectAsState()
+                        val gesturePrefs by preferencesRepository.liveGesturePreferences.collectAsState()
                         val batteryState by batteryMonitor.batteryState.collectAsState()
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
                         val history by projectedHistory.collectAsState()
@@ -752,7 +797,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onSwipeActivity = { direction ->
                                 handleActivitySwipe(direction)
-                            }
+                            },
+                            gesturePreferences = gesturePrefs
                         )
                     }
                 }
@@ -1377,6 +1423,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
             isUserInteractingWithNotification = false
             batteryMonitor.stopMonitoring()
             audioOutputTracker.stop()
+            torchHandler.stop()
+            networkHandler.stop()
+            systemEventsReceiver?.let {
+                try {
+                    appContext.unregisterReceiver(it)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error unregistering systemEventsReceiver", e)
+                }
+                systemEventsReceiver = null
+            }
             unregisterKeyguardReceiver()
             controllerScope?.cancel()
             controllerScope = null

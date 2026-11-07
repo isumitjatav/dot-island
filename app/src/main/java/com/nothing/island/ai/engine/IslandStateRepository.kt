@@ -413,6 +413,35 @@ class IslandStateRepository(
                 subtitle = event.recordingType.name,
                 statusText = "PRIVACY ANCHOR"
             )
+            is IslandEvent.RingerModeChanged -> PresentationDetails(
+                title = when (event.ringerMode) {
+                    com.nothing.island.ai.gestures.RingerState.SILENT -> "SILENT"
+                    com.nothing.island.ai.gestures.RingerState.VIBRATE -> "VIBRATE"
+                    com.nothing.island.ai.gestures.RingerState.NORMAL -> "SOUND ON"
+                },
+                subtitle = "RINGER MODE",
+                statusText = "SYSTEM"
+            )
+            is IslandEvent.TorchStateChanged -> PresentationDetails(
+                title = if (event.isEnabled) "TORCH ON" else "TORCH OFF",
+                subtitle = "FLASHLIGHT",
+                statusText = "HARDWARE"
+            )
+            is IslandEvent.WifiStateChanged -> PresentationDetails(
+                title = if (event.isConnected) (event.ssid ?: "WI-FI CONNECTED") else "WI-FI DISCONNECTED",
+                subtitle = if (event.isConnected) "NETWORK ACTIVE" else "DISCONNECTED",
+                statusText = "CONNECTIVITY"
+            )
+            is IslandEvent.DndStateChanged -> PresentationDetails(
+                title = if (event.isEnabled) "DND ON" else "DND OFF",
+                subtitle = "DO NOT DISTURB",
+                statusText = "BEDTIME"
+            )
+            is IslandEvent.BatteryThresholdWarning -> PresentationDetails(
+                title = if (event.isCritical) "CRITICAL BATTERY" else "LOW BATTERY",
+                subtitle = "${event.batteryLevel}% REMAINING",
+                statusText = if (event.isCritical) "CONNECT CHARGER" else "BATTERY SAVER"
+            )
             else -> PresentationDetails(
                 title = "NOTHING ISLAND",
                 subtitle = "ACTIVE • CALIBRATED",

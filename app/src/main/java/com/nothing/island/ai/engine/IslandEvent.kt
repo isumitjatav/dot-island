@@ -1,5 +1,7 @@
 package com.nothing.island.ai.engine
 
+import com.nothing.island.ai.gestures.RingerState
+
 /**
  * Priority classification levels for Nothing Island event arbitration.
  * Higher integer values represent strictly higher precedence.
@@ -191,6 +193,26 @@ sealed interface IslandEvent {
             is ScreenStateChanged -> {
                 val o = other as ScreenStateChanged
                 isScreenOn == o.isScreenOn
+            }
+            is RingerModeChanged -> {
+                val o = other as RingerModeChanged
+                ringerMode == o.ringerMode
+            }
+            is TorchStateChanged -> {
+                val o = other as TorchStateChanged
+                isEnabled == o.isEnabled
+            }
+            is WifiStateChanged -> {
+                val o = other as WifiStateChanged
+                isConnected == o.isConnected && ssid == o.ssid
+            }
+            is DndStateChanged -> {
+                val o = other as DndStateChanged
+                isEnabled == o.isEnabled
+            }
+            is BatteryThresholdWarning -> {
+                val o = other as BatteryThresholdWarning
+                batteryLevel == o.batteryLevel && isCritical == o.isCritical
             }
         }
     }
@@ -480,5 +502,55 @@ sealed interface IslandEvent {
         override val priority: Int = IslandPriority.IDLE_BASE,
         override val timeoutMs: Long = 0L,
         val isScreenOn: Boolean
+    ) : IslandEvent
+
+    // ==========================================
+    // 11. HARDWARE ALERTS & SYSTEM SENSORS
+    // ==========================================
+    data class RingerModeChanged(
+        override val id: String = "ringer_mode_changed",
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "SystemEventsReceiver",
+        override val priority: Int = IslandPriority.SYSTEM_HARDWARE,
+        override val timeoutMs: Long = 2500L,
+        val ringerMode: RingerState
+    ) : IslandEvent
+
+    data class TorchStateChanged(
+        override val id: String = "torch_state_changed",
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "TorchCallbackHandler",
+        override val priority: Int = IslandPriority.SYSTEM_HARDWARE,
+        override val timeoutMs: Long = 2500L,
+        val isEnabled: Boolean
+    ) : IslandEvent
+
+    data class WifiStateChanged(
+        override val id: String = "wifi_state_changed",
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "NetworkCallbackHandler",
+        override val priority: Int = IslandPriority.SYSTEM_HARDWARE,
+        override val timeoutMs: Long = 3000L,
+        val isConnected: Boolean,
+        val ssid: String? = null
+    ) : IslandEvent
+
+    data class DndStateChanged(
+        override val id: String = "dnd_state_changed",
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "SystemEventsReceiver",
+        override val priority: Int = IslandPriority.SYSTEM_HARDWARE,
+        override val timeoutMs: Long = 2500L,
+        val isEnabled: Boolean
+    ) : IslandEvent
+
+    data class BatteryThresholdWarning(
+        override val id: String = "battery_threshold_warning",
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "SystemEventsReceiver",
+        override val priority: Int = IslandPriority.SAFETY_ALERT,
+        override val timeoutMs: Long = 4000L,
+        val batteryLevel: Int,
+        val isCritical: Boolean
     ) : IslandEvent
 }
