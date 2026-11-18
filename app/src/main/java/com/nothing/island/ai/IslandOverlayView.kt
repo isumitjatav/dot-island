@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -91,6 +92,8 @@ import com.nothing.island.ai.ui.components.NotificationCardResolver
 import com.nothing.island.ai.ui.components.NotificationCompactView
 import com.nothing.island.ai.ui.components.SystemAlertPill
 import com.nothing.island.ai.gestures.GesturePreferences
+import com.nothing.island.ai.gestures.IslandGestureActionExecutor
+import com.nothing.island.ai.gestures.islandGestureDetector
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -282,6 +285,16 @@ fun IslandOverlayView(
     val activeNotification = activeEvent as? IslandEvent.NotificationPosted
     val dashboardListState = rememberLazyListState()
 
+    val context = LocalContext.current
+    val gestureExecutor = remember(context, onToggleExpand, onExpandDashboard, onClearHistory) {
+        IslandGestureActionExecutor(
+            context = context,
+            torchHandler = null,
+            onToggleExpand = onExpandDashboard,
+            onClearAllNotifications = onClearHistory
+        )
+    }
+
     // Multi-download support with primary selection:
     // 1. Active notification if downloading/indeterminate
     // 2. Or most recently updated active download in projected history
@@ -351,7 +364,14 @@ fun IslandOverlayView(
                     onSwipe = { direction ->
                         Log.d("IslandTouch", "BatteryCompactView swiped $direction")
                         onSwipeActivity(direction)
-                    }
+                    },
+                    modifier = Modifier.islandGestureDetector(
+                        preferences = gesturePreferences,
+                        executor = gestureExecutor,
+                        isMediaIslandActive = false,
+                        onTap = onExpandBattery,
+                        onSwipeActivity = onSwipeActivity
+                    )
                 )
             } else if (currentTrack.isPlaying || (!currentTrack.isHistorical && currentTrack != MediaTrackState.EMPTY)) {
                 // COMPACT MUSIC PLAYER (Milestone R7)
@@ -366,7 +386,13 @@ fun IslandOverlayView(
                     onSwipe = { direction ->
                         Log.d("IslandTouch", "MusicCompactView swiped $direction")
                         onSwipeActivity(direction)
-                    }
+                    },
+                    modifier = Modifier.islandGestureDetector(
+                        preferences = gesturePreferences,
+                        executor = gestureExecutor,
+                        isMediaIslandActive = true,
+                        onSwipeActivity = onSwipeActivity
+                    )
                 )
             } else {
                 // COMPACT PILL MODE: Calibrated capsule dimensions and corner radius in DP
@@ -402,13 +428,11 @@ fun IslandOverlayView(
                             maxProgress = downloadMax,
                             accentColor = accentColor
                         )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            Log.d("IslandTouch", "IslandOverlayView root idle Box clicked -> expand dashboard (State A)")
-                            onExpandDashboard()
-                        },
+                        .islandGestureDetector(
+                            preferences = gesturePreferences,
+                            executor = gestureExecutor,
+                            isMediaIslandActive = false
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     // Clean idle state with outer border progress tracking if background download active

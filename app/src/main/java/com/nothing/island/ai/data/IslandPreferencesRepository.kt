@@ -25,6 +25,7 @@ import com.nothing.island.ai.media.MusicVisualizerStyle
 import com.nothing.island.ai.notifications.NotificationAnimationStyle
 import com.nothing.island.ai.notifications.NotificationPreferences
 import com.nothing.island.ai.notifications.NotificationPreviewMode
+import com.nothing.island.ai.system.SystemEventsPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -190,6 +191,18 @@ class IslandPreferencesRepository internal constructor(
         val EXPAND_SILENT_NOTIFICATIONS = booleanPreferencesKey("expand_silent_notifications")
     }
 
+    object SystemEventsPreferencesKeys {
+        val SYSTEM_EVENTS_ENABLED = booleanPreferencesKey("system_events_enabled")
+        val RINGER_CAPSULE_ENABLED = booleanPreferencesKey("ringer_capsule_enabled")
+        val SILENT_MODE_CAPSULE_ENABLED = booleanPreferencesKey("silent_mode_capsule_enabled")
+        val RING_MODE_CAPSULE_ENABLED = booleanPreferencesKey("ring_mode_capsule_enabled")
+        val DEVICE_UNLOCK_CAPSULE_ENABLED = booleanPreferencesKey("device_unlock_capsule_enabled")
+        val FLASHLIGHT_CAPSULE_ENABLED = booleanPreferencesKey("flashlight_capsule_enabled")
+        val WIFI_CAPSULE_ENABLED = booleanPreferencesKey("wifi_capsule_enabled")
+        val ZEN_MODE_CAPSULE_ENABLED = booleanPreferencesKey("zen_mode_capsule_enabled")
+        val BATTERY_WARNING_CAPSULE_ENABLED = booleanPreferencesKey("battery_warning_capsule_enabled")
+    }
+
     /**
      * Immutable Flow emitting preferences stored in DataStore.
      * Catches IOExceptions cleanly and emits emptyPreferences() as safe fallback.
@@ -277,6 +290,23 @@ class IslandPreferencesRepository internal constructor(
         .distinctUntilChanged()
 
     /**
+     * Immutable Flow emitting Sprint 2 system-event feedback preferences.
+     */
+    val systemEventsPreferencesFlow: Flow<SystemEventsPreferences> = dataStore.data
+        .catch { exception ->
+            if (exception is IOException) {
+                Log.e(TAG, "Error reading system event preferences from DataStore, falling back to safe defaults", exception)
+                emit(emptyPreferences())
+            } else {
+                throw exception
+            }
+        }
+        .map { preferences ->
+            mapSystemEventsPreferences(preferences)
+        }
+        .distinctUntilChanged()
+
+    /**
      * Live calibration StateFlow.
      * Immediately updated when sliders move to provide real-time overlay feedback
      * without thrashing disk I/O on every frame.
@@ -296,11 +326,15 @@ class IslandPreferencesRepository internal constructor(
     private val _liveGesturePreferences = MutableStateFlow(GesturePreferences())
     val liveGesturePreferences: StateFlow<GesturePreferences> = _liveGesturePreferences.asStateFlow()
 
+    private val _liveSystemEventsPreferences = MutableStateFlow(SystemEventsPreferences.DEFAULTS)
+    val liveSystemEventsPreferences: StateFlow<SystemEventsPreferences> = _liveSystemEventsPreferences.asStateFlow()
+
     private var syncJob: Job? = null
     private var notificationSyncJob: Job? = null
     private var musicSyncJob: Job? = null
     private var batterySyncJob: Job? = null
     private var gestureSyncJob: Job? = null
+    private var systemEventsSyncJob: Job? = null
 
     init {
         // Synchronize live StateFlow with persisted DataStore values on launch
@@ -329,6 +363,11 @@ class IslandPreferencesRepository internal constructor(
                 _liveGesturePreferences.value = persisted
             }
         }
+        systemEventsSyncJob = scope.launch {
+            systemEventsPreferencesFlow.collect { persisted ->
+                _liveSystemEventsPreferences.value = persisted
+            }
+        }
     }
 
     /**
@@ -340,6 +379,7 @@ class IslandPreferencesRepository internal constructor(
         musicSyncJob?.cancel()
         batterySyncJob?.cancel()
         gestureSyncJob?.cancel()
+        systemEventsSyncJob?.cancel()
     }
 
     private fun mapPreferences(preferences: Preferences): IslandPreferences {
@@ -873,6 +913,44 @@ class IslandPreferencesRepository internal constructor(
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist gesture preferences to DataStore", e)
+        }
+    }
+
+    private fun mapSystemEventsPreferences(preferences: Preferences): SystemEventsPreferences {
+        val defaults = SystemEventsPreferences.DEFAULTS
+        return SystemEventsPreferences(
+            systemEventsEnabled = preferences[SystemEventsPreferencesKeys.SYSTEM_EVENTS_ENABLED] ?: defaults.systemEventsEnabled,
+            ringerCapsuleEnabled = preferences[SystemEventsPreferencesKeys.RINGER_CAPSULE_ENABLED] ?: defaults.ringerCapsuleEnabled,
+            silentModeCapsuleEnabled = preferences[SystemEventsPreferencesKeys.SILENT_MODE_CAPSULE_ENABLED] ?: defaults.silentModeCapsuleEnabled,
+            ringModeCapsuleEnabled = preferences[SystemEventsPreferencesKeys.RING_MODE_CAPSULE_ENABLED] ?: defaults.ringModeCapsuleEnabled,
+            deviceUnlockCapsuleEnabled = preferences[SystemEventsPreferencesKeys.DEVICE_UNLOCK_CAPSULE_ENABLED] ?: defaults.deviceUnlockCapsuleEnabled,
+            flashlightCapsuleEnabled = preferences[SystemEventsPreferencesKeys.FLASHLIGHT_CAPSULE_ENABLED] ?: defaults.flashlightCapsuleEnabled,
+            wifiCapsuleEnabled = preferences[SystemEventsPreferencesKeys.WIFI_CAPSULE_ENABLED] ?: defaults.wifiCapsuleEnabled,
+            zenModeCapsuleEnabled = preferences[SystemEventsPreferencesKeys.ZEN_MODE_CAPSULE_ENABLED] ?: defaults.zenModeCapsuleEnabled,
+            batteryWarningCapsuleEnabled = preferences[SystemEventsPreferencesKeys.BATTERY_WARNING_CAPSULE_ENABLED] ?: defaults.batteryWarningCapsuleEnabled,
+        )
+    }
+
+    fun updateLiveSystemEventsPreferences(prefs: SystemEventsPreferences) {
+        _liveSystemEventsPreferences.value = prefs
+    }
+
+    suspend fun updateSystemEventsPreferences(prefs: SystemEventsPreferences) {
+        _liveSystemEventsPreferences.value = prefs
+        try {
+            dataStore.edit { p ->
+                p[SystemEventsPreferencesKeys.SYSTEM_EVENTS_ENABLED] = prefs.systemEventsEnabled
+                p[SystemEventsPreferencesKeys.RINGER_CAPSULE_ENABLED] = prefs.ringerCapsuleEnabled
+                p[SystemEventsPreferencesKeys.SILENT_MODE_CAPSULE_ENABLED] = prefs.silentModeCapsuleEnabled
+                p[SystemEventsPreferencesKeys.RING_MODE_CAPSULE_ENABLED] = prefs.ringModeCapsuleEnabled
+                p[SystemEventsPreferencesKeys.DEVICE_UNLOCK_CAPSULE_ENABLED] = prefs.deviceUnlockCapsuleEnabled
+                p[SystemEventsPreferencesKeys.FLASHLIGHT_CAPSULE_ENABLED] = prefs.flashlightCapsuleEnabled
+                p[SystemEventsPreferencesKeys.WIFI_CAPSULE_ENABLED] = prefs.wifiCapsuleEnabled
+                p[SystemEventsPreferencesKeys.ZEN_MODE_CAPSULE_ENABLED] = prefs.zenModeCapsuleEnabled
+                p[SystemEventsPreferencesKeys.BATTERY_WARNING_CAPSULE_ENABLED] = prefs.batteryWarningCapsuleEnabled
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to persist system event preferences to DataStore", e)
         }
     }
 

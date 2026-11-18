@@ -49,6 +49,22 @@ class IslandGestureDetectorUnitTest {
     }
 
     @Test
+    fun execute_screenshot_safelyHandledWithoutCrashing() {
+        // Screenshot requires AccessibilityService global action; safely logs without crashing
+        executor.execute(GestureAction.SCREENSHOT)
+        assertFalse(toggleExpandCalled)
+        assertFalse(clearAllCalled)
+    }
+
+    @Test
+    fun adjustVolumeDelta_safelyHandlesDeltaWithoutAudioManager() {
+        // Under test context wrapper where AudioManager is null, adjusts delta gracefully
+        executor.adjustVolumeDelta(100f, 300f)
+        executor.adjustVolumeDelta(-50f, 300f)
+        assertFalse(toggleExpandCalled)
+    }
+
+    @Test
     fun gestureActionEnum_containsAllEightStandardActions() {
         val actions = GestureAction.values()
         assertEquals(8, actions.size)

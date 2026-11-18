@@ -50,6 +50,7 @@ import com.nothing.island.ai.switcher.IslandInterface
 import com.nothing.island.ai.switcher.SwipeDirection
 import com.nothing.island.ai.hardware.TorchCallbackHandler
 import com.nothing.island.ai.hardware.NetworkCallbackHandler
+import com.nothing.island.ai.gestures.RingerState
 import com.nothing.island.ai.receiver.SystemEventsReceiver
 import com.nothing.island.ai.gestures.GesturePreferences
 import kotlinx.coroutines.CoroutineScope
@@ -91,6 +92,27 @@ class IslandOverlayController private constructor(private val appContext: Contex
         @Volatile
         var isOverlayActive: Boolean = false
             private set
+    }
+
+    /**
+     * Sprint 2: gates momentary system-hardware capsules against persisted preferences.
+     * Unknown event domains are allowed through unchanged.
+     */
+    private fun shouldEmitSystemEvent(event: IslandEvent): Boolean {
+        val prefs = preferencesRepository.liveSystemEventsPreferences.value
+        if (!prefs.systemEventsEnabled) return false
+        return when (event) {
+            is IslandEvent.RingerModeChanged -> prefs.ringerCapsuleEnabled && when (event.ringerMode) {
+                RingerState.SILENT, RingerState.VIBRATE -> prefs.silentModeCapsuleEnabled
+                RingerState.NORMAL -> prefs.ringModeCapsuleEnabled
+            }
+            is IslandEvent.DeviceUnlocked -> prefs.deviceUnlockCapsuleEnabled
+            is IslandEvent.TorchStateChanged -> prefs.flashlightCapsuleEnabled
+            is IslandEvent.WifiStateChanged -> prefs.wifiCapsuleEnabled
+            is IslandEvent.DndStateChanged -> prefs.zenModeCapsuleEnabled
+            is IslandEvent.BatteryThresholdWarning -> prefs.batteryWarningCapsuleEnabled
+            else -> true
+        }
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -151,10 +173,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
     val activitySwitcher = IslandActivitySwitcher()
 
     val torchHandler = TorchCallbackHandler(appContext) { event ->
-        eventEngine.emit(event)
+        if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
     }
     val networkHandler = NetworkCallbackHandler(appContext) { event ->
-        eventEngine.emit(event)
+        if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
     }
     private var systemEventsReceiver: SystemEventsReceiver? = null
 
@@ -332,11 +354,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 networkHandler.start()
                 if (systemEventsReceiver == null) {
                     systemEventsReceiver = SystemEventsReceiver { event ->
-                        eventEngine.emit(event)
+                        if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
                     }
                     val filter = SystemEventsReceiver.createIntentFilter()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_EXPORTED)
+                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
                     } else {
                         appContext.registerReceiver(systemEventsReceiver, filter)
                     }
@@ -619,11 +641,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 networkHandler.start()
                 if (systemEventsReceiver == null) {
                     systemEventsReceiver = SystemEventsReceiver { event ->
-                        eventEngine.emit(event)
+                        if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
                     }
                     val filter = SystemEventsReceiver.createIntentFilter()
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_EXPORTED)
+                        appContext.registerReceiver(systemEventsReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
                     } else {
                         appContext.registerReceiver(systemEventsReceiver, filter)
                     }
