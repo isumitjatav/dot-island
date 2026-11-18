@@ -179,6 +179,22 @@ class IslandStateRepository(
     }
 
     /**
+     * Expands overlay into State E: Call Card (caller, video badge, duration timer,
+     * answer and decline controls backed by the dialer's notification actions).
+     */
+    fun expandCall() {
+        _state.update { current ->
+            Log.d(TAG, "Expanded -> State E (CALL)")
+            current.copy(
+                mode = IslandMode.EXPANDED,
+                expandedViewType = ExpandedViewType.CALL,
+                selectedNotificationKey = null,
+                isAutoExpanded = true
+            )
+        }
+    }
+
+    /**
      * Selects a historical notification to view in State B (Notification-Focused View).
      */
     fun selectHistoricalNotification(key: String) {

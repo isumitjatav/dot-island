@@ -48,7 +48,13 @@ enum class ExpandedViewType {
      * safety alerts (low battery / overheat), or horizontal swipe via Activity Switcher.
      * Displays live charging visualizer, battery level, wattage, voltage, temp, and honest ETA.
      */
-    BATTERY
+    BATTERY,
+
+    /**
+     * State E: Incoming / Active Call (caller identity, duration, answer & decline).
+     * Triggered by a call notification captured by the telephony engine.
+     */
+    CALL
 }
 
 /**

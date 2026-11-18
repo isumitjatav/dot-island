@@ -84,6 +84,8 @@ import com.nothing.island.ai.switcher.IslandInterface
 import com.nothing.island.ai.switcher.SwipeDirection
 import com.nothing.island.ai.ui.components.AppNotificationIcon
 import com.nothing.island.ai.ui.components.BatteryCompactView
+import com.nothing.island.ai.ui.components.CallCompactView
+import com.nothing.island.ai.ui.components.CallExpandedView
 import com.nothing.island.ai.ui.components.BatteryExpandedView
 import com.nothing.island.ai.ui.components.MusicCompactView
 import com.nothing.island.ai.ui.components.MusicExpandedView
@@ -265,6 +267,9 @@ fun IslandOverlayView(
     onExpandNotificationFocused: () -> Unit = onToggleExpand,
     onExpandMusic: () -> Unit = onToggleExpand,
     onExpandBattery: () -> Unit = onToggleExpand,
+    onExpandCall: () -> Unit = onToggleExpand,
+    onAnswerCall: () -> Unit = {},
+    onDeclineCall: () -> Unit = {},
     onCollapse: () -> Unit = onToggleExpand,
     onTogglePulse: () -> Unit = {},
     onOpenContent: (String) -> Unit = {},
@@ -326,7 +331,17 @@ fun IslandOverlayView(
                     activeEvent is IslandEvent.BatteryThresholdWarning ||
                     activeEvent is IslandEvent.DeviceUnlocked)
 
-            if (isSystemAlertActive) {
+            val isCallActive = activeEvent is IslandEvent.IncomingCallRinging ||
+                    activeEvent is IslandEvent.CallConnected ||
+                    activeEvent is IslandEvent.CallEnded
+
+            if (isCallActive) {
+                // R9: telephony capsule with breathing red accent
+                CallCompactView(
+                    event = activeEvent!!,
+                    onTap = onExpandCall,
+                )
+            } else if (isSystemAlertActive) {
                 // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
                 SystemAlertPill(
                     event = activeEvent!!,
@@ -603,6 +618,27 @@ fun IslandOverlayView(
                         onSwipe = onSwipeActivity,
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+
+                ExpandedViewType.CALL -> {
+                    // =========================================================================
+                    // STATE E: CALL CARD (Milestone R9)
+                    // Caller identity, video badge, duration timer and real dialer actions
+                    // =========================================================================
+                    val callEvent = activeEvent
+                    if (callEvent is IslandEvent.IncomingCallRinging ||
+                        callEvent is IslandEvent.CallConnected ||
+                        callEvent is IslandEvent.CallEnded
+                    ) {
+                        val elapsed = if (callEvent is IslandEvent.CallConnected) callEvent.durationSeconds else 0L
+                        CallExpandedView(
+                            event = callEvent,
+                            elapsedSeconds = elapsed,
+                            onAnswer = onAnswerCall,
+                            onDecline = onDeclineCall,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    }
                 }
             }
         }

@@ -52,6 +52,7 @@ import com.nothing.island.ai.hardware.TorchCallbackHandler
 import com.nothing.island.ai.hardware.NetworkCallbackHandler
 import com.nothing.island.ai.gestures.RingerState
 import com.nothing.island.ai.receiver.SystemEventsReceiver
+import com.nothing.island.ai.telephony.CallActionRegistry
 import com.nothing.island.ai.gestures.GesturePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -495,6 +496,18 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 Log.d("IslandTouch", "onExpandBattery lambda invoked")
                                 expandBattery()
                             },
+                            onExpandCall = {
+                                Log.d("IslandTouch", "onExpandCall lambda invoked")
+                                repository.expandCall()
+                            },
+                            onAnswerCall = {
+                                Log.d("IslandTouch", "onAnswerCall lambda invoked")
+                                if (CallActionRegistry.answer()) collapse()
+                            },
+                            onDeclineCall = {
+                                Log.d("IslandTouch", "onDeclineCall lambda invoked")
+                                if (CallActionRegistry.decline()) collapse()
+                            },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
                                 collapse()
@@ -781,6 +794,18 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onExpandBattery = {
                                 Log.d("IslandTouch", "onExpandBattery lambda invoked")
                                 expandBattery()
+                            },
+                            onExpandCall = {
+                                Log.d("IslandTouch", "onExpandCall lambda invoked")
+                                repository.expandCall()
+                            },
+                            onAnswerCall = {
+                                Log.d("IslandTouch", "onAnswerCall lambda invoked")
+                                if (CallActionRegistry.answer()) collapse()
+                            },
+                            onDeclineCall = {
+                                Log.d("IslandTouch", "onDeclineCall lambda invoked")
+                                if (CallActionRegistry.decline()) collapse()
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
@@ -1384,6 +1409,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 ExpandedViewType.NOTIFICATION_FOCUSED -> IslandInterface.NOTIFICATION_FOCUSED
                 ExpandedViewType.MUSIC -> IslandInterface.MUSIC
                 ExpandedViewType.BATTERY -> IslandInterface.BATTERY
+                ExpandedViewType.CALL -> IslandInterface.DASHBOARD
             }
             activitySwitcher.syncCurrentInterface(currentTarget)
 

@@ -2,6 +2,9 @@ package com.nothing.island.ai.notifications
 
 import android.app.KeyguardManager
 import android.app.Notification
+import com.nothing.island.ai.telephony.CallActionRegistry
+import com.nothing.island.ai.telephony.CallNotificationParser
+import com.nothing.island.ai.telephony.CallSignal
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
@@ -107,6 +110,10 @@ class IslandNotificationListenerService : NotificationListenerService() {
     // Monotonic sequence counter assigned at callback arrival
     private val ingressSequence = AtomicLong(0L)
 
+    /** R9: notification key of the call currently presented by the island. */
+    @Volatile
+    private var activeCallKey: String? = null
+
     // Set of notification keys present at connection time (historical)
     private val historicalNotificationKeys = ConcurrentHashMap.newKeySet<String>()
 
@@ -162,6 +169,45 @@ class IslandNotificationListenerService : NotificationListenerService() {
             val seq = ingressSequence.incrementAndGet()
             val key = sbn.key ?: return@launch
             val postTime = sbn.postTime
+
+            // R9: Route incoming-call notifications straight to the telephony engine.
+            // This avoids restricted READ_PHONE_STATE / ANSWER_PHONE_CALLS permissions.
+            val callInfo = CallNotificationParser.parse(
+                CallSignal(
+                    category = sbn.notification.category,
+                    title = sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
+                    text = sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
+                    actionTitles = sbn.notification.actions?.mapNotNull { it.title?.toString() } ?: emptyList(),
+                )
+            )
+            if (callInfo?.isIncoming == true) {
+                activeCallKey = key
+                val callActions = sbn.notification.actions.orEmpty()
+                fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
+                    val label = action.title?.toString()?.lowercase().orEmpty()
+                    keywords.any { label.contains(it) }
+                }?.actionIntent
+                CallActionRegistry.register(
+                    CallActionRegistry.CallActions(
+                        key = key,
+                        answer = actionFor("answer", "accept"),
+                        decline = actionFor("decline", "reject", "hang"),
+                    )
+                )
+                IslandOverlayController.getInstance(applicationContext).apply {
+                    eventEngine.emit(
+                        IslandEvent.IncomingCallRinging(
+                            id = key,
+                            callId = key,
+                            callerDisplayName = callInfo.callerDisplayName,
+                            isVideoCall = callInfo.isVideoCall,
+                        )
+                    )
+                    repository.expandCall()
+                }
+                Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
+                return@launch
+            }
 
             // 1. Silent check: Do not emit alerts for historical notifications cataloged at connection time
             val isHistorical = isHistorical(key)
@@ -283,6 +329,15 @@ class IslandNotificationListenerService : NotificationListenerService() {
             val seq = ingressSequence.incrementAndGet()
             val key = sbn.key ?: return@launch
             val postTime = sbn.postTime
+
+            if (activeCallKey == key) {
+                activeCallKey = null
+                CallActionRegistry.clear(key)
+                IslandOverlayController.getInstance(applicationContext).eventEngine.emit(
+                    IslandEvent.CallEnded(id = "call_end_$key", callId = key)
+                )
+                Log.i(TAG, "R9 call ended for key=$key")
+            }
 
             try {
                 historicalNotificationKeys.remove(key)
