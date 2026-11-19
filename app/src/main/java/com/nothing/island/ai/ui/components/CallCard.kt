@@ -165,7 +165,12 @@ fun CallExpandedView(
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = if (isRinging && (event as? IslandEvent.IncomingCallRinging)?.isVideoCall == true) "VIDEO CALL" else formatCallDuration(elapsedSeconds),
+            text = when {
+                isRinging && (event as? IslandEvent.IncomingCallRinging)?.isVideoCall == true -> "VIDEO CALL"
+                event is IslandEvent.CallConnected -> formatCallDuration(elapsedSeconds)
+                isRinging -> "INCOMING"
+                else -> "CALL"
+            },
             color = NothingSecondaryText,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,

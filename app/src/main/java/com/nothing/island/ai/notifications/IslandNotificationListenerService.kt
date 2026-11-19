@@ -4,6 +4,7 @@ import android.app.KeyguardManager
 import android.app.Notification
 import com.nothing.island.ai.telephony.CallActionRegistry
 import com.nothing.island.ai.telephony.CallNotificationParser
+import com.nothing.island.ai.telephony.CallPhase
 import com.nothing.island.ai.telephony.CallSignal
 import android.content.ComponentName
 import android.content.Context
@@ -180,32 +181,54 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     actionTitles = sbn.notification.actions?.mapNotNull { it.title?.toString() } ?: emptyList(),
                 )
             )
-            if (callInfo?.isIncoming == true) {
-                activeCallKey = key
-                val callActions = sbn.notification.actions.orEmpty()
-                fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
-                    val label = action.title?.toString()?.lowercase().orEmpty()
-                    keywords.any { label.contains(it) }
-                }?.actionIntent
-                CallActionRegistry.register(
-                    CallActionRegistry.CallActions(
-                        key = key,
-                        answer = actionFor("answer", "accept"),
-                        decline = actionFor("decline", "reject", "hang"),
-                    )
-                )
-                IslandOverlayController.getInstance(applicationContext).apply {
-                    eventEngine.emit(
-                        IslandEvent.IncomingCallRinging(
-                            id = key,
-                            callId = key,
-                            callerDisplayName = callInfo.callerDisplayName,
-                            isVideoCall = callInfo.isVideoCall,
+            if (callInfo != null) {
+                val controller = IslandOverlayController.getInstance(applicationContext)
+                when (callInfo.phase) {
+                    CallPhase.INCOMING -> {
+                        activeCallKey = key
+                        val callActions = sbn.notification.actions.orEmpty()
+                        fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
+                            val label = action.title?.toString()?.lowercase().orEmpty()
+                            keywords.any { label.contains(it) }
+                        }?.actionIntent
+                        CallActionRegistry.register(
+                            CallActionRegistry.CallActions(
+                                key = key,
+                                answer = actionFor("answer", "accept"),
+                                decline = actionFor("decline", "reject", "hang"),
+                            )
                         )
-                    )
-                    repository.expandCall()
+                        controller.apply {
+                            eventEngine.emit(
+                                IslandEvent.IncomingCallRinging(
+                                    id = key,
+                                    callId = key,
+                                    callerDisplayName = callInfo.callerDisplayName,
+                                    isVideoCall = callInfo.isVideoCall,
+                                )
+                            )
+                            repository.expandCall()
+                        }
+                        Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
+                    }
+
+                    CallPhase.ONGOING -> {
+                        activeCallKey = key
+                        val isAlreadyConnected = controller.priorityManager?.activeEvent is IslandEvent.CallConnected
+                        if (!isAlreadyConnected) {
+                            controller.eventEngine.emit(
+                                IslandEvent.CallConnected(
+                                    id = "call_connected_$key",
+                                    callId = key,
+                                    callerDisplayName = callInfo.callerDisplayName,
+                                    durationSeconds = 0L,
+                                )
+                            )
+                            controller.repository.expandCall()
+                            Log.i(TAG, "R9 call connected: ${callInfo.callerDisplayName}")
+                        }
+                    }
                 }
-                Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
                 return@launch
             }
 
@@ -315,6 +338,19 @@ class IslandNotificationListenerService : NotificationListenerService() {
                 if (event != null && !isHistorical) {
                     val accepted = controller.eventEngine.emit(event)
                     Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
+
+                    // Hide System (Double) Notification: once the island owns the
+                    // presentation, cancel the redundant system heads-up. Only
+                    // clearable, non-ongoing alerts are safe to remove; calls and
+                    // persistent media/service notifications are never cancelled.
+                    if (accepted && prefs.hideSystemNotification && sbn.isClearable && !sbn.isOngoing) {
+                        try {
+                            cancelNotification(key)
+                            Log.i(TAG, "Hide System Notification: cancelled redundant system alert key=$key")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to cancel redundant system notification key=$key", e)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing incoming notification for key=$key", e)

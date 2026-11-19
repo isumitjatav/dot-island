@@ -9,6 +9,9 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
+    <!-- R9: optional, user-granted permission for in-island answer/decline -->
+    <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+
     <application
         android:allowBackup="true"
         android:icon="@android:drawable/sym_def_app_icon"

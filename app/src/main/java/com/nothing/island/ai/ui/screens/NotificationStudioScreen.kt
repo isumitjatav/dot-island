@@ -229,6 +229,16 @@ fun NotificationStudioScreen(
                 )
 
                 NothingSwitchRow(
+                    title = "Hide System (Double) Notification",
+                    description = "Remove the duplicate system heads-up once the island shows the alert. Calls and ongoing media are never hidden.",
+                    checked = notifPrefs.hideSystemNotification,
+                    onCheckedChange = { isChecked ->
+                        coroutineScope.launch { repository.updateHideSystemNotification(isChecked) }
+                    },
+                    badgeText = "NEW"
+                )
+
+                NothingSwitchRow(
                     title = "Expand during Do Not Disturb",
                     description = "Allow urgent notification popups even when DND mode is engaged",
                     checked = autoExpandDnd,

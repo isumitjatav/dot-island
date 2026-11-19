@@ -14,9 +14,11 @@ data class CallSignal(
     val actionTitles: List<String>,
 )
 
+enum class CallPhase { INCOMING, ONGOING }
+
 data class CallNotificationInfo(
     val callerDisplayName: String,
-    val isIncoming: Boolean,
+    val phase: CallPhase,
     val isVideoCall: Boolean,
 )
 
@@ -33,13 +35,14 @@ object CallNotificationParser {
 
         val actions = signal.actionTitles.map { it.lowercase() }
         val isIncoming = actions.any { title ->
-            title.contains("answer") || title.contains("accept") || title.contains("reject") || title.contains("decline")
+            title.contains("answer") || title.contains("accept") ||
+                title.contains("reject") || title.contains("decline") || title.contains("hang")
         }
         val isVideoCall = actions.any { it.contains("video") }
 
         return CallNotificationInfo(
             callerDisplayName = caller,
-            isIncoming = isIncoming,
+            phase = if (isIncoming) CallPhase.INCOMING else CallPhase.ONGOING,
             isVideoCall = isVideoCall,
         )
     }

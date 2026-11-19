@@ -28,8 +28,8 @@ class CallNotificationParserUnitTest {
             )
         )
         assertEquals("Mom", info?.callerDisplayName)
-        assertTrue(info!!.isIncoming)
-        assertFalse(info.isVideoCall)
+        assertEquals(CallPhase.INCOMING, info?.phase)
+        assertFalse(info!!.isVideoCall)
     }
 
     @Test
@@ -43,11 +43,11 @@ class CallNotificationParserUnitTest {
             )
         )
         assertTrue(info!!.isVideoCall)
-        assertTrue(info.isIncoming)
+        assertEquals(CallPhase.INCOMING, info.phase)
     }
 
     @Test
-    fun ongoingCall_withoutAnswerAction_isNotIncoming() {
+    fun ongoingCall_withoutAnswerAction_isDetected() {
         val info = CallNotificationParser.parse(
             CallSignal(
                 category = CallNotificationParser.CATEGORY_CALL,
@@ -56,8 +56,8 @@ class CallNotificationParserUnitTest {
                 actionTitles = listOf("Speaker", "Mute"),
             )
         )
-        assertFalse(info!!.isIncoming)
-        assertEquals("Mom", info.callerDisplayName)
+        assertEquals(CallPhase.ONGOING, info?.phase)
+        assertEquals("Mom", info?.callerDisplayName)
     }
 
     @Test
@@ -74,6 +74,6 @@ class CallNotificationParserUnitTest {
         val info = CallNotificationParser.parse(
             CallSignal(CallNotificationParser.CATEGORY_CALL, "Mom", null, listOf("ANSWER"))
         )
-        assertTrue(info!!.isIncoming)
+        assertEquals(CallPhase.INCOMING, info?.phase)
     }
 }

@@ -1,8 +1,10 @@
 package com.nothing.island.ai
 
+import android.Manifest
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.Crossfade
@@ -25,6 +27,7 @@ import com.nothing.island.ai.battery.ChargingAnimationStyle
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.navigation.IslandDestination
 import com.nothing.island.ai.notifications.NotificationPreviewMode
+import com.nothing.island.ai.telephony.CallController
 import com.nothing.island.ai.ui.components.NothingBottomNavigation
 import com.nothing.island.ai.ui.screens.AnimationStudioScreen
 import com.nothing.island.ai.ui.screens.AppearanceScreen
@@ -49,10 +52,24 @@ class MainActivity : ComponentActivity() {
     private val hasOverlayPermissionState = mutableStateOf(false)
     private val isServiceRunningState = mutableStateOf(false)
 
+    private val requestCallPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            android.util.Log.i("MainActivity", "ANSWER_PHONE_CALLS granted — in-island call controls enabled")
+        } else {
+            android.util.Log.w("MainActivity", "ANSWER_PHONE_CALLS denied — call controls fall back to dialer notification actions")
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
         updateStates()
+
+        if (!CallController.canControlCalls(this)) {
+            requestCallPermission.launch(Manifest.permission.ANSWER_PHONE_CALLS)
+        }
 
         setContent {
             NothingIslandTheme {

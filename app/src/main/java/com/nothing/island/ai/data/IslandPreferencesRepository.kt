@@ -142,6 +142,7 @@ class IslandPreferencesRepository internal constructor(
         val NOTIFICATION_SYNC_DISMISS_ANDROID = booleanPreferencesKey("notif_sync_dismiss_android")
         val NOTIFICATION_AUTO_EXPAND = booleanPreferencesKey("notif_auto_expand")
         val NOTIFICATION_SWIPE_DISMISS = booleanPreferencesKey("notif_swipe_dismiss_enabled")
+        val NOTIFICATION_HIDE_SYSTEM = booleanPreferencesKey("notif_hide_system")
     }
 
     object MusicPreferencesKeys {
@@ -581,7 +582,8 @@ class IslandPreferencesRepository internal constructor(
             animationStyle = animStyle,
             excludedPackages = preferences[NotificationPreferencesKeys.NOTIFICATION_EXCLUDED_PACKAGES] ?: emptySet(),
             syncDismissWithAndroid = preferences[NotificationPreferencesKeys.NOTIFICATION_SYNC_DISMISS_ANDROID] ?: false,
-            swipeToDismissEnabled = preferences[NotificationPreferencesKeys.NOTIFICATION_SWIPE_DISMISS] ?: true
+            swipeToDismissEnabled = preferences[NotificationPreferencesKeys.NOTIFICATION_SWIPE_DISMISS] ?: true,
+            hideSystemNotification = preferences[NotificationPreferencesKeys.NOTIFICATION_HIDE_SYSTEM] ?: false
         )
     }
 
@@ -593,6 +595,11 @@ class IslandPreferencesRepository internal constructor(
     suspend fun updateSyncDismissWithAndroid(enabled: Boolean) {
         _liveNotificationPreferences.value = _liveNotificationPreferences.value.copy(syncDismissWithAndroid = enabled)
         dataStore.edit { it[NotificationPreferencesKeys.NOTIFICATION_SYNC_DISMISS_ANDROID] = enabled }
+    }
+
+    suspend fun updateHideSystemNotification(enabled: Boolean) {
+        _liveNotificationPreferences.value = _liveNotificationPreferences.value.copy(hideSystemNotification = enabled)
+        dataStore.edit { it[NotificationPreferencesKeys.NOTIFICATION_HIDE_SYSTEM] = enabled }
     }
 
     suspend fun updateNotificationEnabled(enabled: Boolean) {

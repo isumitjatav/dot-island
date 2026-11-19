@@ -52,7 +52,7 @@ import com.nothing.island.ai.hardware.TorchCallbackHandler
 import com.nothing.island.ai.hardware.NetworkCallbackHandler
 import com.nothing.island.ai.gestures.RingerState
 import com.nothing.island.ai.receiver.SystemEventsReceiver
-import com.nothing.island.ai.telephony.CallActionRegistry
+import com.nothing.island.ai.telephony.CallController
 import com.nothing.island.ai.gestures.GesturePreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -502,11 +502,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
-                                if (CallActionRegistry.answer()) collapse()
+                                if (CallController.answer(appContext)) collapse()
                             },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallActionRegistry.decline()) collapse()
+                                if (CallController.decline(appContext)) collapse()
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
@@ -801,11 +801,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
-                                if (CallActionRegistry.answer()) collapse()
+                                if (CallController.answer(appContext)) collapse()
                             },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallActionRegistry.decline()) collapse()
+                                if (CallController.decline(appContext)) collapse()
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")

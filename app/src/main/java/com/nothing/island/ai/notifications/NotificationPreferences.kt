@@ -38,7 +38,8 @@ data class NotificationPreferences(
     val animationStyle: NotificationAnimationStyle = NotificationAnimationStyle.NOTHING_SNAP,
     val excludedPackages: Set<String> = emptySet(),               // Blacklisted package names
     val syncDismissWithAndroid: Boolean = false,                 // Default: OFF. When true, user dismissal syncs to Android shade
-    val swipeToDismissEnabled: Boolean = true                     // REQ-49: Direct horizontal swipe-to-dismiss gesture
+    val swipeToDismissEnabled: Boolean = true,                    // REQ-49: Direct horizontal swipe-to-dismiss gesture
+    val hideSystemNotification: Boolean = false                   // Hide the duplicate system heads-up when the island shows the alert
 ) {
     companion object {
         val DEFAULTS = NotificationPreferences()
