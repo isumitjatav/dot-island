@@ -108,7 +108,11 @@ fun CallCompactView(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = if (isRinging) (if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL") else "ACTIVE",
+                text = if (isRinging) {
+                    if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL"
+                } else {
+                    formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
+                },
                 color = if (isRinging) NothingPrimaryAccent else NothingSecondaryText,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,

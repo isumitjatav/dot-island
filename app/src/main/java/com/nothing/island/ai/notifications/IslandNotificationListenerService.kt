@@ -115,6 +115,9 @@ class IslandNotificationListenerService : NotificationListenerService() {
     @Volatile
     private var activeCallKey: String? = null
 
+    /** Keys we cancelled ourselves via Hide System Notification; their removal callbacks are ignored. */
+    private val selfCancelledKeys = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+
     // Set of notification keys present at connection time (historical)
     private val historicalNotificationKeys = ConcurrentHashMap.newKeySet<String>()
 
@@ -225,6 +228,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                 )
                             )
                             controller.repository.expandCall()
+                            controller.startCallTicker(key, callInfo.callerDisplayName)
                             Log.i(TAG, "R9 call connected: ${callInfo.callerDisplayName}")
                         }
                     }
@@ -345,6 +349,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     // persistent media/service notifications are never cancelled.
                     if (accepted && prefs.hideSystemNotification && sbn.isClearable && !sbn.isOngoing) {
                         try {
+                            selfCancelledKeys.add(key)
                             cancelNotification(key)
                             Log.i(TAG, "Hide System Notification: cancelled redundant system alert key=$key")
                         } catch (e: Exception) {
@@ -366,10 +371,17 @@ class IslandNotificationListenerService : NotificationListenerService() {
             val key = sbn.key ?: return@launch
             val postTime = sbn.postTime
 
+            if (selfCancelledKeys.remove(key)) {
+                Log.d(TAG, "Ignoring self-inflicted removal callback for key=$key (Hide System Notification)")
+                return@launch
+            }
+
             if (activeCallKey == key) {
                 activeCallKey = null
                 CallActionRegistry.clear(key)
-                IslandOverlayController.getInstance(applicationContext).eventEngine.emit(
+                val controller = IslandOverlayController.getInstance(applicationContext)
+                controller.stopCallTicker()
+                controller.eventEngine.emit(
                     IslandEvent.CallEnded(id = "call_end_$key", callId = key)
                 )
                 Log.i(TAG, "R9 call ended for key=$key")

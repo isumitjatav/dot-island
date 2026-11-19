@@ -56,6 +56,16 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Debug-only receiver for previewing pills via ADB (no hardware required) -->
+        <receiver
+            android:name=".receiver.DebugEventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.nothing.island.ai.DEBUG_EARBUD" />
+                <action android:name="com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT" />
+            </intent-filter>
+        </receiver>
+
         <!-- Nothing Island Headless Notification Listener Service (Milestone R6) -->
         <service
             android:name=".notifications.IslandNotificationListenerService"

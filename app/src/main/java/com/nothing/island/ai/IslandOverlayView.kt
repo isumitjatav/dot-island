@@ -84,6 +84,8 @@ import com.nothing.island.ai.switcher.IslandInterface
 import com.nothing.island.ai.switcher.SwipeDirection
 import com.nothing.island.ai.ui.components.AppNotificationIcon
 import com.nothing.island.ai.ui.components.BatteryCompactView
+import com.nothing.island.ai.ui.components.EarbudConnectionView
+import com.nothing.island.ai.ui.components.EarbudDisconnectedView
 import com.nothing.island.ai.ui.components.CallCompactView
 import com.nothing.island.ai.ui.components.CallExpandedView
 import com.nothing.island.ai.ui.components.BatteryExpandedView
@@ -335,12 +337,28 @@ fun IslandOverlayView(
                     activeEvent is IslandEvent.CallConnected ||
                     activeEvent is IslandEvent.CallEnded
 
+            val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
+                    activeEvent is IslandEvent.BluetoothDeviceDisconnected
+
             if (isCallActive) {
                 // R9: telephony capsule with breathing red accent
                 CallCompactView(
                     event = activeEvent!!,
                     onTap = onExpandCall,
                 )
+            } else if (isEarbudEvent) {
+                // Bluetooth headset pill with circular battery ring
+                when (val e = activeEvent) {
+                    is IslandEvent.BluetoothDeviceConnected -> EarbudConnectionView(
+                        event = e,
+                        onTap = onToggleExpand,
+                    )
+                    is IslandEvent.BluetoothDeviceDisconnected -> EarbudDisconnectedView(
+                        event = e,
+                        onTap = onToggleExpand,
+                    )
+                    else -> Unit
+                }
             } else if (isSystemAlertActive) {
                 // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
                 SystemAlertPill(

@@ -12,6 +12,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -59,6 +60,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -167,6 +170,33 @@ class IslandOverlayController private constructor(private val appContext: Contex
     )
 
     val eventEngine = IslandEventEngine()
+
+    /** R9 live call duration: ticks once per second while a call is active. */
+    private var callTickerJob: Job? = null
+
+    fun startCallTicker(callId: String, caller: String) {
+        callTickerJob?.cancel()
+        val startedAt = SystemClock.elapsedRealtime()
+        callTickerJob = controllerLifecycleScope.launch {
+            while (isActive) {
+                delay(1000L)
+                val seconds = (SystemClock.elapsedRealtime() - startedAt) / 1000
+                eventEngine.emit(
+                    IslandEvent.CallConnected(
+                        id = "call_tick_$callId",
+                        callId = callId,
+                        callerDisplayName = caller,
+                        durationSeconds = seconds,
+                    )
+                )
+            }
+        }
+    }
+
+    fun stopCallTicker() {
+        callTickerJob?.cancel()
+        callTickerJob = null
+    }
 
     val audioOutputTracker = AudioOutputDeviceTracker(appContext)
     val mediaTracker: MediaSessionTracker = MediaSessionTracker.getInstance(appContext, eventEngine, audioOutputTracker)
@@ -502,11 +532,26 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
-                                if (CallController.answer(appContext)) collapse()
+                                if (CallController.answer(appContext)) {
+                                    val ringing = priorityManager?.activeEvent as? IslandEvent.IncomingCallRinging
+                                    val callId = ringing?.callId ?: "active_call"
+                                    val caller = ringing?.callerDisplayName ?: "Call"
+                                    eventEngine.emit(
+                                        IslandEvent.CallConnected(
+                                            id = "call_connected_$callId",
+                                            callId = callId,
+                                            callerDisplayName = caller,
+                                        )
+                                    )
+                                    startCallTicker(callId, caller)
+                                }
                             },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallController.decline(appContext)) collapse()
+                                if (CallController.decline(appContext)) {
+                                    stopCallTicker()
+                                    collapse()
+                                }
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
@@ -801,11 +846,26 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
-                                if (CallController.answer(appContext)) collapse()
+                                if (CallController.answer(appContext)) {
+                                    val ringing = priorityManager?.activeEvent as? IslandEvent.IncomingCallRinging
+                                    val callId = ringing?.callId ?: "active_call"
+                                    val caller = ringing?.callerDisplayName ?: "Call"
+                                    eventEngine.emit(
+                                        IslandEvent.CallConnected(
+                                            id = "call_connected_$callId",
+                                            callId = callId,
+                                            callerDisplayName = caller,
+                                        )
+                                    )
+                                    startCallTicker(callId, caller)
+                                }
                             },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallController.decline(appContext)) collapse()
+                                if (CallController.decline(appContext)) {
+                                    stopCallTicker()
+                                    collapse()
+                                }
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")

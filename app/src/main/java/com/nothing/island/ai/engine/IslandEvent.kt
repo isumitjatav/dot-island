@@ -348,7 +348,8 @@ sealed interface IslandEvent {
         override val id: String,
         override val timestamp: Long = System.currentTimeMillis(),
         override val source: String = "TelephonyEngine",
-        override val priority: Int = IslandPriority.ACTIVE_TELEPHONY,
+        // Must preempt IncomingCallRinging after the user answers.
+        override val priority: Int = IslandPriority.CRITICAL_TELEPHONY,
         override val timeoutMs: Long = 0L,
         val callId: String,
         val callerDisplayName: String,

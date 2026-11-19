@@ -1,0 +1,52 @@
+package com.nothing.island.ai.receiver
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import com.nothing.island.ai.IslandOverlayController
+import com.nothing.island.ai.engine.IslandEvent
+
+/**
+ * Debug-only receiver for previewing system pills without real hardware.
+ * ADB usage:
+ *   adb shell am broadcast -a com.nothing.island.ai.DEBUG_EARBUD --ei battery 75 --es name "AirPods Pro"
+ *   adb shell am broadcast -a com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT --es name "AirPods Pro"
+ */
+class DebugEventReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val controller = IslandOverlayController.getInstance(context)
+        when (intent.action) {
+            ACTION_EARBUD -> {
+                val name = intent.getStringExtra(EXTRA_NAME) ?: "AirPods Pro"
+                val battery = if (intent.hasExtra(EXTRA_BATTERY)) {
+                    intent.getIntExtra(EXTRA_BATTERY, 75)
+                } else null
+                controller.eventEngine.emit(
+                    IslandEvent.BluetoothDeviceConnected(
+                        id = "debug_earbud_${System.currentTimeMillis()}",
+                        deviceName = name,
+                        deviceAddress = "00:00:00:00:00:00",
+                        batteryLevelPercentage = battery,
+                    )
+                )
+            }
+            ACTION_EARBUD_DISCONNECT -> {
+                val name = intent.getStringExtra(EXTRA_NAME) ?: "AirPods Pro"
+                controller.eventEngine.emit(
+                    IslandEvent.BluetoothDeviceDisconnected(
+                        id = "debug_earbud_off_${System.currentTimeMillis()}",
+                        deviceName = name,
+                        deviceAddress = "00:00:00:00:00:00",
+                    )
+                )
+            }
+        }
+    }
+
+    companion object {
+        const val ACTION_EARBUD = "com.nothing.island.ai.DEBUG_EARBUD"
+        const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
+        const val EXTRA_NAME = "name"
+        const val EXTRA_BATTERY = "battery"
+    }
+}

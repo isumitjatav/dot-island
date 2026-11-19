@@ -62,6 +62,11 @@ class IslandPriorityManager(
                     handleMediaStopped(event)
                     return@withLock
                 }
+                is IslandEvent.CallConnected -> {
+                    // Answered: replace the persistent ringing card even though both
+                    // events share the CRITICAL tier (equal priority replaces).
+                    backgroundFallbacks.remove("CALL")
+                }
                 is IslandEvent.CallEnded -> {
                     handleCallEnded(event)
                     return@withLock
