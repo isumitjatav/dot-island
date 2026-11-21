@@ -181,6 +181,7 @@ class IslandPreferencesRepository internal constructor(
         val BATTERY_TEMP_WARNING_ENABLED = booleanPreferencesKey("battery_temp_warning_enabled")
         val BATTERY_TEMP_WARNING_THRESHOLD_C = floatPreferencesKey("battery_temp_warning_threshold_c")
         val BATTERY_AUTO_EXPAND_ON_PLUGGED = booleanPreferencesKey("battery_auto_expand_on_plugged")
+        val BATTERY_SEGMENTED_GAUGE = booleanPreferencesKey("battery_segmented_gauge")
     }
 
     object GesturePreferencesKeys {
@@ -802,7 +803,8 @@ class IslandPreferencesRepository internal constructor(
             lowBatteryThreshold = preferences[BatteryPreferencesKeys.BATTERY_LOW_THRESHOLD] ?: 20,
             temperatureWarningEnabled = preferences[BatteryPreferencesKeys.BATTERY_TEMP_WARNING_ENABLED] ?: true,
             temperatureWarningThresholdC = preferences[BatteryPreferencesKeys.BATTERY_TEMP_WARNING_THRESHOLD_C] ?: 45.0f,
-            autoExpandOnPlugged = preferences[BatteryPreferencesKeys.BATTERY_AUTO_EXPAND_ON_PLUGGED] ?: true
+            autoExpandOnPlugged = preferences[BatteryPreferencesKeys.BATTERY_AUTO_EXPAND_ON_PLUGGED] ?: true,
+            showSegmentedBatteryGauge = preferences[BatteryPreferencesKeys.BATTERY_SEGMENTED_GAUGE] ?: true
         )
     }
 
@@ -833,6 +835,7 @@ class IslandPreferencesRepository internal constructor(
                 p[BatteryPreferencesKeys.BATTERY_TEMP_WARNING_ENABLED] = prefs.temperatureWarningEnabled
                 p[BatteryPreferencesKeys.BATTERY_TEMP_WARNING_THRESHOLD_C] = prefs.temperatureWarningThresholdC
                 p[BatteryPreferencesKeys.BATTERY_AUTO_EXPAND_ON_PLUGGED] = prefs.autoExpandOnPlugged
+                p[BatteryPreferencesKeys.BATTERY_SEGMENTED_GAUGE] = prefs.showSegmentedBatteryGauge
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist battery preferences to DataStore", e)

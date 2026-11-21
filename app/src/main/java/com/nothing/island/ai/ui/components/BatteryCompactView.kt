@@ -312,5 +312,36 @@ fun BatteryCompactView(
                 }
             }
         }
+
+        // Segmented battery gauge: small ticks along the bottom edge that fill
+        // with the current percentage (Nothing OS style).
+        if (preferences.showSegmentedBatteryGauge) {
+            val segments = 8
+            val filled = ((batteryState.percentage.coerceIn(0, 100) / 100f) * segments).toInt()
+            val segmentColor = when {
+                isOverheat -> Color(0xFFFF5252)
+                isLowBattery -> Color(0xFFFFB300)
+                isCharging -> accentColor
+                else -> Color.White
+            }
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                repeat(segments) { index ->
+                    Box(
+                        modifier = Modifier
+                            .size(width = 6.dp, height = 2.dp)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(
+                                if (index < filled) segmentColor
+                                else Color.White.copy(alpha = 0.15f)
+                            )
+                    )
+                }
+            }
+        }
     }
 }

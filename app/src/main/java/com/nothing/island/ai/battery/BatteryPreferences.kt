@@ -154,7 +154,8 @@ data class BatteryPreferences(
     val lowBatteryThreshold: Int = 20,              // 5% to 30%, default 20%
     val temperatureWarningEnabled: Boolean = true,
     val temperatureWarningThresholdC: Float = 45.0f,// 40.0°C to 50.0°C
-    val autoExpandOnPlugged: Boolean = true
+    val autoExpandOnPlugged: Boolean = true,
+    val showSegmentedBatteryGauge: Boolean = true
 ) {
     companion object {
         val DEFAULTS = BatteryPreferences()
