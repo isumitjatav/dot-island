@@ -34,7 +34,9 @@ data class IslandMasterState(
      */
     val isAutoExpanded: Boolean = false,
     /** True when two concurrent activities are shown as satellite pills. */
-    val isDualPill: Boolean = false
+    val isDualPill: Boolean = false,
+    /** True when the compact music pill is aligned to the left of the camera. */
+    val isMusicPillLeft: Boolean = false
 ) {
     /**
      * Bridges cleanly to existing IslandState for backward compatibility with Compose views.
@@ -194,6 +196,11 @@ class IslandStateRepository(
                 isAutoExpanded = true
             )
         }
+    }
+
+    /** Moves the compact music pill to the left/right of the camera. */
+    fun setMusicPillLeft(left: Boolean) {
+        _state.update { it.copy(isMusicPillLeft = left) }
     }
 
     /** Enables or disables the dual-pill split layout. */

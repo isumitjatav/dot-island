@@ -23,21 +23,52 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.nothing.island.ai.ui.theme.NothingTokens
-import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
 import com.nothing.island.ai.ui.theme.NothingPrimaryAccent
+import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
 import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
+import com.nothing.island.ai.ui.theme.NothingTokens
+
+/** Identifiers for the built-in quick tools. */
+object QuickTools {
+    const val DATA = "data"
+    const val WIFI = "wifi"
+    const val BLUETOOTH = "bluetooth"
+    const val TORCH = "torch"
+    const val LOCATION = "location"
+
+    val DEFAULT = listOf(DATA, WIFI, BLUETOOTH, TORCH, LOCATION)
+
+    fun label(id: String) = when (id) {
+        DATA -> "DATA"
+        WIFI -> "WI-FI"
+        BLUETOOTH -> "BLUETOOTH"
+        TORCH -> "TORCH"
+        LOCATION -> "LOCATION"
+        else -> id.uppercase()
+    }
+
+    fun glyph(id: String) = when (id) {
+        DATA -> "↕"
+        WIFI -> "◕"
+        BLUETOOTH -> "ᛒ"
+        TORCH -> "⚡"
+        LOCATION -> "⌖"
+        else -> "●"
+    }
+}
 
 data class QuickTool(
+    val id: String,
     val label: String,
     val glyph: String,
+    val active: Boolean = false,
     val action: () -> Unit,
 )
 
 /**
- * Ref B-style quick tools drawer: a horizontal row of circular icon buttons
- * rendered inside the expanded island. Original implementation.
+ * Expanded quick tools drawer with large circular icon buttons (64dp).
+ * Default set: data, Wi-Fi, Bluetooth, torch, location.
  */
 @Composable
 fun QuickToolsDrawer(
@@ -58,41 +89,49 @@ fun QuickToolsDrawer(
         Text(
             text = "ASSISTIVE",
             color = NothingPrimaryAccent,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontFamily = FontFamily.Monospace,
             letterSpacing = 2.sp,
         )
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(20.dp))
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            tools.forEach { tool ->
+            tools.take(5).forEach { tool ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(46.dp)
+                            .size(58.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFF161616))
-                            .border(1.dp, NothingTokens.NothingBorderSubtle, CircleShape)
+                            .background(if (tool.active) NothingPrimaryAccent.copy(alpha = 0.18f) else Color(0xFF161616))
+                            .border(
+                                1.dp,
+                                if (tool.active) NothingPrimaryAccent else NothingTokens.NothingBorderSubtle,
+                                CircleShape,
+                            )
                             .clickable { tool.action() },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(tool.glyph, color = NothingPrimaryText, fontSize = 18.sp)
+                        Text(
+                            tool.glyph,
+                            color = if (tool.active) NothingPrimaryAccent else NothingPrimaryText,
+                            fontSize = 24.sp,
+                        )
                     }
                     Text(
                         text = tool.label,
                         color = NothingSecondaryText,
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontFamily = FontFamily.Monospace,
                     )
                 }
             }
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         Text(
             text = "TAP OUTSIDE TO CLOSE",
             color = NothingSecondaryText,

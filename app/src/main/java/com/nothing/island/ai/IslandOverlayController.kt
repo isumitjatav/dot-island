@@ -198,6 +198,41 @@ class IslandOverlayController private constructor(private val appContext: Contex
         callTickerJob = null
     }
 
+    /** Handles a quick-tools button press. */
+    private fun handleQuickTool(id: String) {
+        Log.d(TAG, "QuickTool: $id")
+        when (id) {
+            "torch" -> torchHandler.toggleTorch()
+            "data" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+            "wifi" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+            "bluetooth" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+            "location" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+            "music" -> expandMusic()
+            "settings" -> {
+                val intent = android.content.Intent(appContext, MainActivity::class.java)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+        }
+        collapse()
+    }
+
     val audioOutputTracker = AudioOutputDeviceTracker(appContext)
     val mediaTracker: MediaSessionTracker = MediaSessionTracker.getInstance(appContext, eventEngine, audioOutputTracker)
     val batteryMonitor: BatteryMonitor = BatteryMonitor.getInstance(appContext, eventEngine, preferencesRepository)
@@ -493,6 +528,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             currentTrack = currentTrack,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
+                            isMusicPillLeft = masterState.isMusicPillLeft,
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
@@ -549,25 +585,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     startCallTicker(callId, caller)
                                 }
                             },
-                            onQuickTool = { tool ->
-                                Log.d("IslandTouch", "onQuickTool: $tool")
-                                when (tool) {
-                                    "torch" -> torchHandler.toggleTorch()
-                                    "music" -> expandMusic()
-                                    "call" -> {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL)
-                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        runCatching { appContext.startActivity(intent) }
-                                    }
-                                    "settings" -> {
-                                        val intent = android.content.Intent(appContext, MainActivity::class.java)
-                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        runCatching { appContext.startActivity(intent) }
-                                    }
-                                    "qr" -> Unit // No QR scanner available; no-op
-                                }
-                                collapse()
-                            },
+                            onQuickTool = { tool -> handleQuickTool(tool) },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 if (CallController.decline(appContext)) {
@@ -611,10 +629,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 seekMediaTo(pos)
                             },
                             onSwipeActivity = { direction ->
-                                if (direction == com.nothing.island.ai.switcher.SwipeDirection.DOWN) {
-                                    repository.expandQuickTools()
-                                } else {
-                                    handleActivitySwipe(direction)
+                                when (direction) {
+                                    com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
+                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT -> repository.setMusicPillLeft(true)
+                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> repository.setMusicPillLeft(false)
                                 }
                             },
                             gesturePreferences = gesturePrefs
@@ -831,6 +849,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             currentTrack = currentTrack,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
+                            isMusicPillLeft = masterState.isMusicPillLeft,
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
@@ -887,25 +906,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     startCallTicker(callId, caller)
                                 }
                             },
-                            onQuickTool = { tool ->
-                                Log.d("IslandTouch", "onQuickTool: $tool")
-                                when (tool) {
-                                    "torch" -> torchHandler.toggleTorch()
-                                    "music" -> expandMusic()
-                                    "call" -> {
-                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL)
-                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        runCatching { appContext.startActivity(intent) }
-                                    }
-                                    "settings" -> {
-                                        val intent = android.content.Intent(appContext, MainActivity::class.java)
-                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                                        runCatching { appContext.startActivity(intent) }
-                                    }
-                                    "qr" -> Unit // No QR scanner available; no-op
-                                }
-                                collapse()
-                            },
+                            onQuickTool = { tool -> handleQuickTool(tool) },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 if (CallController.decline(appContext)) {
@@ -949,10 +950,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 seekMediaTo(pos)
                             },
                             onSwipeActivity = { direction ->
-                                if (direction == com.nothing.island.ai.switcher.SwipeDirection.DOWN) {
-                                    repository.expandQuickTools()
-                                } else {
-                                    handleActivitySwipe(direction)
+                                when (direction) {
+                                    com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
+                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT -> repository.setMusicPillLeft(true)
+                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> repository.setMusicPillLeft(false)
                                 }
                             },
                             gesturePreferences = gesturePrefs
@@ -1313,8 +1314,23 @@ class IslandOverlayController private constructor(private val appContext: Contex
     /**
      * Launches notification primary content intent and collapses the island.
      */
-    fun openNotificationContent(notificationId: String) {
-        val fired = NotificationActionBridge.executeContentIntent(notificationId)
+    fun openNotificationContent(notificationId: String, packageName: String? = null) {
+        var fired = NotificationActionBridge.executeContentIntent(notificationId)
+        val resolvedPackage = packageName ?: historyRepository.getEntry(notificationId)?.packageName
+        // Fallback: if the notification has no content PendingIntent, launch the app
+        // by package name so tapping the message still opens the source app.
+        if (!fired && !resolvedPackage.isNullOrBlank()) {
+            try {
+                val launchIntent = appContext.packageManager.getLaunchIntentForPackage(resolvedPackage)
+                if (launchIntent != null) {
+                    launchIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    appContext.startActivity(launchIntent)
+                    fired = true
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Fallback launch failed for $resolvedPackage", e)
+            }
+        }
         Log.d(TAG, "openNotificationContent: id=$notificationId, fired=$fired")
         repository.setMode(IslandMode.COLLAPSED)
     }

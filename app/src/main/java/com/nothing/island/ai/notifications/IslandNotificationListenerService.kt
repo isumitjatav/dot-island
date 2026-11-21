@@ -340,15 +340,20 @@ class IslandNotificationListenerService : NotificationListenerService() {
 
                 // 6. Emit presentation event ONLY after successful commit (and only if not historical)
                 if (event != null && !isHistorical) {
-                    // "Hide System (Double) Notification" now means: keep messages
-                    // in the Android system drawer, but do NOT slide them down onto
-                    // the screen as an island popup. Notification access still
-                    // records them in history silently.
-                    if (prefs.hideSystemNotification) {
-                        Log.i(TAG, "Notification kept in system drawer only (island popup suppressed): key=$key")
-                    } else {
-                        val accepted = controller.eventEngine.emit(event)
-                        Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
+                    // Island always presents the alert (slide-down popup).
+                    val accepted = controller.eventEngine.emit(event)
+                    Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
+
+                    // "Hide System (Double) Notification": cancel the redundant
+                    // Android heads-up so the same alert does not appear twice.
+                    if (accepted && prefs.hideSystemNotification && sbn.isClearable && !sbn.isOngoing) {
+                        try {
+                            selfCancelledKeys.add(key)
+                            cancelNotification(key)
+                            Log.i(TAG, "Hide System Notification: heads-up cancelled key=$key")
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Failed to cancel redundant notification key=$key", e)
+                        }
                     }
                 }
             } catch (e: Exception) {

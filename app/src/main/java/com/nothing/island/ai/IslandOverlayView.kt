@@ -258,6 +258,7 @@ fun IslandOverlayView(
     currentTrack: MediaTrackState = MediaTrackState.EMPTY,
     activeEvent: IslandEvent? = null,
     isDualPill: Boolean = false,
+    isMusicPillLeft: Boolean = false,
     projectedHistory: List<PrivacySafeNotificationPresentation> = emptyList(),
     selectedNotificationKey: String? = null,
     activeUndo: UndoNotificationState? = null,
@@ -433,7 +434,11 @@ fun IslandOverlayView(
                 )
             } else if (currentTrack.isPlaying || (!currentTrack.isHistorical && currentTrack != MediaTrackState.EMPTY)) {
                 // COMPACT MUSIC PLAYER (Milestone R7)
-                // 200dp symmetrical capsule with rotating artwork, 54dp punch-hole clearance, and live audio-reactive visualizer
+                // 200dp symmetrical capsule; swipe-left shifts it to the left of the camera.
+                Box(
+                    modifier = Modifier.offset(x = if (isMusicPillLeft) (-60).dp else 0.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                 MusicCompactView(
                     trackState = currentTrack,
                     preferences = musicPreferences,
@@ -452,6 +457,7 @@ fun IslandOverlayView(
                         onSwipeActivity = onSwipeActivity
                     )
                 )
+                }
             } else {
                 // COMPACT PILL MODE: Calibrated capsule dimensions and corner radius in DP
                 // Symmetrically wraps the centered punch-hole camera without any rectangular box distortion
@@ -696,14 +702,16 @@ fun IslandOverlayView(
                 }
 
                 ExpandedViewType.QUICK_TOOLS -> {
+                    val qt = com.nothing.island.ai.ui.components.QuickTools
                     com.nothing.island.ai.ui.components.QuickToolsDrawer(
-                        tools = listOf(
-                            com.nothing.island.ai.ui.components.QuickTool("TORCH", "⚡") { onQuickTool("torch") },
-                            com.nothing.island.ai.ui.components.QuickTool("QR", "▦") { onQuickTool("qr") },
-                            com.nothing.island.ai.ui.components.QuickTool("MUSIC", "♪") { onQuickTool("music") },
-                            com.nothing.island.ai.ui.components.QuickTool("CALL", "☎") { onQuickTool("call") },
-                            com.nothing.island.ai.ui.components.QuickTool("SETTINGS", "⚙") { onQuickTool("settings") },
-                        ),
+                        tools = qt.DEFAULT.map { id ->
+                            com.nothing.island.ai.ui.components.QuickTool(
+                                id = id,
+                                label = qt.label(id),
+                                glyph = qt.glyph(id),
+                                action = { onQuickTool(id) },
+                            )
+                        },
                         onCollapse = onCollapse,
                         modifier = Modifier.fillMaxSize()
                     )
