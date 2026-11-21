@@ -146,6 +146,10 @@ fun MascotPillPreview(
     }
 }
 
+/** Resolves a persisted sprite name to a Sprite, defaulting to CAT. */
+fun mascotByName(name: String): MascotSprites.Sprite =
+    MascotSprites.ALL.firstOrNull { it.name == name } ?: MascotSprites.CAT
+
 /**
  * A row of the available mascots. Tap one to select it; the selected one is
  * shown with a red outline. This is the picker UI for the feature.

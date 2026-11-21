@@ -59,7 +59,9 @@ data class IslandPreferences(
     val hapticFeedbackEnabled: Boolean = true,
     val reducedMotionEnabled: Boolean = false,
     val presetName: String = "Nothing Minimal",
-    val accentColorHex: Long = 0xFFD71920L // NothingPrimaryAccent (NothingRed)
+    val accentColorHex: Long = 0xFFD71920L, // NothingPrimaryAccent (NothingRed)
+    val mascotEnabled: Boolean = false,
+    val mascotSpriteName: String = "CAT"
 )
 
 /** Context extension for single-instance Preferences DataStore */
@@ -126,6 +128,8 @@ class IslandPreferencesRepository internal constructor(
         val REDUCED_MOTION_ENABLED = booleanPreferencesKey("reduced_motion_enabled")
         val PRESET_NAME = stringPreferencesKey("preset_name")
         val ACCENT_COLOR_HEX = longPreferencesKey("accent_color_hex")
+        val MASCOT_ENABLED = booleanPreferencesKey("mascot_enabled")
+        val MASCOT_SPRITE_NAME = stringPreferencesKey("mascot_sprite_name")
     }
 
     object NotificationPreferencesKeys {
@@ -396,8 +400,21 @@ class IslandPreferencesRepository internal constructor(
             hapticFeedbackEnabled = preferences[PreferencesKeys.HAPTIC_FEEDBACK_ENABLED] ?: HARDWARE_DEFAULTS.hapticFeedbackEnabled,
             reducedMotionEnabled = preferences[PreferencesKeys.REDUCED_MOTION_ENABLED] ?: HARDWARE_DEFAULTS.reducedMotionEnabled,
             presetName = preferences[PreferencesKeys.PRESET_NAME] ?: HARDWARE_DEFAULTS.presetName,
-            accentColorHex = preferences[PreferencesKeys.ACCENT_COLOR_HEX] ?: HARDWARE_DEFAULTS.accentColorHex
+            accentColorHex = preferences[PreferencesKeys.ACCENT_COLOR_HEX] ?: HARDWARE_DEFAULTS.accentColorHex,
+            mascotEnabled = preferences[PreferencesKeys.MASCOT_ENABLED] ?: HARDWARE_DEFAULTS.mascotEnabled,
+            mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName
         )
+    }
+
+    suspend fun updateMascot(enabled: Boolean, spriteName: String) {
+        _livePreferences.value = _livePreferences.value.copy(
+            mascotEnabled = enabled,
+            mascotSpriteName = spriteName,
+        )
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.MASCOT_ENABLED] = enabled
+            prefs[PreferencesKeys.MASCOT_SPRITE_NAME] = spriteName
+        }
     }
 
     /**

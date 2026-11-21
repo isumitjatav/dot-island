@@ -468,7 +468,16 @@ fun IslandOverlayView(
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Clean idle state with outer border progress tracking if background download active
+                    // Optional walking pixel mascot in the idle pill.
+                    if (preferences.mascotEnabled && downloadState == DownloadProgressState.NONE) {
+                        com.nothing.island.ai.ui.components.MascotPillPreview(
+                            sprite = com.nothing.island.ai.ui.components.mascotByName(preferences.mascotSpriteName),
+                            modifier = Modifier.size(
+                                width = preferences.compactWidthDp.dp,
+                                height = preferences.compactHeightDp.dp,
+                            ),
+                        )
+                    }
                 }
             }
         } else {

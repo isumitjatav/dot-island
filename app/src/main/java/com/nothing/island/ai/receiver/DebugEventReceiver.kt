@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.nothing.island.ai.IslandOverlayController
+import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.IslandEvent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Debug-only receiver for previewing system pills without real hardware.
@@ -30,6 +34,13 @@ class DebugEventReceiver : BroadcastReceiver() {
                     )
                 )
             }
+            ACTION_MASCOT -> {
+                val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
+                val name = intent.getStringExtra(EXTRA_NAME) ?: "CAT"
+                CoroutineScope(Dispatchers.IO).launch {
+                    IslandPreferencesRepository.getInstance(context).updateMascot(enabled, name)
+                }
+            }
             ACTION_EARBUD_DISCONNECT -> {
                 val name = intent.getStringExtra(EXTRA_NAME) ?: "AirPods Pro"
                 controller.eventEngine.emit(
@@ -48,5 +59,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
         const val EXTRA_NAME = "name"
         const val EXTRA_BATTERY = "battery"
+        const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
+        const val EXTRA_ENABLED = "enabled"
     }
 }

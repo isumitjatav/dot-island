@@ -25,6 +25,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +53,7 @@ import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
 import com.nothing.island.ai.ui.theme.NothingSuccess
 import com.nothing.island.ai.ui.theme.NothingTokens
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -68,9 +70,11 @@ fun HomeScreen(
     val prefs by preferencesRepository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
     val isPreviewExpanded = remember { mutableStateOf(false) }
-    val mascotSprite = remember {
-        mutableStateOf(com.nothing.island.ai.ui.components.MascotSprites.CAT)
-    }
+    val mascotSprite = remember { mutableStateOf(
+        com.nothing.island.ai.ui.components.mascotByName(prefs.mascotSpriteName)
+    ) }
+    val mascotEnabled = remember { mutableStateOf(prefs.mascotEnabled) }
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -173,9 +177,35 @@ fun HomeScreen(
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            androidx.compose.material3.Text(
+                text = "SHOW IN OVERLAY",
+                color = NothingSecondaryText,
+                fontSize = 11.sp,
+                fontFamily = FontFamily.Monospace,
+            )
+            androidx.compose.material3.Switch(
+                checked = mascotEnabled.value,
+                onCheckedChange = { enabled ->
+                    mascotEnabled.value = enabled
+                    coroutineScope.launch {
+                        preferencesRepository.updateMascot(enabled, mascotSprite.value.name)
+                    }
+                },
+            )
+        }
         com.nothing.island.ai.ui.components.MascotPicker(
             selected = mascotSprite.value,
-            onSelect = { mascotSprite.value = it },
+            onSelect = { sprite ->
+                mascotSprite.value = sprite
+                coroutineScope.launch {
+                    preferencesRepository.updateMascot(mascotEnabled.value, sprite.name)
+                }
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
