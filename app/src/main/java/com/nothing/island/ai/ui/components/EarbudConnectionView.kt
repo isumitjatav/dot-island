@@ -102,14 +102,14 @@ fun EarbudConnectionView(
         label = "earbudDropY",
     )
     val pillWidth by animateDpAsState(
-        targetValue = if (dropped) 264.dp else 124.dp,
+        targetValue = if (dropped) 320.dp else 124.dp,
         animationSpec = spring(
             dampingRatio = 0.45f,
             stiffness = Spring.StiffnessLow,
         ),
         label = "earbudWidth",
     )
-    val pillHeight = 40.dp
+    val pillHeight = 52.dp
 
     // Gentle breathing on the ring
     val pulse = rememberInfiniteTransition(label = "earbudPulse")
@@ -132,19 +132,19 @@ fun EarbudConnectionView(
             .background(NothingPrimaryBackground)
             .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
             .clickable(onClick = onTap)
-            .padding(horizontal = 12.dp),
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(modifier = Modifier.size(20.dp)) {
+            Canvas(modifier = Modifier.size(34.dp)) {
                 drawEarbuds(this, NothingPrimaryText)
             }
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(14.dp))
             androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "CONNECTED",
                     color = NothingSecondaryText,
-                    fontSize = 8.sp,
+                    fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 0.sp,
                     softWrap = false,
@@ -152,15 +152,15 @@ fun EarbudConnectionView(
                 Text(
                     text = event.deviceName,
                     color = NothingPrimaryText,
-                    fontSize = 12.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Spacer(Modifier.width(4.dp))
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            Spacer(Modifier.width(10.dp))
+            Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val stroke = 3.dp.toPx()
                     val inset = stroke / 2
@@ -187,7 +187,7 @@ fun EarbudConnectionView(
                 Text(
                     text = if (battery != null) "$clamped" else "·",
                     color = NothingPrimaryText,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                 )

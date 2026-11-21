@@ -1176,7 +1176,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             prefs.expandedWidthDp
         } else {
             if (isEarbudActive) {
-                264f // Wider capsule for the earbud pill's horizontal spring expansion
+                320f // Full-width capsule for the earbud pill's horizontal spring expansion
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {
@@ -1187,7 +1187,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val heightDp = if (mode == IslandMode.EXPANDED) {
             prefs.expandedHeightDp
         } else if (isEarbudActive) {
-            120f // Room for the downward spring drop (72dp) plus the 40dp pill
+            132f // Room for the downward spring drop (72dp) plus the 52dp pill
         } else {
             if (isAccessibilityMode) {
                 prefs.compactHeightDp
