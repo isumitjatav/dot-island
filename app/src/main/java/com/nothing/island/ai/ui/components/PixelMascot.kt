@@ -107,6 +107,22 @@ fun MascotPillPreview(
         label = "mascotBob",
     )
 
+    // Leg frame switching: alternate the leg sprites as the mascot walks.
+    var frameIndex by remember { mutableStateOf(0) }
+    LaunchedEffect(sprite.name) {
+        while (true) {
+            kotlinx.coroutines.delay(220L)
+            frameIndex++
+        }
+    }
+    val frames = sprite.walkFrames
+    val activeRows = if (frames != null && frames.isNotEmpty()) {
+        frames[frameIndex % frames.size]
+    } else {
+        sprite.rows
+    }
+    val activeSprite = sprite.copy(rows = activeRows)
+
     // One-shot hop: rise quickly, then fall back to rest — no stuck state.
     fun doHop() {
         scope.launch {
@@ -129,7 +145,7 @@ fun MascotPillPreview(
                 .size(20.dp)
                 .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp),
         ) {
-            drawSprite(draw = this, sprite = sprite, cell = size.width / sprite.rows[0].length)
+            drawSprite(draw = this, sprite = activeSprite, cell = size.width / activeSprite.rows[0].length)
         }
     }
 }
@@ -138,22 +154,23 @@ fun MascotPillPreview(
  * A row of the available mascots. Tap one to select it; the selected one is
  * shown with a red outline. This is the picker UI for the feature.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun MascotPicker(
     selected: MascotSprites.Sprite,
     onSelect: (MascotSprites.Sprite) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    androidx.compose.foundation.layout.FlowRow(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         MascotSprites.ALL.forEach { sprite ->
             val isSelected = sprite.name == selected.name
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(40.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(NothingTokens.NothingSurfaceLow)
                     .border(
