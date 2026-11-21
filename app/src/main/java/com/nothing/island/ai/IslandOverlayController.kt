@@ -1215,7 +1215,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val widthDp = if (mode == IslandMode.EXPANDED) {
             prefs.expandedWidthDp
         } else {
-            if (isEarbudActive) {
+            if (state.isDualPill) {
+                220f // Two satellite pills + center camera clearance
+            } else if (isEarbudActive) {
                 320f // Full-width capsule for the earbud pill's horizontal spring expansion
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
