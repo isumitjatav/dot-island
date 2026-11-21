@@ -64,6 +64,7 @@
                 <action android:name="com.nothing.island.ai.DEBUG_EARBUD" />
                 <action android:name="com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT" />
                 <action android:name="com.nothing.island.ai.DEBUG_MASCOT" />
+                <action android:name="com.nothing.island.ai.DEBUG_QUICK_TOOLS" />
             </intent-filter>
         </receiver>
 

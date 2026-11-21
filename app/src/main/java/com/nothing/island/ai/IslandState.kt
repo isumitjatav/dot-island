@@ -54,7 +54,13 @@ enum class ExpandedViewType {
      * State E: Incoming / Active Call (caller identity, duration, answer & decline).
      * Triggered by a call notification captured by the telephony engine.
      */
-    CALL
+    CALL,
+
+    /**
+     * State F: Quick tools drawer with flashlight, QR, music, call and settings.
+     * Triggered by a swipe-down gesture on the compact pill.
+     */
+    QUICK_TOOLS
 }
 
 /**

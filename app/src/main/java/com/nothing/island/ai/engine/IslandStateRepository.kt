@@ -194,6 +194,19 @@ class IslandStateRepository(
         }
     }
 
+    /** Expands the quick tools drawer (State F). */
+    fun expandQuickTools() {
+        _state.update { current ->
+            Log.d(TAG, "Expanded -> State F (QUICK_TOOLS)")
+            current.copy(
+                mode = IslandMode.EXPANDED,
+                expandedViewType = ExpandedViewType.QUICK_TOOLS,
+                selectedNotificationKey = null,
+                isAutoExpanded = false,
+            )
+        }
+    }
+
     /**
      * Selects a historical notification to view in State B (Notification-Focused View).
      */

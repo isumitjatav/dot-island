@@ -546,6 +546,25 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     startCallTicker(callId, caller)
                                 }
                             },
+                            onQuickTool = { tool ->
+                                Log.d("IslandTouch", "onQuickTool: $tool")
+                                when (tool) {
+                                    "torch" -> torchHandler.toggleTorch()
+                                    "music" -> expandMusic()
+                                    "call" -> {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL)
+                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        runCatching { appContext.startActivity(intent) }
+                                    }
+                                    "settings" -> {
+                                        val intent = android.content.Intent(appContext, MainActivity::class.java)
+                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        runCatching { appContext.startActivity(intent) }
+                                    }
+                                    "qr" -> Unit // No QR scanner available; no-op
+                                }
+                                collapse()
+                            },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 if (CallController.decline(appContext)) {
@@ -859,6 +878,25 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     )
                                     startCallTicker(callId, caller)
                                 }
+                            },
+                            onQuickTool = { tool ->
+                                Log.d("IslandTouch", "onQuickTool: $tool")
+                                when (tool) {
+                                    "torch" -> torchHandler.toggleTorch()
+                                    "music" -> expandMusic()
+                                    "call" -> {
+                                        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL)
+                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        runCatching { appContext.startActivity(intent) }
+                                    }
+                                    "settings" -> {
+                                        val intent = android.content.Intent(appContext, MainActivity::class.java)
+                                        intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                                        runCatching { appContext.startActivity(intent) }
+                                    }
+                                    "qr" -> Unit // No QR scanner available; no-op
+                                }
+                                collapse()
                             },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
@@ -1476,6 +1514,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 ExpandedViewType.MUSIC -> IslandInterface.MUSIC
                 ExpandedViewType.BATTERY -> IslandInterface.BATTERY
                 ExpandedViewType.CALL -> IslandInterface.DASHBOARD
+                ExpandedViewType.QUICK_TOOLS -> IslandInterface.DASHBOARD
             }
             activitySwitcher.syncCurrentInterface(currentTarget)
 

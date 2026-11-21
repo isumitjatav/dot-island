@@ -34,6 +34,9 @@ class DebugEventReceiver : BroadcastReceiver() {
                     )
                 )
             }
+            ACTION_QUICK_TOOLS -> {
+                IslandOverlayController.getInstance(context).repository.expandQuickTools()
+            }
             ACTION_MASCOT -> {
                 val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
                 val name = intent.getStringExtra(EXTRA_NAME) ?: "CAT"
@@ -59,6 +62,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
         const val EXTRA_NAME = "name"
         const val EXTRA_BATTERY = "battery"
+        const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
         const val EXTRA_ENABLED = "enabled"
     }

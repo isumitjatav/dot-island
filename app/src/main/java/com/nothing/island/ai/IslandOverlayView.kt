@@ -272,6 +272,7 @@ fun IslandOverlayView(
     onExpandCall: () -> Unit = onToggleExpand,
     onAnswerCall: () -> Unit = {},
     onDeclineCall: () -> Unit = {},
+    onQuickTool: (String) -> Unit = {},
     onCollapse: () -> Unit = onToggleExpand,
     onTogglePulse: () -> Unit = {},
     onOpenContent: (String) -> Unit = {},
@@ -666,6 +667,20 @@ fun IslandOverlayView(
                             modifier = Modifier.fillMaxSize()
                         )
                     }
+                }
+
+                ExpandedViewType.QUICK_TOOLS -> {
+                    com.nothing.island.ai.ui.components.QuickToolsDrawer(
+                        tools = listOf(
+                            com.nothing.island.ai.ui.components.QuickTool("TORCH", "⚡") { onQuickTool("torch") },
+                            com.nothing.island.ai.ui.components.QuickTool("QR", "▦") { onQuickTool("qr") },
+                            com.nothing.island.ai.ui.components.QuickTool("MUSIC", "♪") { onQuickTool("music") },
+                            com.nothing.island.ai.ui.components.QuickTool("CALL", "☎") { onQuickTool("call") },
+                            com.nothing.island.ai.ui.components.QuickTool("SETTINGS", "⚙") { onQuickTool("settings") },
+                        ),
+                        onCollapse = onCollapse,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
         }
