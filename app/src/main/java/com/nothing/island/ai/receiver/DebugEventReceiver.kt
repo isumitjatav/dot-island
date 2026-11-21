@@ -46,7 +46,7 @@ class DebugEventReceiver : BroadcastReceiver() {
             }
             ACTION_DUAL_PILL -> {
                 IslandOverlayController.getInstance(context).repository.setDualPill(
-                    intent.getBooleanExtra(EXTRA_ENABLED, true)
+                    intent.getBooleanExtra(EXTRA_ENABLED, false)
                 )
             }
             ACTION_FACE_UNLOCK -> {

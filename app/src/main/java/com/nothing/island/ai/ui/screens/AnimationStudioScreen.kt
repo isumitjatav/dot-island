@@ -19,6 +19,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +34,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.nothing.island.ai.ui.components.IslandPreview
 import com.nothing.island.ai.ui.components.NothingCard
 import com.nothing.island.ai.ui.components.NothingCardVariant
@@ -53,11 +57,40 @@ fun AnimationStudioScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val repository = remember { com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context) }
+    val savedPrefs by repository.animationPreferencesFlow().collectAsState(
+        initial = com.nothing.island.ai.ui.AnimationPreferences.DEFAULTS
+    )
+    val scope = rememberCoroutineScope()
 
-    var physicsMode by remember { mutableStateOf("LIQUID") }
-    var borderGlowEnabled by remember { mutableStateOf(true) }
-    var speedVal by remember { mutableStateOf(1.2f) }
-    var thicknessVal by remember { mutableStateOf(2.0f) }
+    var physicsMode by remember { mutableStateOf(savedPrefs.physicsMode) }
+    var borderGlowEnabled by remember { mutableStateOf(savedPrefs.borderGlowEnabled) }
+    var speedVal by remember { mutableStateOf(savedPrefs.glowSpeed) }
+    var thicknessVal by remember { mutableStateOf(savedPrefs.glowThickness) }
+    LaunchedEffect(savedPrefs) {
+        physicsMode = savedPrefs.physicsMode
+        borderGlowEnabled = savedPrefs.borderGlowEnabled
+        speedVal = savedPrefs.glowSpeed
+        thicknessVal = savedPrefs.glowThickness
+    }
+    fun persist(
+        mode: String = physicsMode,
+        glow: Boolean = borderGlowEnabled,
+        speed: Float = speedVal,
+        thickness: Float = thicknessVal,
+    ) {
+        scope.launch {
+            repository.updateAnimation(
+                com.nothing.island.ai.ui.AnimationPreferences(
+                    physicsMode = mode,
+                    borderGlowEnabled = glow,
+                    glowSpeed = speed,
+                    glowThickness = thickness,
+                )
+            )
+        }
+    }
 
     var paletteColors by remember {
         mutableStateOf(
@@ -143,7 +176,7 @@ fun AnimationStudioScreen(
             NothingSegmentedControl(
                 items = modes,
                 selectedItem = physicsMode,
-                onItemSelected = { physicsMode = it },
+                onItemSelected = { physicsMode = it; persist(mode = it) },
                 labelProvider = { it }
             )
         }
@@ -158,12 +191,12 @@ fun AnimationStudioScreen(
                     title = "Enable Border Animation",
                     description = "Play customizable border glow animations around the cutout",
                     checked = borderGlowEnabled,
-                    onCheckedChange = { borderGlowEnabled = it }
+                    onCheckedChange = { borderGlowEnabled = it; persist(glow = it) }
                 )
 
                 NothingStepperSlider(
                     value = speedVal,
-                    onValueChange = { speedVal = it },
+                    onValueChange = { speedVal = it; persist(speed = it) },
                     valueRange = 0.5f..3.0f,
                     stepSize = 0.1f,
                     label = "Animation Speed",
@@ -173,7 +206,7 @@ fun AnimationStudioScreen(
 
                 NothingStepperSlider(
                     value = thicknessVal,
-                    onValueChange = { thicknessVal = it },
+                    onValueChange = { thicknessVal = it; persist(thickness = it) },
                     valueRange = 1.0f..4.0f,
                     stepSize = 0.5f,
                     label = "Border Thickness",

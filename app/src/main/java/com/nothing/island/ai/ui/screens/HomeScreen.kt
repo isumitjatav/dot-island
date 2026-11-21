@@ -70,11 +70,6 @@ fun HomeScreen(
     val prefs by preferencesRepository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
     val isPreviewExpanded = remember { mutableStateOf(false) }
-    val mascotSprite = remember { mutableStateOf(
-        com.nothing.island.ai.ui.components.mascotByName(prefs.mascotSpriteName)
-    ) }
-    val mascotEnabled = remember { mutableStateOf(prefs.mascotEnabled) }
-    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
@@ -151,62 +146,6 @@ fun HomeScreen(
             horizontalOffsetDp = prefs.horizontalOffsetDp,
             accentColor = Color(prefs.accentColorHex),
             statusText = "${Build.MODEL} (${Build.DEVICE})"
-        )
-
-        // Interactive mascot prototype (tap the pill to make it jump)
-        Spacer(modifier = Modifier.height(10.dp))
-        Text(
-            text = "MASCOT PROTOTYPE · TAP TO JUMP",
-            color = NothingMutedText,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
-            letterSpacing = 1.sp,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .background(NothingTokens.NothingSurfaceLow, RoundedCornerShape(12.dp))
-                .border(1.dp, NothingDivider, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            com.nothing.island.ai.ui.components.MascotPillPreview(
-                sprite = mascotSprite.value
-            )
-        }
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            androidx.compose.material3.Text(
-                text = "SHOW IN OVERLAY",
-                color = NothingSecondaryText,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-            )
-            androidx.compose.material3.Switch(
-                checked = mascotEnabled.value,
-                onCheckedChange = { enabled ->
-                    mascotEnabled.value = enabled
-                    coroutineScope.launch {
-                        preferencesRepository.updateMascot(enabled, mascotSprite.value.name)
-                    }
-                },
-            )
-        }
-        com.nothing.island.ai.ui.components.MascotPicker(
-            selected = mascotSprite.value,
-            onSelect = { sprite ->
-                mascotSprite.value = sprite
-                coroutineScope.launch {
-                    preferencesRepository.updateMascot(mascotEnabled.value, sprite.name)
-                }
-            },
-            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(18.dp))

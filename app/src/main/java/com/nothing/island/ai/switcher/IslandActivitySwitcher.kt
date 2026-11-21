@@ -35,7 +35,8 @@ enum class IslandInterface {
  */
 enum class SwipeDirection {
     LEFT,  // Next available or forward interface
-    RIGHT  // Previous visited interface
+    RIGHT, // Previous visited interface
+    DOWN   // Open quick tools drawer
 }
 
 /**
@@ -182,6 +183,8 @@ class IslandActivitySwitcher {
                     }
                 }
             }
+
+            SwipeDirection.DOWN -> false // handled by controller as quick tools
         }
     }
 

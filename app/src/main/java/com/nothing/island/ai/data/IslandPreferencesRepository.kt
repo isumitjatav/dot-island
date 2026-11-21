@@ -132,6 +132,10 @@ class IslandPreferencesRepository internal constructor(
         val MASCOT_ENABLED = booleanPreferencesKey("mascot_enabled")
         val MASCOT_SPRITE_NAME = stringPreferencesKey("mascot_sprite_name")
         val PILL_BACKGROUND_COLOR_HEX = longPreferencesKey("pill_background_color_hex")
+        val ANIM_PHYSICS_MODE = stringPreferencesKey("anim_physics_mode")
+        val ANIM_BORDER_GLOW = booleanPreferencesKey("anim_border_glow")
+        val ANIM_GLOW_SPEED = floatPreferencesKey("anim_glow_speed")
+        val ANIM_GLOW_THICKNESS = floatPreferencesKey("anim_glow_thickness")
     }
 
     object NotificationPreferencesKeys {
@@ -422,6 +426,25 @@ class IslandPreferencesRepository internal constructor(
             prefs[PreferencesKeys.PRESET_NAME] = presetName
         }
     }
+
+    suspend fun updateAnimation(prefs: com.nothing.island.ai.ui.AnimationPreferences) {
+        dataStore.edit { p ->
+            p[PreferencesKeys.ANIM_PHYSICS_MODE] = prefs.physicsMode
+            p[PreferencesKeys.ANIM_BORDER_GLOW] = prefs.borderGlowEnabled
+            p[PreferencesKeys.ANIM_GLOW_SPEED] = prefs.glowSpeed
+            p[PreferencesKeys.ANIM_GLOW_THICKNESS] = prefs.glowThickness
+        }
+    }
+
+    fun animationPreferencesFlow(): kotlinx.coroutines.flow.Flow<com.nothing.island.ai.ui.AnimationPreferences> =
+        dataStore.data.map { p ->
+            com.nothing.island.ai.ui.AnimationPreferences(
+                physicsMode = p[PreferencesKeys.ANIM_PHYSICS_MODE] ?: "LIQUID",
+                borderGlowEnabled = p[PreferencesKeys.ANIM_BORDER_GLOW] ?: true,
+                glowSpeed = p[PreferencesKeys.ANIM_GLOW_SPEED] ?: 1.2f,
+                glowThickness = p[PreferencesKeys.ANIM_GLOW_THICKNESS] ?: 2.0f,
+            )
+        }
 
     suspend fun updateMascot(enabled: Boolean, spriteName: String) {
         _livePreferences.value = _livePreferences.value.copy(

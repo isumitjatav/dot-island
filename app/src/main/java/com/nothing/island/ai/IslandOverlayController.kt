@@ -307,6 +307,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
             }
 
             try {
+                // Dual-pill is a transient preview state; never persist it across attaches.
+                repository.setDualPill(false)
                 activeContext = service
                 val wm = service.getSystemService(Context.WINDOW_SERVICE) as WindowManager
                 activeWindowManager = wm
@@ -609,7 +611,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 seekMediaTo(pos)
                             },
                             onSwipeActivity = { direction ->
-                                handleActivitySwipe(direction)
+                                if (direction == com.nothing.island.ai.switcher.SwipeDirection.DOWN) {
+                                    repository.expandQuickTools()
+                                } else {
+                                    handleActivitySwipe(direction)
+                                }
                             },
                             gesturePreferences = gesturePrefs
                         )
@@ -943,7 +949,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 seekMediaTo(pos)
                             },
                             onSwipeActivity = { direction ->
-                                handleActivitySwipe(direction)
+                                if (direction == com.nothing.island.ai.switcher.SwipeDirection.DOWN) {
+                                    repository.expandQuickTools()
+                                } else {
+                                    handleActivitySwipe(direction)
+                                }
                             },
                             gesturePreferences = gesturePrefs
                         )
@@ -1247,10 +1257,18 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 if (isAccessibilityMode) WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS else WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
-        val targetFlags = if (mode == IslandMode.EXPANDED) {
-            baseFlags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-        } else {
-            baseFlags
+        // Only the tiny 124x36 idle capsule stays tappable (for expand). Any
+        // enlarged collapsed window (earbud 320dp, dual-pill 220dp) is made
+        // touch-transparent so it can never swallow taps in apps underneath
+        // (e.g. Paytm). Expanded cards keep their own touch handling.
+        val isEnlargedCollapsed = mode != IslandMode.EXPANDED &&
+            (state.isDualPill || isEarbudActive ||
+                (state.activeEvent is IslandEvent.OrderTrackingUpdated) ||
+                (state.activeEvent is IslandEvent.DeviceUnlocked))
+        val targetFlags = when {
+            mode == IslandMode.EXPANDED -> baseFlags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
+            isEnlargedCollapsed -> baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            else -> baseFlags
         }
 
         var changed = false

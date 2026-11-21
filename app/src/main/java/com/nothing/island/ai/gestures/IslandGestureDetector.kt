@@ -247,13 +247,13 @@ fun Modifier.islandGestureDetector(
                     val swipeThreshold = 30f
                     if (abs(totalDragX) > abs(totalDragY)) {
                         if (totalDragX > swipeThreshold) {
-                            if (isMediaIslandActive && onSwipeActivity != null) {
+                            if (onSwipeActivity != null) {
                                 onSwipeActivity(SwipeDirection.RIGHT)
                             } else {
                                 executor.execute(preferences.swipeRightAction)
                             }
                         } else if (totalDragX < -swipeThreshold) {
-                            if (isMediaIslandActive && onSwipeActivity != null) {
+                            if (onSwipeActivity != null) {
                                 onSwipeActivity(SwipeDirection.LEFT)
                             } else {
                                 executor.execute(preferences.swipeLeftAction)
@@ -261,7 +261,13 @@ fun Modifier.islandGestureDetector(
                         }
                     } else {
                         if (totalDragY > swipeThreshold) {
-                            executor.execute(preferences.swipeDownAction)
+                            // Swipe down always opens the quick tools drawer; fall back
+                            // to the configured action if no callback is provided.
+                            if (onSwipeActivity != null) {
+                                onSwipeActivity(SwipeDirection.DOWN)
+                            } else {
+                                executor.execute(preferences.swipeDownAction)
+                            }
                         }
                     }
                     break

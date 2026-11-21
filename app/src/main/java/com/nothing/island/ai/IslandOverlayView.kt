@@ -489,7 +489,8 @@ fun IslandOverlayView(
                         .islandGestureDetector(
                             preferences = gesturePreferences,
                             executor = gestureExecutor,
-                            isMediaIslandActive = false
+                            isMediaIslandActive = false,
+                            onSwipeActivity = onSwipeActivity
                         ),
                     contentAlignment = Alignment.Center
                 ) {

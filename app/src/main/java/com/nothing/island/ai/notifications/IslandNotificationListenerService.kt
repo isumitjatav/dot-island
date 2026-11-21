@@ -340,21 +340,15 @@ class IslandNotificationListenerService : NotificationListenerService() {
 
                 // 6. Emit presentation event ONLY after successful commit (and only if not historical)
                 if (event != null && !isHistorical) {
-                    val accepted = controller.eventEngine.emit(event)
-                    Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
-
-                    // Hide System (Double) Notification: once the island owns the
-                    // presentation, cancel the redundant system heads-up. Only
-                    // clearable, non-ongoing alerts are safe to remove; calls and
-                    // persistent media/service notifications are never cancelled.
-                    if (accepted && prefs.hideSystemNotification && sbn.isClearable && !sbn.isOngoing) {
-                        try {
-                            selfCancelledKeys.add(key)
-                            cancelNotification(key)
-                            Log.i(TAG, "Hide System Notification: cancelled redundant system alert key=$key")
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Failed to cancel redundant system notification key=$key", e)
-                        }
+                    // "Hide System (Double) Notification" now means: keep messages
+                    // in the Android system drawer, but do NOT slide them down onto
+                    // the screen as an island popup. Notification access still
+                    // records them in history silently.
+                    if (prefs.hideSystemNotification) {
+                        Log.i(TAG, "Notification kept in system drawer only (island popup suppressed): key=$key")
+                    } else {
+                        val accepted = controller.eventEngine.emit(event)
+                        Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
                     }
                 }
             } catch (e: Exception) {

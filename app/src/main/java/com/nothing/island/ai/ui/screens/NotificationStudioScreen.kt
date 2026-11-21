@@ -229,8 +229,8 @@ fun NotificationStudioScreen(
                 )
 
                 NothingSwitchRow(
-                    title = "Hide System (Double) Notification",
-                    description = "Remove the duplicate system heads-up once the island shows the alert. Calls and ongoing media are never hidden.",
+                    title = "Keep Messages In System Drawer",
+                    description = "Notifications stay in the Android shade and are recorded silently, without sliding down onto the screen as an island popup.",
                     checked = notifPrefs.hideSystemNotification,
                     onCheckedChange = { isChecked ->
                         coroutineScope.launch { repository.updateHideSystemNotification(isChecked) }
