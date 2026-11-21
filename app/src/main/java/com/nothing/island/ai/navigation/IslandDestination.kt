@@ -24,6 +24,7 @@ sealed class IslandDestination(
     data object AnimationStudio : IslandDestination("studio_anim", "ANIMATION STUDIO", "ANIM")
     data object GestureStudio : IslandDestination("studio_gesture", "GESTURE STUDIO", "GESTURE")
     data object PeripheralsStudio : IslandDestination("studio_peripherals", "PERIPHERALS & SYSTEM", "DEVICES")
+    data object MascotStudio : IslandDestination("studio_mascot", "MASCOT STUDIO", "MASCOT")
     data object GeometryStudio : IslandDestination("studio_geometry", "GEOMETRY CALIBRATION", "CALIBRATE")
     data object Settings : IslandDestination("settings", "SYSTEM SETTINGS", "SETUP")
 
@@ -43,6 +44,6 @@ sealed class IslandDestination(
          * Sub-studios accessible from the Studios Hub screen.
          */
         val studioHubDestinations: List<IslandDestination>
-            get() = listOf(ThemeStudio, AnimationStudio, GestureStudio, PeripheralsStudio, GeometryStudio, Settings)
+            get() = listOf(ThemeStudio, AnimationStudio, GestureStudio, PeripheralsStudio, MascotStudio, GeometryStudio, Settings)
     }
 }

@@ -91,6 +91,14 @@ fun StudiosHubScreen(
             accentColor = NothingTokens.NothingGreen
         ),
         StudioCardItem(
+            destination = IslandDestination.MascotStudio,
+            title = "MASCOT STUDIO",
+            subtitle = "Pixel Companions That Walk & Jump Inside The Island",
+            badgeText = "PIXEL",
+            glyphSymbol = "🐱",
+            accentColor = NothingTokens.NothingRed
+        ),
+        StudioCardItem(
             destination = IslandDestination.GeometryStudio,
             title = "GEOMETRY CALIBRATION",
             subtitle = "Cutout Alignment, Width/Height DP & Corner Radii",

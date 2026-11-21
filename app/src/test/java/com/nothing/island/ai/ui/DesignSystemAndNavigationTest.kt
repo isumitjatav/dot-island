@@ -61,12 +61,13 @@ class DesignSystemAndNavigationTest {
     @Test
     fun testStudioHubSubDestinations() {
         val hubDestinations = IslandDestination.studioHubDestinations
-        assertEquals(6, hubDestinations.size)
+        assertEquals(7, hubDestinations.size)
 
         assertTrue(hubDestinations.contains(IslandDestination.ThemeStudio))
         assertTrue(hubDestinations.contains(IslandDestination.AnimationStudio))
         assertTrue(hubDestinations.contains(IslandDestination.GestureStudio))
         assertTrue(hubDestinations.contains(IslandDestination.PeripheralsStudio))
+        assertTrue(hubDestinations.contains(IslandDestination.MascotStudio))
         assertTrue(hubDestinations.contains(IslandDestination.GeometryStudio))
         assertTrue(hubDestinations.contains(IslandDestination.Settings))
 

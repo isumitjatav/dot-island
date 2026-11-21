@@ -180,6 +180,13 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
+                                    is IslandDestination.MascotStudio -> {
+                                        com.nothing.island.ai.ui.screens.MascotStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
                                     is IslandDestination.GeometryStudio -> {
                                         GeometryStudioScreen(
                                             onNavigateBack = {
