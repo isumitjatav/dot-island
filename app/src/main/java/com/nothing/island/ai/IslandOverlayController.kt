@@ -1169,11 +1169,15 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 (state.activeEvent is IslandEvent.BatteryStateChanged && state.activeEvent.isLowBattery) ||
                 (state.activeEvent is IslandEvent.BatteryWarning) ||
                 (activitySwitcher.currentInterface.value == IslandInterface.BATTERY)
+        val isEarbudActive = state.activeEvent is IslandEvent.BluetoothDeviceConnected ||
+                state.activeEvent is IslandEvent.BluetoothDeviceDisconnected
 
         val widthDp = if (mode == IslandMode.EXPANDED) {
             prefs.expandedWidthDp
         } else {
-            if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
+            if (isEarbudActive) {
+                264f // Wider capsule for the earbud pill's horizontal spring expansion
+            } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {
                 prefs.compactWidthDp
@@ -1182,6 +1186,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
         val heightDp = if (mode == IslandMode.EXPANDED) {
             prefs.expandedHeightDp
+        } else if (isEarbudActive) {
+            120f // Room for the downward spring drop (72dp) plus the 40dp pill
         } else {
             if (isAccessibilityMode) {
                 prefs.compactHeightDp

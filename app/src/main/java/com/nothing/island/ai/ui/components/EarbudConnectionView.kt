@@ -86,26 +86,25 @@ fun EarbudConnectionView(
     val battery = event.batteryLevelPercentage
     val clamped = (battery ?: 100).coerceIn(0, 100)
 
-    // Stage 1: drop in from above with a spring; Stage 2: expand width with a spring.
-    var stage by remember { mutableStateOf(0) }
+    // The pill starts at the camera cutout, then DROPS DOWN into the screen
+    // with a springy bounce while widening — matching the user's sketch.
+    var dropped by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        stage = 1 // start the drop
-        kotlinx.coroutines.delay(160L)
-        stage = 2 // then widen
+        dropped = true
     }
 
     val dropY by animateDpAsState(
-        targetValue = if (stage >= 1) 0.dp else (-48).dp,
+        targetValue = if (dropped) 72.dp else 0.dp,
         animationSpec = spring(
-            dampingRatio = 0.42f,
+            dampingRatio = 0.38f,      // low damping => visible bounce/overshoot
             stiffness = Spring.StiffnessMediumLow,
         ),
         label = "earbudDropY",
     )
     val pillWidth by animateDpAsState(
-        targetValue = if (stage >= 2) 264.dp else 124.dp,
+        targetValue = if (dropped) 264.dp else 124.dp,
         animationSpec = spring(
-            dampingRatio = 0.5f,
+            dampingRatio = 0.45f,
             stiffness = Spring.StiffnessLow,
         ),
         label = "earbudWidth",
@@ -207,8 +206,8 @@ fun EarbudDisconnectedView(
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val dropY by animateDpAsState(
-        targetValue = if (shown) 0.dp else (-48).dp,
-        animationSpec = spring(dampingRatio = 0.42f, stiffness = Spring.StiffnessMediumLow),
+        targetValue = if (shown) 72.dp else 0.dp,
+        animationSpec = spring(dampingRatio = 0.38f, stiffness = Spring.StiffnessMediumLow),
         label = "earbudOffDropY",
     )
     Box(
