@@ -34,6 +34,14 @@ class DebugEventReceiver : BroadcastReceiver() {
                     )
                 )
             }
+            ACTION_FACE_UNLOCK -> {
+                IslandOverlayController.getInstance(context).eventEngine.emit(
+                    IslandEvent.DeviceUnlocked(
+                        id = "debug_face_unlock_${System.currentTimeMillis()}",
+                        unlockMethod = com.nothing.island.ai.engine.UnlockMethod.FACE,
+                    )
+                )
+            }
             ACTION_QUICK_TOOLS -> {
                 IslandOverlayController.getInstance(context).repository.expandQuickTools()
             }
@@ -62,6 +70,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
         const val EXTRA_NAME = "name"
         const val EXTRA_BATTERY = "battery"
+        const val ACTION_FACE_UNLOCK = "com.nothing.island.ai.DEBUG_FACE_UNLOCK"
         const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
         const val EXTRA_ENABLED = "enabled"

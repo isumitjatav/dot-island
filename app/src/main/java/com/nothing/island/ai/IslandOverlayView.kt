@@ -360,6 +360,12 @@ fun IslandOverlayView(
                     )
                     else -> Unit
                 }
+            } else if (activeEvent is IslandEvent.DeviceUnlocked &&
+                activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE
+            ) {
+                com.nothing.island.ai.ui.components.FaceUnlockPill(
+                    onTap = onToggleExpand,
+                )
             } else if (isSystemAlertActive) {
                 // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
                 SystemAlertPill(
