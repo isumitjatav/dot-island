@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -96,7 +97,7 @@ fun MascotPillPreview(
         label = "mascotWalkX",
     )
 
-    // Secondary bob: ghosts float, others gently bob while moving.
+    // Smooth bob + tilt reads as walking without flickering leg frames.
     val bob by walk.animateFloat(
         initialValue = 0f,
         targetValue = -3f,
@@ -106,22 +107,16 @@ fun MascotPillPreview(
         ),
         label = "mascotBob",
     )
-
-    // Leg frame switching: alternate the leg sprites as the mascot walks.
-    var frameIndex by remember { mutableStateOf(0) }
-    LaunchedEffect(sprite.name) {
-        while (true) {
-            kotlinx.coroutines.delay(220L)
-            frameIndex++
-        }
-    }
-    val frames = sprite.walkFrames
-    val activeRows = if (frames != null && frames.isNotEmpty()) {
-        frames[frameIndex % frames.size]
-    } else {
-        sprite.rows
-    }
-    val activeSprite = sprite.copy(rows = activeRows)
+    val tilt by walk.animateFloat(
+        initialValue = -8f,
+        targetValue = 8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(450, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "mascotTilt",
+    )
+    val activeSprite = sprite
 
     // One-shot hop: rise quickly, then fall back to rest — no stuck state.
     fun doHop() {
@@ -143,7 +138,8 @@ fun MascotPillPreview(
         Canvas(
             modifier = Modifier
                 .size(20.dp)
-                .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp),
+                .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp)
+                .graphicsLayer { rotationZ = if (sprite.motion == MascotSprites.Motion.FLOAT) 0f else tilt },
         ) {
             drawSprite(draw = this, sprite = activeSprite, cell = size.width / activeSprite.rows[0].length)
         }
