@@ -257,6 +257,7 @@ fun IslandOverlayView(
     batteryState: BatteryState = BatteryState.INITIAL,
     currentTrack: MediaTrackState = MediaTrackState.EMPTY,
     activeEvent: IslandEvent? = null,
+    isDualPill: Boolean = false,
     projectedHistory: List<PrivacySafeNotificationPresentation> = emptyList(),
     selectedNotificationKey: String? = null,
     activeUndo: UndoNotificationState? = null,
@@ -321,6 +322,18 @@ fun IslandOverlayView(
         contentAlignment = Alignment.TopCenter
     ) {
         if (!isExpanded) {
+            if (isDualPill) {
+                com.nothing.island.ai.ui.components.DualPillContainer(
+                    leftLabel = "MUSIC",
+                    leftGlyph = "♪",
+                    rightLabel = "TIMER",
+                    rightGlyph = "◷",
+                    accentColor = accentColor,
+                    onLeftTap = onExpandMusic,
+                    onRightTap = onCollapse,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
             val isBatteryActive = (activeEvent is IslandEvent.ChargingConnected ||
                     activeEvent is IslandEvent.ChargingDisconnected ||
                     (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
@@ -487,6 +500,7 @@ fun IslandOverlayView(
                     }
                 }
             }
+            } // end else (non-dual compact)
         } else {
             // EXPANDED PRESENTATION LAYER
             when (state.expandedViewType) {

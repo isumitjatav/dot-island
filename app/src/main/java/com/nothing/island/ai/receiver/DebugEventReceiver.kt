@@ -34,6 +34,11 @@ class DebugEventReceiver : BroadcastReceiver() {
                     )
                 )
             }
+            ACTION_DUAL_PILL -> {
+                IslandOverlayController.getInstance(context).repository.setDualPill(
+                    intent.getBooleanExtra(EXTRA_ENABLED, true)
+                )
+            }
             ACTION_FACE_UNLOCK -> {
                 IslandOverlayController.getInstance(context).eventEngine.emit(
                     IslandEvent.DeviceUnlocked(
@@ -70,6 +75,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
         const val EXTRA_NAME = "name"
         const val EXTRA_BATTERY = "battery"
+        const val ACTION_DUAL_PILL = "com.nothing.island.ai.DEBUG_DUAL_PILL"
         const val ACTION_FACE_UNLOCK = "com.nothing.island.ai.DEBUG_FACE_UNLOCK"
         const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"

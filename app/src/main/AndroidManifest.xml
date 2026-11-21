@@ -66,6 +66,7 @@
                 <action android:name="com.nothing.island.ai.DEBUG_MASCOT" />
                 <action android:name="com.nothing.island.ai.DEBUG_QUICK_TOOLS" />
                 <action android:name="com.nothing.island.ai.DEBUG_FACE_UNLOCK" />
+                <action android:name="com.nothing.island.ai.DEBUG_DUAL_PILL" />
             </intent-filter>
         </receiver>
 

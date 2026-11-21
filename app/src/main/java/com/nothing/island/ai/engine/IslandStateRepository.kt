@@ -32,7 +32,9 @@ data class IslandMasterState(
      *  - auto-expanded -> collapse when the triggering event expires (never leave a blank card)
      *  - user-expanded -> stay open; the user's deliberate choice outranks event churn
      */
-    val isAutoExpanded: Boolean = false
+    val isAutoExpanded: Boolean = false,
+    /** True when two concurrent activities are shown as satellite pills. */
+    val isDualPill: Boolean = false
 ) {
     /**
      * Bridges cleanly to existing IslandState for backward compatibility with Compose views.
@@ -192,6 +194,11 @@ class IslandStateRepository(
                 isAutoExpanded = true
             )
         }
+    }
+
+    /** Enables or disables the dual-pill split layout. */
+    fun setDualPill(enabled: Boolean) {
+        _state.update { it.copy(isDualPill = enabled) }
     }
 
     /** Expands the quick tools drawer (State F). */
