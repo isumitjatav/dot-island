@@ -453,7 +453,7 @@ fun IslandOverlayView(
                         .width(preferences.compactWidthDp.dp)
                         .height(preferences.compactHeightDp.dp)
                         .clip(pillShape)
-                        .background(NothingBlack)
+                        .background(Color(preferences.pillBackgroundColorHex))
                         .islandProgressBorder(
                             shape = pillShape,
                             progressState = downloadState,

@@ -35,6 +35,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.ui.components.IslandPreview
 import com.nothing.island.ai.ui.components.NothingCard
@@ -66,6 +68,7 @@ fun ThemeStudioScreen(
     val repository = remember { IslandPreferencesRepository.getInstance(context) }
     val prefs by repository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     var selectedPreset by remember { mutableStateOf(prefs.presetName) }
 
@@ -182,6 +185,14 @@ fun ThemeStudioScreen(
                                     indication = null
                                 ) {
                                     selectedPreset = preset.name
+                                    val argb = (preset.primaryColor.value.toLong() and 0xFFFFFFFFL)
+                                    scope.launch {
+                                        repository.updatePillTheme(
+                                            backgroundHex = argb,
+                                            accentHex = argb,
+                                            presetName = preset.name,
+                                        )
+                                    }
                                 }
                                 .padding(12.dp)
                         ) {

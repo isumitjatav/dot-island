@@ -61,7 +61,8 @@ data class IslandPreferences(
     val presetName: String = "Nothing Minimal",
     val accentColorHex: Long = 0xFFD71920L, // NothingPrimaryAccent (NothingRed)
     val mascotEnabled: Boolean = false,
-    val mascotSpriteName: String = "CAT"
+    val mascotSpriteName: String = "CAT",
+    val pillBackgroundColorHex: Long = 0xFF000000L
 )
 
 /** Context extension for single-instance Preferences DataStore */
@@ -130,6 +131,7 @@ class IslandPreferencesRepository internal constructor(
         val ACCENT_COLOR_HEX = longPreferencesKey("accent_color_hex")
         val MASCOT_ENABLED = booleanPreferencesKey("mascot_enabled")
         val MASCOT_SPRITE_NAME = stringPreferencesKey("mascot_sprite_name")
+        val PILL_BACKGROUND_COLOR_HEX = longPreferencesKey("pill_background_color_hex")
     }
 
     object NotificationPreferencesKeys {
@@ -403,8 +405,22 @@ class IslandPreferencesRepository internal constructor(
             presetName = preferences[PreferencesKeys.PRESET_NAME] ?: HARDWARE_DEFAULTS.presetName,
             accentColorHex = preferences[PreferencesKeys.ACCENT_COLOR_HEX] ?: HARDWARE_DEFAULTS.accentColorHex,
             mascotEnabled = preferences[PreferencesKeys.MASCOT_ENABLED] ?: HARDWARE_DEFAULTS.mascotEnabled,
-            mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName
+            mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName,
+            pillBackgroundColorHex = preferences[PreferencesKeys.PILL_BACKGROUND_COLOR_HEX] ?: HARDWARE_DEFAULTS.pillBackgroundColorHex
         )
+    }
+
+    suspend fun updatePillTheme(backgroundHex: Long, accentHex: Long, presetName: String) {
+        _livePreferences.value = _livePreferences.value.copy(
+            pillBackgroundColorHex = backgroundHex,
+            accentColorHex = accentHex,
+            presetName = presetName,
+        )
+        dataStore.edit { prefs ->
+            prefs[PreferencesKeys.PILL_BACKGROUND_COLOR_HEX] = backgroundHex
+            prefs[PreferencesKeys.ACCENT_COLOR_HEX] = accentHex
+            prefs[PreferencesKeys.PRESET_NAME] = presetName
+        }
     }
 
     suspend fun updateMascot(enabled: Boolean, spriteName: String) {
