@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -130,9 +131,13 @@ fun MusicStudioScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Interactive Live Preview Engine (Default: Expanded Music Player)
+        // Interactive Live Preview Engine — reflects the selected visualizer live
+        val uiPrefs by repository.livePreferences.collectAsState()
         IslandPreview(
-            initialMode = IslandPreviewMode.MUSIC_EXPANDED
+            initialMode = IslandPreviewMode.MUSIC_EXPANDED,
+            visualizerStyle = musicPrefs.visualizerStyle,
+            pillBackgroundColor = Color(uiPrefs.pillBackgroundColorHex),
+            accentColor = Color(uiPrefs.accentColorHex)
         )
 
         Spacer(modifier = Modifier.height(16.dp))

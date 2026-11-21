@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -295,6 +296,9 @@ fun IslandOverlayView(
     val dashboardListState = rememberLazyListState()
 
     val context = LocalContext.current
+    val enabledQuickTools by remember {
+        com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context).quickToolsFlow()
+    }.collectAsState(initial = com.nothing.island.ai.ui.components.QuickTools.DEFAULT.toSet())
     val gestureExecutor = remember(context, onToggleExpand, onExpandDashboard, onClearHistory) {
         IslandGestureActionExecutor(
             context = context,
@@ -359,6 +363,8 @@ fun IslandOverlayView(
                 CallCompactView(
                     event = activeEvent!!,
                     onTap = onExpandCall,
+                    onEndCall = onDeclineCall,
+                    showEndButton = true,
                 )
             } else if (isEarbudEvent) {
                 // Bluetooth headset pill with circular battery ring
@@ -698,7 +704,7 @@ fun IslandOverlayView(
                 ExpandedViewType.QUICK_TOOLS -> {
                     val qt = com.nothing.island.ai.ui.components.QuickTools
                     com.nothing.island.ai.ui.components.QuickToolsDrawer(
-                        tools = qt.DEFAULT.map { id ->
+                        tools = qt.DEFAULT.filter { id -> id in enabledQuickTools }.map { id ->
                             com.nothing.island.ai.ui.components.QuickTool(
                                 id = id,
                                 label = qt.label(id),

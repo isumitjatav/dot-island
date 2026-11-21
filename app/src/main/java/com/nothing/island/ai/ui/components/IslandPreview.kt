@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nothing.island.ai.battery.ChargingAnimationStyle
+import com.nothing.island.ai.media.MusicVisualizerStyle
 import com.nothing.island.ai.ui.charging.ChargingAnimationHost
 import com.nothing.island.ai.ui.theme.NothingTokens
 
@@ -88,6 +89,7 @@ fun IslandPreview(
     horizontalOffsetDp: Float = 0f,
     accentColor: Color = NothingTokens.NothingRed,
     pillBackgroundColor: Color = NothingTokens.NothingBlack,
+    visualizerStyle: MusicVisualizerStyle = MusicVisualizerStyle.VERTICAL_EQUALIZER,
     onModeChanged: ((IslandPreviewMode) -> Unit)? = null,
     // Backward compatibility parameters for legacy callers
     isExpanded: Boolean = false,
@@ -254,8 +256,8 @@ fun IslandPreview(
                         IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, pillBackgroundColor, accentColor)
                         IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(pillBackgroundColor, accentColor)
                         IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(pillBackgroundColor, accentColor, visualizerStyle)
+                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor, visualizerStyle)
                         IslandPreviewMode.CHARGING -> PreviewChargingPill(pillBackgroundColor, accentColor)
                         IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(pillBackgroundColor, accentColor)
                         IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(pillBackgroundColor, accentColor)
@@ -479,7 +481,7 @@ private fun PreviewActionChip(text: String, textColor: Color) {
 }
 
 @Composable
-private fun PreviewMusicCompact(bg: Color, accent: Color) {
+private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle) {
     val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -532,14 +534,14 @@ private fun PreviewMusicCompact(bg: Color, accent: Color) {
                 maxLines = 1
             )
 
-            // Animated Equalizer Waveform Bars (Blue)
-            PreviewWaveformBars(NothingTokens.NothingBlue)
+            // Animated visualizer reflecting the selected style
+            PreviewMusicVisualizer(visualizerStyle, NothingTokens.NothingBlue)
         }
     }
 }
 
 @Composable
-private fun PreviewMusicExpanded(bg: Color, accent: Color) {
+private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle) {
     Box(
         modifier = Modifier
             .width(300.dp)
@@ -584,7 +586,7 @@ private fun PreviewMusicExpanded(bg: Color, accent: Color) {
                     )
                 }
 
-                PreviewWaveformBars(NothingTokens.NothingBlue)
+                PreviewMusicVisualizer(visualizerStyle, NothingTokens.NothingBlue)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -782,6 +784,57 @@ private fun PreviewProgressRing(
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+/** Live visualizer that visually changes with the selected music style. */
+@Composable
+private fun PreviewMusicVisualizer(style: MusicVisualizerStyle, color: Color) {
+    val t = rememberInfiniteTransition(label = "visStyle")
+    val phase by t.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(700, easing = LinearEasing), RepeatMode.Reverse),
+        label = "visPhase"
+    )
+    when (style) {
+        MusicVisualizerStyle.VERTICAL_EQUALIZER -> PreviewWaveformBars(color)
+        MusicVisualizerStyle.WAVEFORM -> {
+            Canvas(modifier = Modifier.size(width = 34.dp, height = 18.dp)) {
+                val w = size.width; val h = size.height
+                val path = androidx.compose.ui.graphics.Path()
+                path.moveTo(0f, h / 2f)
+                for (x in 0..w.toInt() step 4) {
+                    val y = h / 2f + kotlin.math.sin((x / w) * 6.28f + phase * 6.28f) * (h * 0.35f)
+                    path.lineTo(x.toFloat(), y)
+                }
+                drawPath(
+                    path, color,
+                    style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+                )
+            }
+        }
+        MusicVisualizerStyle.CIRCULAR -> {
+            Box(modifier = Modifier.size(18.dp), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(18.dp)) {
+                    drawCircle(color, radius = size.minDimension / 2f, style = Stroke(1.5.dp.toPx()))
+                    drawArc(color, -90f, 280f * phase, false, style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round))
+                }
+            }
+        }
+        MusicVisualizerStyle.VINYL -> {
+            Box(modifier = Modifier.size(18.dp).rotate(phase * 360f), contentAlignment = Alignment.Center) {
+                Canvas(modifier = Modifier.size(18.dp)) {
+                    drawCircle(Color(0xFF333333), radius = size.minDimension / 2f)
+                    drawCircle(color, radius = size.minDimension / 6f)
+                }
+            }
+        }
+        MusicVisualizerStyle.MINIMAL_PULSE -> {
+            Box(modifier = Modifier.size(18.dp), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.size((8 + phase * 8).dp).clip(CircleShape).background(color.copy(alpha = 0.5f)))
+                Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(color))
+            }
         }
     }
 }

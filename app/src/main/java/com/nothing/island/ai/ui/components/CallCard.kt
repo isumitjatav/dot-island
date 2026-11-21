@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,6 +57,8 @@ fun formatCallDuration(totalSeconds: Long): String {
 fun CallCompactView(
     event: IslandEvent,
     onTap: () -> Unit,
+    onEndCall: (() -> Unit)? = null,
+    showEndButton: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val caller = when (event) {
@@ -77,15 +80,17 @@ fun CallCompactView(
         label = "callGlow",
     )
 
+    val showEnd = !isRinging && showEndButton && onEndCall != null
+    Box(modifier = modifier) {
     Box(
-        modifier = modifier
+        modifier = Modifier
             .width(200.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
             .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(18.dp))
             .clickable(onClick = onTap)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = if (showEnd) 26.dp else 14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -118,6 +123,24 @@ fun CallCompactView(
                 fontFamily = FontFamily.Monospace,
             )
         }
+    }
+
+    // Reference-style red call-end button attached to the left of the pill.
+    if (showEnd) {
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .offset(x = (-6).dp)
+                .size(34.dp)
+                .clip(CircleShape)
+                .background(NothingPrimaryAccent)
+                .border(3.dp, NothingPrimaryBackground, CircleShape)
+                .clickable(onClick = onEndCall!!),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("✕", color = NothingPrimaryText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+    }
     }
 }
 

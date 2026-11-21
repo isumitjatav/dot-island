@@ -299,6 +299,20 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
+        // QUICK CONTROLS — live customizable preview
+        SectionHeader(title = "QUICK CONTROLS — CUSTOMIZE", badgeText = "LIVE", badgeColor = NothingPrimaryAccent)
+        Spacer(modifier = Modifier.height(6.dp))
+        com.nothing.island.ai.ui.components.QuickControlsPreview()
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = "Tapping a tile adds/removes it from the island's quick controls drawer.",
+            color = NothingSecondaryText,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace
+        )
+
+        Spacer(modifier = Modifier.height(18.dp))
+
         // GENERAL PREFERENCES
         SectionHeader(title = "GENERAL PREFERENCES")
 

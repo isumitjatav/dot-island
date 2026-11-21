@@ -69,6 +69,7 @@
                 <action android:name="com.nothing.island.ai.DEBUG_DUAL_PILL" />
                 <action android:name="com.nothing.island.ai.DEBUG_ORDER_TRACKING" />
                 <action android:name="com.nothing.island.ai.DEBUG_MUSIC" />
+                <action android:name="com.nothing.island.ai.DEBUG_CALL" />
             </intent-filter>
         </receiver>
 

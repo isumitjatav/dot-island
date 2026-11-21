@@ -60,7 +60,9 @@ fun HomeScreen(
     hasOverlayPermission: Boolean,
     isServiceRunning: Boolean,
     geometry: CutoutGeometry,
+    hasNotificationPermission: Boolean = true,
     onRequestPermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit = {},
     onToggleService: () -> Unit,
     onNavigateToDestination: (IslandDestination) -> Unit,
     modifier: Modifier = Modifier
@@ -213,6 +215,62 @@ fun HomeScreen(
                     }
                 }
 
+                // Notification access — required for notifications + music pills
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Notification access",
+                            color = NothingPrimaryText,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = if (hasNotificationPermission) "Connected — alerts & media enabled"
+                                   else "REQUIRED for notifications & music",
+                            color = if (hasNotificationPermission) NothingSuccess else NothingPrimaryAccent,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    if (!hasNotificationPermission) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NothingPrimaryAccent)
+                                .clickable { onRequestNotificationPermission() }
+                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                        ) {
+                            Text(
+                                text = "GRANT",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NothingElevatedSurface)
+                                .border(1.dp, NothingSuccess.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "ALLOWED",
+                                color = NothingSuccess,
+                                fontSize = 10.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
                 // Service Toggle Button
                 Box(
                     modifier = Modifier
@@ -286,8 +344,16 @@ fun HomeScreen(
 
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ModuleStatusRow("System Notifications", "Not connected (M4.2)", NothingMutedText)
-                ModuleStatusRow("Media Playback", "Not connected (M4.3)", NothingMutedText)
+                ModuleStatusRow(
+                    "System Notifications",
+                    if (hasNotificationPermission) "Connected" else "Permission required",
+                    if (hasNotificationPermission) NothingSuccess else NothingPrimaryAccent
+                )
+                ModuleStatusRow(
+                    "Media Playback",
+                    if (hasNotificationPermission) "Connected" else "Permission required",
+                    if (hasNotificationPermission) NothingSuccess else NothingPrimaryAccent
+                )
                 ModuleStatusRow("Charging & Battery", "UI Integration Pending (M4.4)", NothingMutedText)
                 ModuleStatusRow("Gemini AI Engine", "Not configured (M5)", NothingMutedText)
             }

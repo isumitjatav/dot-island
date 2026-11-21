@@ -136,6 +136,7 @@ class IslandPreferencesRepository internal constructor(
         val ANIM_BORDER_GLOW = booleanPreferencesKey("anim_border_glow")
         val ANIM_GLOW_SPEED = floatPreferencesKey("anim_glow_speed")
         val ANIM_GLOW_THICKNESS = floatPreferencesKey("anim_glow_thickness")
+        val QUICK_TOOLS_ENABLED = stringSetPreferencesKey("quick_tools_enabled")
     }
 
     object NotificationPreferencesKeys {
@@ -445,6 +446,17 @@ class IslandPreferencesRepository internal constructor(
                 glowThickness = p[PreferencesKeys.ANIM_GLOW_THICKNESS] ?: 2.0f,
             )
         }
+
+    /** Enabled quick-tool ids shown in the island's quick controls drawer. */
+    fun quickToolsFlow(): kotlinx.coroutines.flow.Flow<Set<String>> =
+        dataStore.data.map { p ->
+            p[PreferencesKeys.QUICK_TOOLS_ENABLED]
+                ?: com.nothing.island.ai.ui.components.QuickTools.DEFAULT.toSet()
+        }
+
+    suspend fun updateQuickTools(enabled: Set<String>) {
+        dataStore.edit { p -> p[PreferencesKeys.QUICK_TOOLS_ENABLED] = enabled }
+    }
 
     suspend fun updateMascot(enabled: Boolean, spriteName: String) {
         _livePreferences.value = _livePreferences.value.copy(

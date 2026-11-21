@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
 
     private val hasOverlayPermissionState = mutableStateOf(false)
     private val isServiceRunningState = mutableStateOf(false)
+    private val hasNotificationPermissionState = mutableStateOf(false)
 
     private val requestCallPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -116,9 +117,16 @@ class MainActivity : ComponentActivity() {
                                             hasOverlayPermission = hasOverlayPermissionState.value,
                                             isServiceRunning = isServiceRunningState.value,
                                             geometry = geometry,
+                                            hasNotificationPermission = hasNotificationPermissionState.value,
                                             onRequestPermission = {
                                                 val intent = OverlayPermissionManager.createOverlayPermissionIntent(this@MainActivity)
                                                 startActivity(intent)
+                                            },
+                                            onRequestNotificationPermission = {
+                                                startActivity(
+                                                    com.nothing.island.ai.notifications.NotificationPermissionManager
+                                                        .createNotificationAccessIntent(this@MainActivity)
+                                                )
                                             },
                                             onToggleService = {
                                                 if (IslandOverlayService.isRunning) {
@@ -279,5 +287,8 @@ class MainActivity : ComponentActivity() {
         hasOverlayPermissionState.value = OverlayPermissionManager.hasOverlayPermission(this) ||
                 OverlayPermissionManager.isAccessibilityServiceEnabled(this)
         isServiceRunningState.value = IslandOverlayService.isRunning || IslandAccessibilityService.isRunning
+        hasNotificationPermissionState.value =
+            com.nothing.island.ai.notifications.NotificationPermissionManager
+                .isNotificationListenerEnabled(this)
     }
 }

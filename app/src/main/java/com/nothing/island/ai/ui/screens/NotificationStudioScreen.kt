@@ -49,6 +49,7 @@ import com.nothing.island.ai.ui.components.NothingSectionHeader
 import com.nothing.island.ai.ui.components.NothingSegmentedControl
 import com.nothing.island.ai.ui.components.NothingStepperSlider
 import com.nothing.island.ai.ui.components.NothingSwitchRow
+import com.nothing.island.ai.ui.components.NotificationStylePreview
 import com.nothing.island.ai.ui.theme.NothingTokens
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -153,6 +154,18 @@ fun NotificationStudioScreen(
                 badgeText = if (notifPrefs.enabled) "ACTIVE" else "OFF"
             )
         }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Reference-style live popup preview cards
+        Spacer(modifier = Modifier.height(2.dp))
+        NothingSectionHeader(title = "POPUP STYLE — LIVE PREVIEW", isAccent = true)
+        NotificationStylePreview(
+            selected = notifPrefs.previewMode,
+            onSelect = { mode ->
+                coroutineScope.launch { repository.updateNotificationPreviewMode(mode) }
+            }
+        )
 
         Spacer(modifier = Modifier.height(14.dp))
 

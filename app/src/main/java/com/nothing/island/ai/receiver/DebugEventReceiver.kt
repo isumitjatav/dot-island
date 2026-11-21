@@ -60,6 +60,16 @@ class DebugEventReceiver : BroadcastReceiver() {
             ACTION_QUICK_TOOLS -> {
                 IslandOverlayController.getInstance(context).repository.expandQuickTools()
             }
+            ACTION_CALL -> {
+                controller.eventEngine.emit(
+                    IslandEvent.CallConnected(
+                        id = "debug_call_${System.currentTimeMillis()}",
+                        callId = "debug_call_id",
+                        callerDisplayName = intent.getStringExtra(EXTRA_NAME) ?: "Daisy Williams",
+                        durationSeconds = 8L,
+                    )
+                )
+            }
             ACTION_MUSIC -> {
                 val playing = intent.getBooleanExtra(EXTRA_ENABLED, true)
                 controller.mediaTracker.injectTrackForTesting(
@@ -107,6 +117,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
         const val ACTION_MUSIC = "com.nothing.island.ai.DEBUG_MUSIC"
+        const val ACTION_CALL = "com.nothing.island.ai.DEBUG_CALL"
         const val EXTRA_ENABLED = "enabled"
     }
 }
