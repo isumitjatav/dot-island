@@ -335,11 +335,11 @@ fun IslandOverlayView(
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
-            // Battery pill shows only for a genuine charging/low-battery event —
-            // the activity-switcher selection must not pin it permanently.
-            val isBatteryActive = (activeEvent is IslandEvent.ChargingConnected ||
+            // Battery pill is gated on the LIVE charging state, so a stale
+            // ChargingConnected event can never keep it on after unplugging.
+            val isBatteryActive = (batteryState.isCharging && activeEvent is IslandEvent.ChargingConnected) ||
                     (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
-                    (activeEvent is IslandEvent.BatteryWarning))
+                    (activeEvent is IslandEvent.BatteryWarning)
 
             val isSystemAlertActive = (activeEvent is IslandEvent.RingerModeChanged ||
                     activeEvent is IslandEvent.TorchStateChanged ||
