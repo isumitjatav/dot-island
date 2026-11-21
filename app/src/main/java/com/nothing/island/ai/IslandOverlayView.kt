@@ -258,7 +258,6 @@ fun IslandOverlayView(
     currentTrack: MediaTrackState = MediaTrackState.EMPTY,
     activeEvent: IslandEvent? = null,
     isDualPill: Boolean = false,
-    isMusicPillLeft: Boolean = false,
     projectedHistory: List<PrivacySafeNotificationPresentation> = emptyList(),
     selectedNotificationKey: String? = null,
     activeUndo: UndoNotificationState? = null,
@@ -412,11 +411,7 @@ fun IslandOverlayView(
                 )
             } else if (currentTrack.isPlaying && !isBatteryActive) {
                 // COMPACT MUSIC PLAYER takes priority over idle battery when music plays.
-                // 200dp symmetrical capsule; swipe-left shifts it to the left of the camera.
-                Box(
-                    modifier = Modifier.offset(x = if (isMusicPillLeft) (-60).dp else 0.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
+                // Swipe-left shifts the whole window beside the camera (see controller).
                 MusicCompactView(
                     trackState = currentTrack,
                     preferences = musicPreferences,
@@ -435,7 +430,6 @@ fun IslandOverlayView(
                         onSwipeActivity = onSwipeActivity
                     )
                 )
-                }
             } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
                 // COMPACT BATTERY & CHARGING (Milestone R8)
                 // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag

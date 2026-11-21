@@ -528,7 +528,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             currentTrack = currentTrack,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
-                            isMusicPillLeft = masterState.isMusicPillLeft,
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
@@ -849,7 +848,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             currentTrack = currentTrack,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
-                            isMusicPillLeft = masterState.isMusicPillLeft,
                             projectedHistory = history,
                             selectedNotificationKey = masterState.selectedNotificationKey,
                             activeUndo = undoState,
@@ -1251,7 +1249,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
         val targetWidthPx = CutoutDetector.dpToPx(widthDp, ctx)
         val targetHeightPx = CutoutDetector.dpToPx(heightDp, ctx)
-        val targetXPx = CutoutDetector.dpToPx(prefs.horizontalOffsetDp, ctx)
+        // When the compact music pill is swiped left, shift the physical window
+        // so the whole capsule moves beside the camera instead of being clipped.
+        val musicLeftShiftPx = if (mode != IslandMode.EXPANDED && state.isMusicPillLeft && isMediaPlaying) {
+            CutoutDetector.dpToPx(60f, ctx)
+        } else 0
+        val targetXPx = CutoutDetector.dpToPx(prefs.horizontalOffsetDp, ctx) - musicLeftShiftPx
         val targetYPx = CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
 
         val baseFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or

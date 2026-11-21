@@ -60,6 +60,22 @@ class DebugEventReceiver : BroadcastReceiver() {
             ACTION_QUICK_TOOLS -> {
                 IslandOverlayController.getInstance(context).repository.expandQuickTools()
             }
+            ACTION_MUSIC -> {
+                val playing = intent.getBooleanExtra(EXTRA_ENABLED, true)
+                controller.mediaTracker.injectTrackForTesting(
+                    com.nothing.island.ai.media.MediaTrackState(
+                        sessionId = "debug_session",
+                        packageName = "com.debug.music",
+                        appDisplayName = "DEBUG MUSIC",
+                        trackTitle = intent.getStringExtra(EXTRA_NAME) ?: "Circles",
+                        artistName = "Post Malone",
+                        isPlaying = playing,
+                        durationMs = 215_000L,
+                        currentPositionMs = 90_000L,
+                        isHistorical = false,
+                    )
+                )
+            }
             ACTION_MASCOT -> {
                 val enabled = intent.getBooleanExtra(EXTRA_ENABLED, true)
                 val name = intent.getStringExtra(EXTRA_NAME) ?: "CAT"
@@ -90,6 +106,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_FACE_UNLOCK = "com.nothing.island.ai.DEBUG_FACE_UNLOCK"
         const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
+        const val ACTION_MUSIC = "com.nothing.island.ai.DEBUG_MUSIC"
         const val EXTRA_ENABLED = "enabled"
     }
 }
