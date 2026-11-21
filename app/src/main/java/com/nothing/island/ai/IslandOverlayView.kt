@@ -335,11 +335,11 @@ fun IslandOverlayView(
                     modifier = Modifier.fillMaxWidth(),
                 )
             } else {
+            // Battery pill shows only for a genuine charging/low-battery event —
+            // the activity-switcher selection must not pin it permanently.
             val isBatteryActive = (activeEvent is IslandEvent.ChargingConnected ||
-                    activeEvent is IslandEvent.ChargingDisconnected ||
                     (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
-                    (activeEvent is IslandEvent.BatteryWarning) ||
-                    (activitySwitcherInterface == IslandInterface.BATTERY))
+                    (activeEvent is IslandEvent.BatteryWarning))
 
             val isSystemAlertActive = (activeEvent is IslandEvent.RingerModeChanged ||
                     activeEvent is IslandEvent.TorchStateChanged ||
@@ -410,30 +410,8 @@ fun IslandOverlayView(
                         }
                     } else null
                 )
-            } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && (!currentTrack.isPlaying || activitySwitcherInterface == IslandInterface.BATTERY))) {
-                // COMPACT BATTERY & CHARGING (Milestone R8)
-                // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag
-                BatteryCompactView(
-                    batteryState = batteryState,
-                    preferences = batteryPreferences,
-                    onTap = {
-                        Log.d("IslandTouch", "BatteryCompactView tapped -> expand battery view (State D)")
-                        onExpandBattery()
-                    },
-                    onSwipe = { direction ->
-                        Log.d("IslandTouch", "BatteryCompactView swiped $direction")
-                        onSwipeActivity(direction)
-                    },
-                    modifier = Modifier.islandGestureDetector(
-                        preferences = gesturePreferences,
-                        executor = gestureExecutor,
-                        isMediaIslandActive = false,
-                        onTap = onExpandBattery,
-                        onSwipeActivity = onSwipeActivity
-                    )
-                )
-            } else if (currentTrack.isPlaying || (!currentTrack.isHistorical && currentTrack != MediaTrackState.EMPTY)) {
-                // COMPACT MUSIC PLAYER (Milestone R7)
+            } else if (currentTrack.isPlaying && !isBatteryActive) {
+                // COMPACT MUSIC PLAYER takes priority over idle battery when music plays.
                 // 200dp symmetrical capsule; swipe-left shifts it to the left of the camera.
                 Box(
                     modifier = Modifier.offset(x = if (isMusicPillLeft) (-60).dp else 0.dp),
@@ -458,6 +436,28 @@ fun IslandOverlayView(
                     )
                 )
                 }
+            } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
+                // COMPACT BATTERY & CHARGING (Milestone R8)
+                // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag
+                BatteryCompactView(
+                    batteryState = batteryState,
+                    preferences = batteryPreferences,
+                    onTap = {
+                        Log.d("IslandTouch", "BatteryCompactView tapped -> expand battery view (State D)")
+                        onExpandBattery()
+                    },
+                    onSwipe = { direction ->
+                        Log.d("IslandTouch", "BatteryCompactView swiped $direction")
+                        onSwipeActivity(direction)
+                    },
+                    modifier = Modifier.islandGestureDetector(
+                        preferences = gesturePreferences,
+                        executor = gestureExecutor,
+                        isMediaIslandActive = false,
+                        onTap = onExpandBattery,
+                        onSwipeActivity = onSwipeActivity
+                    )
+                )
             } else {
                 // COMPACT PILL MODE: Calibrated capsule dimensions and corner radius in DP
                 // Symmetrically wraps the centered punch-hole camera without any rectangular box distortion

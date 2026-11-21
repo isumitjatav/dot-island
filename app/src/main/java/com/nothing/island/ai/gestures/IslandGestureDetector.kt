@@ -244,7 +244,7 @@ fun Modifier.islandGestureDetector(
 
                 if (!change.pressed) {
                     change.consume()
-                    val swipeThreshold = 30f
+                    val swipeThreshold = 16f
                     if (abs(totalDragX) > abs(totalDragY)) {
                         if (totalDragX > swipeThreshold) {
                             if (onSwipeActivity != null) {
