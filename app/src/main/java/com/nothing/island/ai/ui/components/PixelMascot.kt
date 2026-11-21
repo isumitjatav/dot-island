@@ -82,10 +82,10 @@ fun MascotPillPreview(
     // Continuous walk back and forth; duration and easing vary per sprite.
     val walk = rememberInfiniteTransition(label = "mascotWalk")
     val (duration, easing) = when (sprite.motion) {
-        MascotSprites.Motion.WALK -> 1800 to FastOutSlowInEasing
-        MascotSprites.Motion.BOUNCE -> 1100 to FastOutSlowInEasing
-        MascotSprites.Motion.FLOAT -> 2600 to FastOutSlowInEasing
-        MascotSprites.Motion.WADDLE -> 2200 to FastOutSlowInEasing
+        MascotSprites.Motion.WALK -> 4000 to FastOutSlowInEasing
+        MascotSprites.Motion.BOUNCE -> 3200 to FastOutSlowInEasing
+        MascotSprites.Motion.FLOAT -> 6000 to FastOutSlowInEasing
+        MascotSprites.Motion.WADDLE -> 5000 to FastOutSlowInEasing
     }
     val walkX by walk.animateFloat(
         initialValue = 8f,
@@ -102,7 +102,7 @@ fun MascotPillPreview(
         initialValue = 0f,
         targetValue = -3f,
         animationSpec = infiniteRepeatable(
-            animation = tween(if (sprite.motion == MascotSprites.Motion.FLOAT) 900 else 450),
+            animation = tween(if (sprite.motion == MascotSprites.Motion.FLOAT) 1800 else 1100),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "mascotBob",
@@ -111,7 +111,7 @@ fun MascotPillPreview(
         initialValue = -8f,
         targetValue = 8f,
         animationSpec = infiniteRepeatable(
-            animation = tween(450, easing = FastOutSlowInEasing),
+            animation = tween(1100, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "mascotTilt",
