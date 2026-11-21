@@ -78,16 +78,33 @@ fun MascotPillPreview(
     val scope = rememberCoroutineScope()
     val hop = remember { Animatable(0f) }
 
-    // Continuous walk back and forth.
+    // Continuous walk back and forth; duration and easing vary per sprite.
     val walk = rememberInfiniteTransition(label = "mascotWalk")
+    val (duration, easing) = when (sprite.motion) {
+        MascotSprites.Motion.WALK -> 1800 to FastOutSlowInEasing
+        MascotSprites.Motion.BOUNCE -> 1100 to FastOutSlowInEasing
+        MascotSprites.Motion.FLOAT -> 2600 to FastOutSlowInEasing
+        MascotSprites.Motion.WADDLE -> 2200 to FastOutSlowInEasing
+    }
     val walkX by walk.animateFloat(
         initialValue = 8f,
         targetValue = 88f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1800, easing = FastOutSlowInEasing),
+            animation = tween(duration, easing = easing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "mascotWalkX",
+    )
+
+    // Secondary bob: ghosts float, others gently bob while moving.
+    val bob by walk.animateFloat(
+        initialValue = 0f,
+        targetValue = -3f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(if (sprite.motion == MascotSprites.Motion.FLOAT) 900 else 450),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "mascotBob",
     )
 
     // One-shot hop: rise quickly, then fall back to rest — no stuck state.
@@ -110,7 +127,7 @@ fun MascotPillPreview(
         Canvas(
             modifier = Modifier
                 .size(20.dp)
-                .offset(x = walkX.dp - 44.dp, y = hop.value.dp),
+                .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp),
         ) {
             drawSprite(draw = this, sprite = sprite, cell = size.width / 8f)
         }

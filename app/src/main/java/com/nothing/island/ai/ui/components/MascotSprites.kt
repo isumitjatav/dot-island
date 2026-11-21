@@ -8,10 +8,14 @@ import androidx.compose.ui.graphics.Color
  * These are our own simple pixel drawings, not copied assets.
  */
 object MascotSprites {
+    /** How a sprite moves while walking in the pill. */
+    enum class Motion { WALK, BOUNCE, FLOAT, WADDLE }
+
     data class Sprite(
         val name: String,
         val rows: List<String>,
         val color: Color,
+        val motion: Motion = Motion.WALK,
     )
 
     val CAT = Sprite(
@@ -42,6 +46,8 @@ object MascotSprites {
             "11011011",
         ),
         color = Color(0xFFFFFFFF),
+        // Ghosts hover rather than step.
+        motion = Motion.FLOAT,
     )
 
     val ROBOT = Sprite(
@@ -62,16 +68,17 @@ object MascotSprites {
     val FOX = Sprite(
         name = "FOX",
         rows = listOf(
+            "10000001", // pointed ears
             "11000011",
-            "11100111",
-            "11111111",
+            "11111111", // wide face
             "01111110",
+            "00111100", // narrow muzzle (not wide claws)
             "00111100",
-            "00111100",
-            "01111110",
-            "01000010",
+            "00111100", // slim body
+            "01100110", // two small legs
         ),
         color = Color(0xFFFF8A3D),
+        motion = Motion.WADDLE,
     )
 
     val OWL = Sprite(
