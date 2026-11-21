@@ -34,6 +34,16 @@ class DebugEventReceiver : BroadcastReceiver() {
                     )
                 )
             }
+            ACTION_ORDER_TRACKING -> {
+                IslandOverlayController.getInstance(context).eventEngine.emit(
+                    IslandEvent.OrderTrackingUpdated(
+                        id = "debug_order_${System.currentTimeMillis()}",
+                        merchant = "Blinkit",
+                        status = "Out for delivery",
+                        etaMinutes = 12,
+                    )
+                )
+            }
             ACTION_DUAL_PILL -> {
                 IslandOverlayController.getInstance(context).repository.setDualPill(
                     intent.getBooleanExtra(EXTRA_ENABLED, true)
@@ -75,6 +85,7 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_EARBUD_DISCONNECT = "com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT"
         const val EXTRA_NAME = "name"
         const val EXTRA_BATTERY = "battery"
+        const val ACTION_ORDER_TRACKING = "com.nothing.island.ai.DEBUG_ORDER_TRACKING"
         const val ACTION_DUAL_PILL = "com.nothing.island.ai.DEBUG_DUAL_PILL"
         const val ACTION_FACE_UNLOCK = "com.nothing.island.ai.DEBUG_FACE_UNLOCK"
         const val ACTION_QUICK_TOOLS = "com.nothing.island.ai.DEBUG_QUICK_TOOLS"

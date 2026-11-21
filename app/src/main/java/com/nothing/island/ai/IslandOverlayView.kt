@@ -373,6 +373,11 @@ fun IslandOverlayView(
                     )
                     else -> Unit
                 }
+            } else if (activeEvent is IslandEvent.OrderTrackingUpdated) {
+                com.nothing.island.ai.ui.components.OrderTrackingPill(
+                    event = activeEvent,
+                    onTap = onToggleExpand,
+                )
             } else if (activeEvent is IslandEvent.DeviceUnlocked &&
                 activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE
             ) {

@@ -73,6 +73,10 @@ sealed interface IslandEvent {
         if (this.timeoutMs != other.timeoutMs) return false
 
         return when (this) {
+            is OrderTrackingUpdated -> {
+                val o = other as OrderTrackingUpdated
+                merchant == o.merchant && status == o.status && etaMinutes == o.etaMinutes
+            }
             is NotificationPosted -> {
                 val o = other as NotificationPosted
                 packageName == o.packageName &&
@@ -553,5 +557,17 @@ sealed interface IslandEvent {
         override val timeoutMs: Long = 4000L,
         val batteryLevel: Int,
         val isCritical: Boolean
+    ) : IslandEvent
+
+    /** Live order/delivery tracking state, typically derived from notifications. */
+    data class OrderTrackingUpdated(
+        override val id: String,
+        override val timestamp: Long = System.currentTimeMillis(),
+        override val source: String = "OrderTrackingEngine",
+        override val priority: Int = IslandPriority.LIVE_ACTIVITY,
+        override val timeoutMs: Long = 8000L,
+        val merchant: String,
+        val status: String,
+        val etaMinutes: Int? = null,
     ) : IslandEvent
 }
