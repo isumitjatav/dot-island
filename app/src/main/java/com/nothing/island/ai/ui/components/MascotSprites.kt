@@ -3,9 +3,10 @@ package com.nothing.island.ai.ui.components
 import androidx.compose.ui.graphics.Color
 
 /**
- * Original 8x8 pixel sprites for the mascot preview. Each string is one row,
- * '1' = filled pixel, '.' = eye/highlight pixel, '0' = empty.
- * These are our own simple pixel drawings, not copied assets.
+ * Original pixel sprites for the mascot preview. Each sprite is a grid where
+ * each character maps to a color via [palette]:
+ *   '0' = transparent, other chars = palette key.
+ * Sprites are our own drawings inspired by animal shapes, not copied assets.
  */
 object MascotSprites {
     /** How a sprite moves while walking in the pill. */
@@ -14,23 +15,32 @@ object MascotSprites {
     data class Sprite(
         val name: String,
         val rows: List<String>,
-        val color: Color,
+        val palette: Map<Char, Color>,
         val motion: Motion = Motion.WALK,
     )
+
+    private val RED = Color(0xFFD71920)
+    private val WHITE = Color(0xFFFFFFFF)
+    private val BLACK = Color(0xFF000000)
+    private val ORANGE = Color(0xFFF57C1F)
+    private val CREAM = Color(0xFFFFF2CC)
+    private val CYAN = Color(0xFF00E5FF)
+    private val PURPLE = Color(0xFFB388FF)
+    private val GREEN = Color(0xFF30D158)
 
     val CAT = Sprite(
         name = "CAT",
         rows = listOf(
-            "11000011",
+            "10000001",
             "11111111",
-            "11011011",
+            "11022011",
             "11111111",
             "01111110",
             "00111100",
             "01100110",
             "01000010",
         ),
-        color = Color(0xFFD71920),
+        palette = mapOf('1' to RED, '2' to BLACK),
     )
 
     val GHOST = Sprite(
@@ -38,15 +48,14 @@ object MascotSprites {
         rows = listOf(
             "00111100",
             "01111110",
-            "11011011",
+            "11022011",
             "11111111",
             "11111111",
             "11111111",
             "11111111",
             "11011011",
         ),
-        color = Color(0xFFFFFFFF),
-        // Ghosts hover rather than step.
+        palette = mapOf('1' to WHITE, '2' to BLACK),
         motion = Motion.FLOAT,
     )
 
@@ -55,29 +64,41 @@ object MascotSprites {
         rows = listOf(
             "00111100",
             "01111110",
-            "11011011",
+            "11022011",
             "11111111",
             "01111110",
             "01000010",
             "11111111",
             "01000010",
         ),
-        color = Color(0xFF00E5FF),
+        palette = mapOf('1' to CYAN, '2' to BLACK),
     )
 
+    /**
+     * Detailed fox: orange body, white muzzle and cheek fluff, pointed ears,
+     * dark eyes and nose, and a fluffy tail. Original 12x12 drawing.
+     */
     val FOX = Sprite(
         name = "FOX",
         rows = listOf(
-            "10000001", // pointed ears
-            "11000011",
-            "11111111", // wide face
-            "01111110",
-            "00111100", // narrow muzzle (not wide claws)
-            "00111100",
-            "00111100", // slim body
-            "01100110", // two small legs
+            "100000000001", // ear tips
+            "110000000011",
+            "111000000111", // ears
+            "011111111110", // head top
+            "011322223110", // eyes + white brow
+            "012222222210", // white muzzle band
+            "011222222110", // cheek fluff
+            "001122211100", // lower muzzle
+            "001112211100", // nose
+            "000111111000", // neck
+            "000111111000", // body
+            "000110011000", // legs
         ),
-        color = Color(0xFFFF8A3D),
+        palette = mapOf(
+            '1' to ORANGE,
+            '2' to CREAM,
+            '3' to BLACK,
+        ),
         motion = Motion.WADDLE,
     )
 
@@ -86,14 +107,14 @@ object MascotSprites {
         rows = listOf(
             "11000011",
             "11111111",
-            "11011011",
+            "11022011",
             "01111110",
             "00111100",
             "01111110",
-            "11011011",
+            "11022011",
             "00100100",
         ),
-        color = Color(0xFFB388FF),
+        palette = mapOf('1' to PURPLE, '2' to BLACK),
     )
 
     val SLIME = Sprite(
@@ -102,13 +123,13 @@ object MascotSprites {
             "00111100",
             "01111110",
             "11111111",
+            "11022011",
             "11111111",
-            "11011011",
             "11111111",
             "11111111",
             "01111110",
         ),
-        color = Color(0xFF30D158),
+        palette = mapOf('1' to GREEN, '2' to BLACK),
     )
 
     val ALL = listOf(CAT, GHOST, ROBOT, FOX, OWL, SLIME)

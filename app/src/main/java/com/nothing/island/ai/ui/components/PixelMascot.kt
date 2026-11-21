@@ -55,9 +55,9 @@ private fun drawSprite(
     val startY = (draw.size.height - rows * cell) / 2f
     sprite.rows.forEachIndexed { r, row ->
         row.forEachIndexed { c, ch ->
-            if (ch == '1' || ch == '.') {
+            sprite.palette[ch]?.let { baseColor ->
                 draw.drawRect(
-                    color = (if (ch == '.') Color.White else sprite.color).copy(alpha = alpha),
+                    color = baseColor.copy(alpha = alpha),
                     topLeft = Offset(startX + c * cell, startY + r * cell),
                     size = Size(cell, cell),
                 )
@@ -129,7 +129,7 @@ fun MascotPillPreview(
                 .size(20.dp)
                 .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp),
         ) {
-            drawSprite(draw = this, sprite = sprite, cell = size.width / 8f)
+            drawSprite(draw = this, sprite = sprite, cell = size.width / sprite.rows[0].length)
         }
     }
 }
@@ -168,7 +168,7 @@ fun MascotPicker(
                     drawSprite(
                         draw = this,
                         sprite = sprite,
-                        cell = size.width / 8f,
+                        cell = size.width / sprite.rows[0].length,
                         alpha = if (isSelected) 1f else 0.6f,
                     )
                 }
