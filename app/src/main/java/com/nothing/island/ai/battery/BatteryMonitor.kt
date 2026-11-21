@@ -174,7 +174,15 @@ class BatteryMonitor(
             -1L
         }
 
-        val isChargingNow = chargingStatus == ChargingStatus.CHARGING || chargingSource != ChargingSource.NONE
+        // Some devices report `plugged != NONE` while status is DISCHARGING
+        // (e.g. an AC adapter that isn't actually supplying power). Charging
+        // status is authoritative; plugged source is only a fallback for devices
+        // that leave status UNKNOWN while reporting a real power source.
+        val isChargingNow = chargingStatus == ChargingStatus.CHARGING ||
+                chargingStatus == ChargingStatus.FULL ||
+                (chargingStatus == ChargingStatus.UNKNOWN &&
+                        chargingSource != ChargingSource.NONE &&
+                        chargingSource != ChargingSource.UNKNOWN)
 
         if (isChargingNow) {
             etaEstimator.addSample(percentage)
@@ -227,9 +235,9 @@ class BatteryMonitor(
             return
         }
 
-        // 1. Charger Connected Transition
-        val wasPlugged = previousSource != ChargingSource.NONE && previousSource != ChargingSource.UNKNOWN
-        val isPlugged = chargingSource != ChargingSource.NONE && chargingSource != ChargingSource.UNKNOWN
+        // 1. Charger Connected Transition (status-based, not plug-bit based)
+        val wasPlugged = previousStatus == ChargingStatus.CHARGING || previousStatus == ChargingStatus.FULL
+        val isPlugged = isChargingNow
         if (!wasPlugged && isPlugged) {
             hasEmittedLowBatteryForCycle = false
             etaEstimator.reset()
