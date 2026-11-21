@@ -51,6 +51,7 @@ import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
 import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
 import com.nothing.island.ai.ui.theme.NothingSuccess
+import com.nothing.island.ai.ui.theme.NothingTokens
 
 @Composable
 fun HomeScreen(
@@ -67,6 +68,9 @@ fun HomeScreen(
     val prefs by preferencesRepository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
     val isPreviewExpanded = remember { mutableStateOf(false) }
+    val mascotSprite = remember {
+        mutableStateOf(com.nothing.island.ai.ui.components.MascotSprites.CAT)
+    }
 
     Column(
         modifier = modifier
@@ -143,6 +147,36 @@ fun HomeScreen(
             horizontalOffsetDp = prefs.horizontalOffsetDp,
             accentColor = Color(prefs.accentColorHex),
             statusText = "${Build.MODEL} (${Build.DEVICE})"
+        )
+
+        // Interactive mascot prototype (tap the pill to make it jump)
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(
+            text = "MASCOT PROTOTYPE · TAP TO JUMP",
+            color = NothingMutedText,
+            fontSize = 10.sp,
+            fontFamily = FontFamily.Monospace,
+            letterSpacing = 1.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)
+                .background(NothingTokens.NothingSurfaceLow, RoundedCornerShape(12.dp))
+                .border(1.dp, NothingDivider, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            com.nothing.island.ai.ui.components.MascotPillPreview(
+                sprite = mascotSprite.value
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        com.nothing.island.ai.ui.components.MascotPicker(
+            selected = mascotSprite.value,
+            onSelect = { mascotSprite.value = it },
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(18.dp))

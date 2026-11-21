@@ -1,0 +1,161 @@
+package com.nothing.island.ai.ui.components
+
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.nothing.island.ai.ui.theme.NothingTokens
+import kotlinx.coroutines.launch
+
+/** Draws an 8x8 grid sprite centered and scaled to the canvas. */
+private fun drawSprite(
+    draw: androidx.compose.ui.graphics.drawscope.DrawScope,
+    sprite: MascotSprites.Sprite,
+    cell: Float,
+    alpha: Float = 1f,
+) {
+    val rows = sprite.rows.size
+    val cols = sprite.rows[0].length
+    val startX = (draw.size.width - cols * cell) / 2f
+    val startY = (draw.size.height - rows * cell) / 2f
+    sprite.rows.forEachIndexed { r, row ->
+        row.forEachIndexed { c, ch ->
+            if (ch == '1' || ch == '.') {
+                draw.drawRect(
+                    color = (if (ch == '.') Color.White else sprite.color).copy(alpha = alpha),
+                    topLeft = Offset(startX + c * cell, startY + r * cell),
+                    size = Size(cell, cell),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Compact pill with a pixel mascot that walks back and forth and performs a
+ * one-shot hop on tap (up then back down automatically).
+ */
+@Composable
+fun MascotPillPreview(
+    modifier: Modifier = Modifier,
+    sprite: MascotSprites.Sprite = MascotSprites.CAT,
+) {
+    val scope = rememberCoroutineScope()
+    val hop = remember { Animatable(0f) }
+
+    // Continuous walk back and forth.
+    val walk = rememberInfiniteTransition(label = "mascotWalk")
+    val walkX by walk.animateFloat(
+        initialValue = 8f,
+        targetValue = 88f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "mascotWalkX",
+    )
+
+    // One-shot hop: rise quickly, then fall back to rest — no stuck state.
+    fun doHop() {
+        scope.launch {
+            hop.animateTo(-14f, animationSpec = tween(160, easing = FastOutSlowInEasing))
+            hop.animateTo(0f, animationSpec = tween(220, easing = FastOutSlowInEasing))
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .size(width = 124.dp, height = 36.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(NothingTokens.NothingBlack)
+            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
+            .clickable { doHop() },
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(
+            modifier = Modifier
+                .size(20.dp)
+                .offset(x = walkX.dp - 44.dp, y = hop.value.dp),
+        ) {
+            drawSprite(draw = this, sprite = sprite, cell = size.width / 8f)
+        }
+    }
+}
+
+/**
+ * A row of the available mascots. Tap one to select it; the selected one is
+ * shown with a red outline. This is the picker UI for the feature.
+ */
+@Composable
+fun MascotPicker(
+    selected: MascotSprites.Sprite,
+    onSelect: (MascotSprites.Sprite) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        MascotSprites.ALL.forEach { sprite ->
+            val isSelected = sprite.name == selected.name
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(NothingTokens.NothingSurfaceLow)
+                    .border(
+                        if (isSelected) 2.dp else 1.dp,
+                        if (isSelected) NothingTokens.NothingRed else NothingTokens.NothingBorderSubtle,
+                        RoundedCornerShape(10.dp),
+                    )
+                    .clickable { onSelect(sprite) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(modifier = Modifier.fillMaxSize(0.7f)) {
+                    drawSprite(
+                        draw = this,
+                        sprite = sprite,
+                        cell = size.width / 8f,
+                        alpha = if (isSelected) 1f else 0.6f,
+                    )
+                }
+            }
+        }
+    }
+}
