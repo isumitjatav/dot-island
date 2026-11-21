@@ -269,7 +269,7 @@ fun ChargingStudioScreen(
         Spacer(modifier = Modifier.height(14.dp))
 
         // 4. Two-Column Animation Gallery (All 12 Styles)
-        NothingSectionHeader(title = "CHARGING THEMES (12 ACTIVE STYLES)")
+        NothingSectionHeader(title = "CHARGING THEMES (16 STYLES)")
         val styles = ChargingAnimationStyle.ACTIVE_12
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -317,6 +317,7 @@ fun ChargingStudioScreen(
                                         text = when (style.category) {
                                             "NOTHING SIGNATURE" -> "SIGNATURE"
                                             "FLUID & ELEMENTAL" -> "ELEMENTAL"
+                                            "SCENE FILL" -> "SCENE"
                                             else -> "MINIMAL"
                                         },
                                         color = if (isSelected) NothingTokens.NothingGreen else NothingTokens.NothingTextTertiary,

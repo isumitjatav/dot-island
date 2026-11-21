@@ -29,10 +29,10 @@ class ChargingStudioPhase3UnitTest {
     @Test
     fun testAll12ThemeIdentifiersPresentAndUnique() {
         val active12 = ChargingAnimationStyle.ACTIVE_12
-        assertEquals("Exactly 12 active charging styles must be defined", 12, active12.size)
+        assertEquals("Exactly 16 active charging styles must be defined", 16, active12.size)
 
         val uniqueIds = active12.map { it.id }.toSet()
-        assertEquals("All 12 active styles must have unique string IDs", 12, uniqueIds.size)
+        assertEquals("All active styles must have unique string IDs", 16, uniqueIds.size)
 
         val expectedIds = listOf(
             "glyph_arc",
@@ -46,7 +46,11 @@ class ChargingStudioPhase3UnitTest {
             "digital_gauge",
             "wattage_reactor",
             "minimalist_bolt",
-            "battery_cell"
+            "battery_cell",
+            "scene_pumpkin",
+            "scene_robot",
+            "scene_snowman",
+            "scene_dragonfly"
         )
         expectedIds.forEach { id ->
             assertTrue("Expected ID '$id' must be in active themes", uniqueIds.contains(id))
@@ -55,7 +59,9 @@ class ChargingStudioPhase3UnitTest {
 
     @Test
     fun testThemeCategoriesAreNothingOSAligned() {
-        val validCategories = setOf("NOTHING SIGNATURE", "FLUID & ELEMENTAL", "TECHNICAL & MINIMAL")
+        val validCategories = setOf(
+            "NOTHING SIGNATURE", "FLUID & ELEMENTAL", "TECHNICAL & MINIMAL", "SCENE FILL"
+        )
         ChargingAnimationStyle.ACTIVE_12.forEach { style ->
             assertTrue(
                 "Style ${style.name} category '${style.category}' must be one of valid Nothing OS categories",

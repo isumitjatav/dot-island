@@ -10,8 +10,9 @@ import com.nothing.island.ai.battery.ChargingAnimationStyle
 /**
  * ChargingAnimationHost
  *
- * Dispatches and renders one of the 12 authentic Nothing OS charging animations
- * based on [ChargingAnimationStyle], with fallbacks for legacy styles.
+ * Dispatches and renders all charging animations (12 signature styles plus 4
+ * original scene-fill styles) based on [ChargingAnimationStyle], with fallbacks
+ * for legacy styles.
  */
 @Composable
 fun ChargingAnimationHost(
@@ -170,6 +171,28 @@ fun ChargingAnimationHost(
                     percentage = percentage,
                     isCharging = isCharging,
                     accentColor = accentColor,
+                    speed = speed,
+                    intensity = intensity,
+                    glowIntensity = glowIntensity,
+                    reducedMotion = reducedMotion,
+                    modifier = Modifier.matchParentSize()
+                )
+            }
+            ChargingAnimationStyle.SCENE_PUMPKIN,
+            ChargingAnimationStyle.SCENE_ROBOT,
+            ChargingAnimationStyle.SCENE_SNOWMAN,
+            ChargingAnimationStyle.SCENE_DRAGONFLY -> {
+                val scene = when (style) {
+                    ChargingAnimationStyle.SCENE_PUMPKIN -> SceneKind.PUMPKIN
+                    ChargingAnimationStyle.SCENE_ROBOT -> SceneKind.ROBOT
+                    ChargingAnimationStyle.SCENE_SNOWMAN -> SceneKind.SNOWMAN
+                    else -> SceneKind.DRAGONFLY
+                }
+                SceneFillAnimation(
+                    percentage = percentage,
+                    isCharging = isCharging,
+                    accentColor = accentColor,
+                    scene = scene,
                     speed = speed,
                     intensity = intensity,
                     glowIntensity = glowIntensity,

@@ -53,6 +53,19 @@ data class ThemePresetItem(
     val isOriginal: Boolean = true
 )
 
+/** Dark swatches get the Nothing-red accent so the theme stays visible. */
+private fun effectiveAccent(color: Color): Color {
+    val luminance = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
+    return if (luminance < 0.16f) NothingTokens.NothingRed else color
+}
+
+/** Near-black pill background with a subtle tint of the chosen accent. */
+private fun backgroundFor(accent: Color): Color = Color(
+    red = 0.035f + accent.red * 0.06f,
+    green = 0.035f + accent.green * 0.06f,
+    blue = 0.035f + accent.blue * 0.06f,
+)
+
 /**
  * Nothing OS 3.x Theme Studio Screen
  *
@@ -155,7 +168,11 @@ fun ThemeStudioScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        IslandPreview()
+        // Live preview reflects the theme currently applied to the real overlay.
+        IslandPreview(
+            pillBackgroundColor = Color(prefs.pillBackgroundColorHex),
+            accentColor = Color(prefs.accentColorHex),
+        )
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -185,11 +202,14 @@ fun ThemeStudioScreen(
                                     indication = null
                                 ) {
                                     selectedPreset = preset.name
-                                    val argb = (preset.primaryColor.value.toLong() and 0xFFFFFFFFL)
+                                    val accent = effectiveAccent(preset.primaryColor)
+                                    val bg = backgroundFor(accent)
+                                    val accentHex = accent.value.toLong() and 0xFFFFFFFFL
+                                    val bgHex = bg.value.toLong() and 0xFFFFFFFFL
                                     scope.launch {
                                         repository.updatePillTheme(
-                                            backgroundHex = argb,
-                                            accentHex = argb,
+                                            backgroundHex = bgHex,
+                                            accentHex = accentHex,
                                             presetName = preset.name,
                                         )
                                     }

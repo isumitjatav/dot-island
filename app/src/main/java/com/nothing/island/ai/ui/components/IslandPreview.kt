@@ -87,6 +87,7 @@ fun IslandPreview(
     topOffsetDp: Float = NothingTokens.CutoutTopOffsetDp,
     horizontalOffsetDp: Float = 0f,
     accentColor: Color = NothingTokens.NothingRed,
+    pillBackgroundColor: Color = NothingTokens.NothingBlack,
     onModeChanged: ((IslandPreviewMode) -> Unit)? = null,
     // Backward compatibility parameters for legacy callers
     isExpanded: Boolean = false,
@@ -250,14 +251,14 @@ fun IslandPreview(
                         }
                 ) {
                     when (currentMode) {
-                        IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp)
-                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact()
-                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded()
-                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact()
-                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded()
-                        IslandPreviewMode.CHARGING -> PreviewChargingPill()
-                        IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact()
-                        IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded()
+                        IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, pillBackgroundColor, accentColor)
+                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.CHARGING -> PreviewChargingPill(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(pillBackgroundColor, accentColor)
                     }
                 }
             }
@@ -281,13 +282,13 @@ fun IslandPreview(
 // =============================================================================
 
 @Composable
-private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float) {
+private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float, bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(widthDp.dp)
             .height(heightDp.dp)
             .clip(RoundedCornerShape(radiusDp.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(radiusDp.dp)),
         contentAlignment = Alignment.Center
     ) {
@@ -313,13 +314,13 @@ private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float) {
 }
 
 @Composable
-private fun PreviewNotifCompact() {
+private fun PreviewNotifCompact(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(184.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.CenterStart
@@ -369,13 +370,13 @@ private fun PreviewNotifCompact() {
 }
 
 @Composable
-private fun PreviewNotifExpanded() {
+private fun PreviewNotifExpanded(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderProminent, RoundedCornerShape(22.dp))
             .padding(12.dp)
     ) {
@@ -405,7 +406,7 @@ private fun PreviewNotifExpanded() {
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
                     text = "CLEAR ALL",
-                    color = NothingTokens.NothingRed,
+                    color = accent,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
@@ -478,7 +479,7 @@ private fun PreviewActionChip(text: String, textColor: Color) {
 }
 
 @Composable
-private fun PreviewMusicCompact() {
+private fun PreviewMusicCompact(bg: Color, accent: Color) {
     val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -495,7 +496,7 @@ private fun PreviewMusicCompact() {
             .width(190.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
@@ -519,7 +520,7 @@ private fun PreviewMusicCompact() {
                     modifier = Modifier
                         .size(8.dp)
                         .clip(CircleShape)
-                        .background(NothingTokens.NothingRed)
+                        .background(accent)
                 )
             }
 
@@ -538,13 +539,13 @@ private fun PreviewMusicCompact() {
 }
 
 @Composable
-private fun PreviewMusicExpanded() {
+private fun PreviewMusicExpanded(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
             .clip(RoundedCornerShape(22.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderProminent, RoundedCornerShape(22.dp))
             .padding(12.dp)
     ) {
@@ -562,7 +563,7 @@ private fun PreviewMusicExpanded() {
                         .border(1.dp, Color(0xFF333333), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(NothingTokens.NothingRed))
+                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(accent))
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -640,14 +641,14 @@ private fun PreviewMusicExpanded() {
 }
 
 @Composable
-private fun PreviewChargingPill() {
+private fun PreviewChargingPill(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(180.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(NothingTokens.NothingBlack)
-            .border(1.dp, NothingTokens.NothingGreen, RoundedCornerShape(18.dp))
+            .background(bg)
+            .border(1.dp, accent, RoundedCornerShape(18.dp))
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -664,31 +665,31 @@ private fun PreviewChargingPill() {
                     style = ChargingAnimationStyle.GLYPH_ARC,
                     percentage = 68,
                     isCharging = true,
-                    accentColor = NothingTokens.NothingGreen,
+                    accentColor = accent,
                     modifier = Modifier.fillMaxSize()
                 )
             }
             Text(
                 text = "CHARGING 68%",
-                color = NothingTokens.NothingGreen,
+                color = accent,
                 fontSize = 10.sp,
                 fontFamily = FontFamily.Monospace,
                 fontWeight = FontWeight.Bold
             )
             // Circular progress ring
-            PreviewProgressRing(0.68f, NothingTokens.NothingGreen)
+            PreviewProgressRing(0.68f, accent)
         }
     }
 }
 
 @Composable
-private fun PreviewBluetoothCompact() {
+private fun PreviewBluetoothCompact(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(160.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center
@@ -705,19 +706,19 @@ private fun PreviewBluetoothCompact() {
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium
             )
-            PreviewProgressRing(0.75f, NothingTokens.NothingGreen, "75")
+            PreviewProgressRing(0.75f, accent, "75")
         }
     }
 }
 
 @Composable
-private fun PreviewBluetoothExpanded() {
+private fun PreviewBluetoothExpanded(bg: Color, accent: Color) {
     Box(
         modifier = Modifier
             .width(260.dp)
             .height(64.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(NothingTokens.NothingBlack)
+            .background(bg)
             .border(1.dp, NothingTokens.NothingBorderProminent, RoundedCornerShape(20.dp))
             .padding(horizontal = 14.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
@@ -731,7 +732,7 @@ private fun PreviewBluetoothExpanded() {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "CONNECTED",
-                    color = NothingTokens.NothingGreen,
+                    color = accent,
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
@@ -743,7 +744,7 @@ private fun PreviewBluetoothExpanded() {
                     fontWeight = FontWeight.Bold
                 )
             }
-            PreviewProgressRing(0.75f, NothingTokens.NothingGreen, "75%")
+            PreviewProgressRing(0.75f, accent, "75%")
         }
     }
 }

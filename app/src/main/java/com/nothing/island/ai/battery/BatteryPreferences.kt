@@ -86,6 +86,32 @@ enum class ChargingAnimationStyle(
         "Classic battery enclosure with segmented dot fill"
     ),
 
+    // Original scene-fill styles (percentage fills with a scene character)
+    SCENE_PUMPKIN(
+        "scene_pumpkin",
+        "Pumpkin Patch",
+        "SCENE FILL",
+        "Purple scene fills with a bobbing pumpkin at the charge boundary"
+    ),
+    SCENE_ROBOT(
+        "scene_robot",
+        "Robot Buddy",
+        "SCENE FILL",
+        "Teal scene fills with a little robot at the charge boundary"
+    ),
+    SCENE_SNOWMAN(
+        "scene_snowman",
+        "Snowman",
+        "SCENE FILL",
+        "Blue scene fills with a snowman at the charge boundary"
+    ),
+    SCENE_DRAGONFLY(
+        "scene_dragonfly",
+        "Dragonfly",
+        "SCENE FILL",
+        "Sky scene fills with a dragonfly at the charge boundary"
+    ),
+
     // Legacy entries preserved for backward compatibility
     @Deprecated("Mapped to GLYPH_ARC")
     ENERGY_RING(
@@ -124,7 +150,11 @@ enum class ChargingAnimationStyle(
             DIGITAL_GAUGE,
             WATTAGE_REACTOR,
             MINIMALIST_BOLT,
-            BATTERY_CELL
+            BATTERY_CELL,
+            SCENE_PUMPKIN,
+            SCENE_ROBOT,
+            SCENE_SNOWMAN,
+            SCENE_DRAGONFLY
         )
 
         fun fromString(name: String?): ChargingAnimationStyle {
