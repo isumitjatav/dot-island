@@ -42,19 +42,19 @@ object CallNotificationParser {
         val hasAnswerAction = actions.any { it.contains("answer") || it.contains("accept") }
         val isExplicitIncoming = hasAnswerAction || allText.contains("incoming call") || allText.contains("incoming voice")
 
-        // 2. Outgoing dialing / connecting check:
-        // Dialers (Google Dialer, Nothing OS) show "Calling…", "Dialing…", "Connecting…", "Outgoing call", "Ringing…"
-        // before the other party answers, and showChronometer is false.
-        val isDialingText = allText.contains("calling") ||
-                allText.contains("dialing") ||
-                allText.contains("connecting") ||
-                allText.contains("ringing") ||
-                allText.contains("outgoing call")
+        // 2. Outgoing dialing / connecting check vs ongoing connected call:
+        // When a call is actively connected, Android dialers (Google Phone, Nothing OS, AOSP) set
+        // showChronometer = true or display live elapsed duration (e.g. "00:42") in text/subtext.
+        // Before the remote party answers, showChronometer is false and no elapsed timer is present.
+        val durationRegex = Regex("""\b\d{1,2}:\d{2}(?::\d{2})?\b""")
+        val hasDurationText = durationRegex.containsMatchIn(signal.text.orEmpty()) ||
+                durationRegex.containsMatchIn(signal.subText.orEmpty())
+        val isOngoing = signal.showChronometer || hasDurationText
 
         val phase = when {
             isExplicitIncoming -> CallPhase.INCOMING
-            !signal.showChronometer && isDialingText -> CallPhase.DIALING
-            else -> CallPhase.ONGOING
+            isOngoing -> CallPhase.ONGOING
+            else -> CallPhase.DIALING
         }
 
         val isVideoCall = actions.any { it.contains("video") } || allText.contains("video call")

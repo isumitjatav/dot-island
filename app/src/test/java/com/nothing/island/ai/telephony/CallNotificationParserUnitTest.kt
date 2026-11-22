@@ -122,6 +122,51 @@ class CallNotificationParserUnitTest {
     }
 
     @Test
+    fun dialingCall_withSimTextAndNoChronometer_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "SIM 1",
+                actionTitles = listOf("Hang up"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
+    fun dialingCall_withCarrierTextAndNoChronometer_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "Calling via Jio",
+                actionTitles = listOf("End call"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
+    fun dialingCall_withEmptyTextAndNoChronometer_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = null,
+                actionTitles = listOf("Hang up"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
     fun blankCaller_isIgnored() {
         assertNull(
             CallNotificationParser.parse(

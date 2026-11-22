@@ -380,6 +380,7 @@ fun IslandOverlayView(
                     onEndCall = onDeclineCall,
                     showEndButton = callPrefs.doubleIncomingCallActions,
                     isSpeakerOn = isSpeakerOn,
+                    onToggleSpeaker = onToggleSpeaker,
                 )
             } else if (isEarbudEvent) {
                 // Bluetooth headset pill with circular battery ring

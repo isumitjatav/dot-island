@@ -60,9 +60,13 @@ class DebugEventReceiver : BroadcastReceiver() {
             ACTION_QUICK_TOOLS -> {
                 IslandOverlayController.getInstance(context).repository.expandQuickTools()
             }
+            ACTION_COLLAPSE -> {
+                IslandOverlayController.getInstance(context).collapse()
+            }
             ACTION_CALL -> {
                 val isDialing = intent.getBooleanExtra("is_dialing", false)
                 val duration = if (isDialing) 0L else intent.getLongExtra("duration", 8L)
+                val expand = intent.getBooleanExtra("expand", false)
                 controller.eventEngine.emit(
                     IslandEvent.CallConnected(
                         id = "debug_call_${System.currentTimeMillis()}",
@@ -72,6 +76,26 @@ class DebugEventReceiver : BroadcastReceiver() {
                         isDialing = isDialing,
                     )
                 )
+                if (expand) {
+                    controller.repository.expandCall()
+                }
+            }
+            ACTION_NOTIFICATION -> {
+                val title = intent.getStringExtra("title") ?: "ALEX"
+                val text = intent.getStringExtra("text") ?: "ON MY WAY"
+                val pkg = intent.getStringExtra("pkg") ?: "com.google.android.apps.messaging"
+                val expand = intent.getBooleanExtra("expand", false)
+                controller.eventEngine.emit(
+                    IslandEvent.NotificationPosted(
+                        id = "debug_notif_${System.currentTimeMillis()}",
+                        packageName = pkg,
+                        title = title,
+                        text = text,
+                    )
+                )
+                if (expand) {
+                    controller.expandNotificationFocused()
+                }
             }
             ACTION_MUSIC -> {
                 val playing = intent.getBooleanExtra(EXTRA_ENABLED, true)
@@ -121,6 +145,8 @@ class DebugEventReceiver : BroadcastReceiver() {
         const val ACTION_MASCOT = "com.nothing.island.ai.DEBUG_MASCOT"
         const val ACTION_MUSIC = "com.nothing.island.ai.DEBUG_MUSIC"
         const val ACTION_CALL = "com.nothing.island.ai.DEBUG_CALL"
+        const val ACTION_NOTIFICATION = "com.nothing.island.ai.DEBUG_NOTIFICATION"
+        const val ACTION_COLLAPSE = "com.nothing.island.ai.DEBUG_COLLAPSE"
         const val EXTRA_ENABLED = "enabled"
     }
 }

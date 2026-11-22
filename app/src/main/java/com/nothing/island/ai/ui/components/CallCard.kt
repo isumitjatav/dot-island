@@ -50,8 +50,8 @@ fun formatCallDuration(totalSeconds: Long): String {
 }
 
 /**
- * R9 compact call pill: 200dp symmetrical capsule with a breathing red accent
- * over the camera punch hole.
+ * R9 compact call pill: sleek ~130dp trimmed capsule matching Nothing OS geometry
+ * without colliding with status bar icons or overlapping the red end button.
  */
 @Composable
 fun CallCompactView(
@@ -60,6 +60,7 @@ fun CallCompactView(
     onEndCall: (() -> Unit)? = null,
     showEndButton: Boolean = true,
     isSpeakerOn: Boolean = false,
+    onToggleSpeaker: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val caller = when (event) {
@@ -84,31 +85,71 @@ fun CallCompactView(
 
     val showEnd = !isRinging && showEndButton && onEndCall != null
 
-    // Reference layout: the red END button is a separate circle attached to the
-    // LEFT OUTSIDE the pill. The pill itself shows: green phone icon, live timer,
-    // and an audio waveform — no caller name, no answer button, no overlap.
-    Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
+    // Symmetrical, neatly arranged Row with zero overlap:
+    // [ (✕) red end button ] (6dp space) [ sleek pill: 🔊 00:25 |||| ]
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        // Red END button attached cleanly to the left edge without overlapping
+        if (showEnd) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(NothingPrimaryAccent)
+                    .border(1.5.dp, NothingPrimaryBackground, CircleShape)
+                    .clickable(onClick = { onEndCall?.invoke() }),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("✕", color = NothingPrimaryText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Spacer(Modifier.width(6.dp))
+        }
+
+        // Main Call Capsule (trimmed to 104dp with end button, or 124dp standalone)
+        val pillWidth = if (showEnd) 104.dp else 124.dp
         Box(
             modifier = Modifier
-                .padding(start = if (showEnd) 15.dp else 0.dp)
-                .width(170.dp)
-                .height(36.dp)
-                .clip(RoundedCornerShape(18.dp))
+                .width(pillWidth)
+                .height(32.dp)
+                .clip(RoundedCornerShape(16.dp))
                 .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
-                .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(18.dp))
+                .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(16.dp))
                 .clickable(onClick = onTap)
-                .padding(horizontal = 12.dp),
+                .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Phone or speaker glyph
-                Text(
-                    text = if (isSpeakerOn) "🔊" else "☎",
-                    color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Spacer(Modifier.width(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                // Phone or speaker glyph (tappable to toggle speakerphone)
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .then(
+                            if (onToggleSpeaker != null) {
+                                Modifier.clickable(onClick = { onToggleSpeaker() })
+                            } else {
+                                Modifier
+                            }
+                        )
+                        .padding(horizontal = 2.dp, vertical = 2.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = if (isSpeakerOn) "🔊" else "☎",
+                        color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+
+                Spacer(Modifier.width(4.dp))
+
                 // Live timer or dialing text
                 Text(
                     text = when {
@@ -117,16 +158,22 @@ fun CallCompactView(
                         else -> formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
                     },
                     color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
+                    maxLines = 1,
                 )
+
                 Spacer(Modifier.weight(1f))
-                // Audio waveform bars
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    listOf(5f, 11f, 7f, 14f, 9f).forEachIndexed { index, h ->
+
+                // Audio waveform bars (compact 4 bars)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(1.5.dp),
+                ) {
+                    listOf(4f, 10f, 6f, 12f).forEachIndexed { index, h ->
                         val b by pulse.animateFloat(
-                            initialValue = h * 0.6f, targetValue = h,
+                            initialValue = h * 0.5f, targetValue = h,
                             animationSpec = infiniteRepeatable(
                                 tween(300 + index * 60, easing = FastOutSlowInEasing),
                                 RepeatMode.Reverse,
@@ -142,21 +189,6 @@ fun CallCompactView(
                         )
                     }
                 }
-            }
-        }
-
-        // Red END button attached to the left edge, fully outside the pill.
-        if (showEnd) {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(NothingPrimaryAccent)
-                    .border(2.dp, NothingPrimaryBackground, CircleShape)
-                    .clickable(onClick = { onEndCall?.invoke() }),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text("✕", color = NothingPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

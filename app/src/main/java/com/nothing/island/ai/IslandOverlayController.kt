@@ -1288,7 +1288,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             } else if (isEarbudActive) {
                 320f // Full-width capsule for the earbud pill's horizontal spring expansion
             } else if (isCallActive) {
-                200f // 170dp call pill + 30dp for the attached red end button
+                140f // Sleek trimmed call pill (104dp capsule + 26dp end button + 6dp spacing), non-overlapping
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {

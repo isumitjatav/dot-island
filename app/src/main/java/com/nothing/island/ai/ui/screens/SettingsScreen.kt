@@ -94,6 +94,7 @@ fun SettingsScreen(
     val prefs by preferencesRepository.livePreferences.collectAsState()
     val notifPrefs by preferencesRepository.liveNotificationPreferences.collectAsState()
     val batteryPrefs by preferencesRepository.liveBatteryPreferences.collectAsState()
+    val callPrefs by preferencesRepository.liveCallPreferences.collectAsState()
 
     Column(
         modifier = modifier
@@ -465,6 +466,61 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // TELEPHONY & LIVE CALLS (Milestone R9)
+        SectionHeader(title = "TELEPHONY & LIVE CALLS")
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        IslandCard {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PreferenceToggleRow(
+                    title = "Live Call Island",
+                    subtitle = "Show active calls and incoming ringing in Nothing Island.",
+                    checked = callPrefs.systemCallEnabled,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateCallPreferences(callPrefs.copy(systemCallEnabled = enabled))
+                        }
+                    }
+                )
+
+                PreferenceToggleRow(
+                    title = "Auto-Expand Call Card",
+                    subtitle = "When disabled, calls appear as a sleek compact capsule around the camera. Enable to automatically expand into a full card on connect.",
+                    checked = callPrefs.autoExpandCall,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateCallPreferences(callPrefs.copy(autoExpandCall = enabled))
+                        }
+                    }
+                )
+
+                PreferenceToggleRow(
+                    title = "Double Incoming Call Actions",
+                    subtitle = "Show the red end-call button on the compact pill.",
+                    checked = callPrefs.doubleIncomingCallActions,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateCallPreferences(callPrefs.copy(doubleIncomingCallActions = enabled))
+                        }
+                    }
+                )
+
+                PreferenceToggleRow(
+                    title = "VoIP & Other Apps Calls",
+                    subtitle = "Display calls from third-party communication apps (WhatsApp, Telegram, etc.).",
+                    checked = callPrefs.otherAppsCalls,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateCallPreferences(callPrefs.copy(otherAppsCalls = enabled))
+                        }
+                    }
+                )
             }
         }
 

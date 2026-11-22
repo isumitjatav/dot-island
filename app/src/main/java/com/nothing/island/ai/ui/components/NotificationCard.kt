@@ -459,24 +459,6 @@ fun NotificationCard(
                         }
                     }
 
-                    if (onDismiss != null && notificationKey != null) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(NothingDarkGray)
-                                .clickable { onDismiss(notificationKey) }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Text(
-                                text = "DISMISS",
-                                color = NothingWhite,
-                                fontSize = 10.5.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
                     if (onCollapse != null) {
                         Box(
                             modifier = Modifier
@@ -498,12 +480,13 @@ fun NotificationCard(
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                    } else if (state.formattedTime != null) {
+                    } else {
                         Text(
-                            text = state.formattedTime,
+                            text = state.formattedTime ?: "JUST NOW",
                             color = NothingMutedText,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 1.sp
                         )
                     }
                 }
@@ -526,42 +509,63 @@ fun NotificationCard(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Title
-                if (!state.title.isNullOrBlank()) {
-                    Text(
-                        text = state.title,
-                        color = NothingWhite,
-                        fontSize = 14.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = if (state.previewMode == NotificationPreviewMode.APP_ONLY) FontWeight.Normal else FontWeight.Bold,
-                        lineHeight = 18.sp,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        // Title (Sender Name, e.g. "ALEX")
+                        if (!state.title.isNullOrBlank()) {
+                            Text(
+                                text = state.title.uppercase(),
+                                color = NothingWhite,
+                                fontSize = 16.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = if (state.previewMode == NotificationPreviewMode.APP_ONLY) FontWeight.Normal else FontWeight.Bold,
+                                lineHeight = 20.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
 
-                // Body content (only rendered in FULL preview mode when non-blank)
-                if (!state.body.isNullOrBlank()) {
-                    Text(
-                        text = state.body,
-                        color = NothingWhite.copy(alpha = 0.9f),
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 16.sp,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                        // Body content (e.g. "ON MY WAY")
+                        if (!state.body.isNullOrBlank()) {
+                            Text(
+                                text = state.body.uppercase(),
+                                color = NothingWhite.copy(alpha = 0.85f),
+                                fontSize = 13.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 17.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
 
-                // Subtext
-                if (!state.subText.isNullOrBlank()) {
-                    Text(
-                        text = state.subText,
-                        color = NothingMutedText,
-                        fontSize = 10.5.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        // Subtext
+                        if (!state.subText.isNullOrBlank()) {
+                            Text(
+                                text = state.subText,
+                                color = NothingMutedText,
+                                fontSize = 10.5.sp,
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    // Red indicator dot matching reference image
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(NothingRed)
                     )
                 }
 
@@ -770,37 +774,97 @@ fun NotificationCard(
                             )
                         }
                     }
-                } else if (actionEntry != null && actionEntry.actions.isNotEmpty() && notificationKey != null) {
-                    Spacer(modifier = Modifier.height(4.dp))
+                } else if (notificationKey != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    // Reference pill action buttons (Image 1): [ REPLY • ] [ OPEN ] [ DISMISS ]
+                    val replyActionIndex = actionEntry?.actions?.indexOfFirst { it.isReply } ?: -1
+                    val hasReply = (replyActionIndex != -1 || onSendReply != null)
+                    val hasOpen = (actionEntry?.contentIntent != null || onOpenContent != null)
+                    val hasDismiss = onDismiss != null
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        actionEntry.actions.take(3).forEachIndexed { index, actionItem ->
+                        // 1. REPLY Pill with red indicator dot
+                        if (hasReply) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(NothingBorder)
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(17.dp))
+                                    .background(NothingDarkGray)
+                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
                                     .clickable {
-                                        if (actionItem.isReply) {
-                                            replyingActionIndex = index
-                                            replyStatus = null
-                                            replyText = ""
-                                            onInputFocusChanged?.invoke(true)
-                                        } else {
-                                            onExecuteAction?.invoke(notificationKey, index)
-                                        }
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        replyingActionIndex = if (replyActionIndex >= 0) replyActionIndex else 0
+                                        replyStatus = null
+                                        replyText = ""
+                                        onInputFocusChanged?.invoke(true)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text(
+                                        text = "REPLY",
+                                        color = NothingWhite,
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(5.dp)
+                                            .clip(CircleShape)
+                                            .background(NothingRed)
+                                    )
+                                }
+                            }
+                        }
+
+                        // 2. OPEN Pill
+                        if (hasOpen) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(17.dp))
+                                    .background(NothingDarkGray)
+                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
+                                    .clickable { onOpenContent?.invoke(notificationKey) },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = actionItem.title.uppercase(),
+                                    text = "OPEN",
                                     color = NothingWhite,
-                                    fontSize = 10.5.sp,
+                                    fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        // 3. DISMISS Pill
+                        if (hasDismiss) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(34.dp)
+                                    .clip(RoundedCornerShape(17.dp))
+                                    .background(NothingDarkGray)
+                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
+                                    .clickable { onDismiss?.invoke(notificationKey) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "DISMISS",
+                                    color = NothingWhite,
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
