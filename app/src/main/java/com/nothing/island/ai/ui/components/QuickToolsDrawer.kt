@@ -95,9 +95,9 @@ fun QuickToolsDrawer(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(notchedCardShape())
             .background(NothingPrimaryBackground)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(24.dp))
+            .border(1.dp, NothingTokens.NothingBorderSubtle, notchedCardShape())
             .verticalScroll(scroll)
             .padding(16.dp),
     ) {

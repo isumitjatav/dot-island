@@ -778,7 +778,7 @@ fun DashboardCard(
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier
 ) {
-    val cardShape = RoundedCornerShape(26.dp)
+    val cardShape = com.nothing.island.ai.ui.components.notchedCardShape()
     var isConfirmingClear by remember { mutableStateOf(false) }
 
     var totalHeaderDrag by remember { mutableFloatStateOf(0f) }

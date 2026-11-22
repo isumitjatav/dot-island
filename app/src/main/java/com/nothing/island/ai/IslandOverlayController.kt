@@ -484,16 +484,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         }
                         if (isNewTrack && musicPrefs.isAutoExpandEnabled && repository.state.value.mode == IslandMode.COLLAPSED) {
                             Log.d(TAG, "Auto-expanding music for new track: ${track.trackTitle}")
-                            expandMusic()
-                            autoExpandJob?.cancel()
-                            autoExpandJob = scope.launch {
-                                kotlinx.coroutines.delay((musicPrefs.autoExpandDurationSeconds * 1000).toLong())
-                                val current = repository.state.value
-                                if (current.mode == IslandMode.EXPANDED && current.expandedViewType == ExpandedViewType.MUSIC) {
-                                    Log.d(TAG, "Auto-expand duration expired; collapsing to compact pill.")
-                                    collapse()
-                                }
-                            }
+                            expandMusic() // schedules its own auto-collapse
                         }
                     }
                 }
@@ -807,16 +798,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         }
                         if (isNewTrack && musicPrefs.isAutoExpandEnabled && repository.state.value.mode == IslandMode.COLLAPSED) {
                             Log.d(TAG, "Auto-expanding music for new track: ${track.trackTitle}")
-                            expandMusic()
-                            autoExpandJob?.cancel()
-                            autoExpandJob = scope.launch {
-                                kotlinx.coroutines.delay((musicPrefs.autoExpandDurationSeconds * 1000).toLong())
-                                val current = repository.state.value
-                                if (current.mode == IslandMode.EXPANDED && current.expandedViewType == ExpandedViewType.MUSIC) {
-                                    Log.d(TAG, "Auto-expand duration expired; collapsing to compact pill.")
-                                    collapse()
-                                }
-                            }
+                            expandMusic() // schedules its own auto-collapse
                         }
                     }
                 }
@@ -1218,6 +1200,20 @@ class IslandOverlayController private constructor(private val appContext: Contex
             batteryAutoExpandJob?.cancel()
             activitySwitcher.navigateTo(IslandInterface.MUSIC)
             repository.expandMusic()
+
+            // Auto-collapse the music player a few seconds after it opens so the
+            // island returns to the compact pill (reference behavior).
+            val prefs = preferencesRepository.liveMusicPreferences.value
+            if (prefs.isAutoExpandEnabled) {
+                autoExpandJob = controllerScope?.launch {
+                    kotlinx.coroutines.delay((prefs.autoExpandDurationSeconds * 1000).toLong())
+                    val current = repository.state.value
+                    if (current.mode == IslandMode.EXPANDED && current.expandedViewType == ExpandedViewType.MUSIC) {
+                        Log.d(TAG, "Music auto-collapse timer expired; collapsing to compact pill.")
+                        collapse()
+                    }
+                }
+            }
         }
     }
 
@@ -1266,6 +1262,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 (activitySwitcher.currentInterface.value == IslandInterface.BATTERY)
         val isEarbudActive = state.activeEvent is IslandEvent.BluetoothDeviceConnected ||
                 state.activeEvent is IslandEvent.BluetoothDeviceDisconnected
+        val isCallActive = state.activeEvent is IslandEvent.IncomingCallRinging ||
+                state.activeEvent is IslandEvent.CallConnected ||
+                state.activeEvent is IslandEvent.CallEnded
 
         val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS
@@ -1278,6 +1277,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 220f // Two satellite pills + center camera clearance
             } else if (isEarbudActive) {
                 320f // Full-width capsule for the earbud pill's horizontal spring expansion
+            } else if (isCallActive) {
+                232f // 200dp call pill + 32dp for the attached red end button
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {

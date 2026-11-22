@@ -81,66 +81,82 @@ fun CallCompactView(
     )
 
     val showEnd = !isRinging && showEndButton && onEndCall != null
-    Box(modifier = modifier) {
-    Box(
-        modifier = Modifier
-            .width(200.dp)
-            .height(36.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
-            .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(18.dp))
-            .clickable(onClick = onTap)
-            .padding(horizontal = if (showEnd) 26.dp else 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(if (isRinging) NothingPrimaryAccent else NothingSuccess)
-            )
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = caller,
-                color = NothingPrimaryText,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = if (isRinging) {
-                    if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL"
-                } else {
-                    formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
-                },
-                color = if (isRinging) NothingPrimaryAccent else NothingSecondaryText,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-            )
-        }
-    }
 
-    // Reference-style red call-end button attached to the left of the pill.
-    if (showEnd) {
+    // Reference layout: the red END button is a separate circle attached to the
+    // LEFT OUTSIDE the pill. The pill itself shows: green phone icon, live timer,
+    // and an audio waveform — no caller name, no answer button, no overlap.
+    Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
         Box(
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .offset(x = (-6).dp)
-                .size(34.dp)
-                .clip(CircleShape)
-                .background(NothingPrimaryAccent)
-                .border(3.dp, NothingPrimaryBackground, CircleShape)
-                .clickable(onClick = onEndCall!!),
+                .padding(start = if (showEnd) 18.dp else 0.dp)
+                .width(200.dp)
+                .height(36.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
+                .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(18.dp))
+                .clickable(onClick = onTap)
+                .padding(horizontal = 14.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text("✕", color = NothingPrimaryText, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Green phone glyph
+                Text(
+                    text = "⌕",
+                    color = NothingSuccess,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.width(10.dp))
+                // Live timer (green, matches reference)
+                Text(
+                    text = if (isRinging) {
+                        if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL"
+                    } else {
+                        formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
+                    },
+                    color = if (isRinging) NothingPrimaryAccent else NothingSuccess,
+                    fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.weight(1f))
+                // Audio waveform bars
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    listOf(6f, 12f, 8f, 16f, 10f).forEachIndexed { index, h ->
+                        val b by pulse.animateFloat(
+                            initialValue = h * 0.6f, targetValue = h,
+                            animationSpec = infiniteRepeatable(
+                                tween(300 + index * 60, easing = FastOutSlowInEasing),
+                                RepeatMode.Reverse,
+                            ),
+                            label = "wave$index",
+                        )
+                        Box(
+                            Modifier
+                                .width(2.dp)
+                                .height(b.dp)
+                                .clip(RoundedCornerShape(1.dp))
+                                .background(NothingSuccess)
+                        )
+                    }
+                }
+            }
         }
-    }
+
+        // Red END button attached to the left edge, fully outside the pill.
+        if (showEnd) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(NothingPrimaryAccent)
+                    .border(3.dp, NothingPrimaryBackground, CircleShape)
+                    .clickable(onClick = onEndCall!!),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("✕", color = NothingPrimaryText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -166,9 +182,9 @@ fun CallExpandedView(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(notchedCardShape())
             .background(NothingPrimaryBackground)
-            .border(1.dp, NothingDivider, RoundedCornerShape(24.dp))
+            .border(1.dp, NothingDivider, notchedCardShape())
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -203,32 +219,48 @@ fun CallExpandedView(
             fontFamily = FontFamily.Monospace,
         )
         Spacer(Modifier.height(20.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(NothingElevatedSurface)
-                    .border(1.dp, NothingDivider, RoundedCornerShape(14.dp))
-                    .clickable(onClick = onDecline),
-                contentAlignment = Alignment.Center,
+        if (isRinging) {
+            // Incoming call: DECLINE + ANSWER
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("DECLINE", color = NothingSecondaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(NothingElevatedSurface)
+                        .border(1.dp, NothingDivider, RoundedCornerShape(14.dp))
+                        .clickable(onClick = onDecline),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("DECLINE", color = NothingSecondaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(NothingPrimaryAccent)
+                        .clickable(onClick = onAnswer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("ANSWER", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                }
             }
+        } else {
+            // Ongoing call: a single END CALL button (no ANSWER)
             Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .fillMaxWidth()
                     .height(48.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(NothingPrimaryAccent)
-                    .clickable(onClick = onAnswer),
+                    .clickable(onClick = onDecline),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("ANSWER", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text("END CALL", color = NothingPrimaryText, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
             }
         }
     }

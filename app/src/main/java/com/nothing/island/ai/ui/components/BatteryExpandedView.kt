@@ -60,7 +60,7 @@ fun BatteryExpandedView(
     topClearanceDp: Dp = 48.dp,
     modifier: Modifier = Modifier
 ) {
-    val cardShape = RoundedCornerShape(26.dp)
+    val cardShape = notchedCardShape()
     val accentColor = Color(preferences.accentColorHex)
 
     var totalDrag by remember { mutableFloatStateOf(0f) }

@@ -362,7 +362,7 @@ fun NotificationCard(
         }
     }
 
-    val cardShape = RoundedCornerShape(26.dp)
+    val cardShape = notchedCardShape()
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 50f
 
