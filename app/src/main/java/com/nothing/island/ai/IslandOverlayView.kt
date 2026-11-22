@@ -286,6 +286,9 @@ fun IslandOverlayView(
     onSkipNext: () -> Unit = {},
     onSkipPrevious: () -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
+    onQuickVolume: (Int) -> Unit = {},
+    onQuickHistory: () -> Unit = {},
+    onQuickAi: () -> Unit = {},
     onSwipeActivity: (SwipeDirection) -> Unit = {},
     activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD,
     gesturePreferences: GesturePreferences = GesturePreferences()
@@ -716,6 +719,9 @@ fun IslandOverlayView(
                             )
                         },
                         onCollapse = onCollapse,
+                        onVolumeChange = onQuickVolume,
+                        onHistory = onQuickHistory,
+                        onAi = onQuickAi,
                         modifier = Modifier.fillMaxSize()
                     )
                 }

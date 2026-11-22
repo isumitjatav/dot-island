@@ -198,6 +198,46 @@ class IslandOverlayController private constructor(private val appContext: Contex
         callTickerJob = null
     }
 
+    /** Adjusts media volume from the quick controls drawer. */
+    private fun adjustQuickVolume(delta: Int) {
+        try {
+            val audio = appContext.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+            audio?.adjustStreamVolume(
+                android.media.AudioManager.STREAM_MUSIC,
+                if (delta > 0) android.media.AudioManager.ADJUST_RAISE else android.media.AudioManager.ADJUST_LOWER,
+                0,
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to adjust volume", e)
+        }
+    }
+
+    /** Opens the system call history from quick controls. */
+    private fun openQuickHistory() {
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+            intent.type = "vnd.android.cursor.dir/calls"
+            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            appContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to open call history", e)
+        }
+        collapse()
+    }
+
+    /** Opens the AI assistant gateway from quick controls. */
+    private fun openQuickAi() {
+        try {
+            val intent = android.content.Intent(appContext, MainActivity::class.java)
+            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+            intent.putExtra("open_ai", true)
+            appContext.startActivity(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to open AI", e)
+        }
+        collapse()
+    }
+
     /** Handles a quick-tools button press. */
     private fun handleQuickTool(id: String) {
         Log.d(TAG, "QuickTool: $id")
@@ -585,6 +625,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 }
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
+                            onQuickVolume = { delta -> adjustQuickVolume(delta) },
+                            onQuickHistory = { openQuickHistory() },
+                            onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 if (CallController.decline(appContext)) {
@@ -905,6 +948,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                 }
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
+                            onQuickVolume = { delta -> adjustQuickVolume(delta) },
+                            onQuickHistory = { openQuickHistory() },
+                            onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 if (CallController.decline(appContext)) {
@@ -1221,7 +1267,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val isEarbudActive = state.activeEvent is IslandEvent.BluetoothDeviceConnected ||
                 state.activeEvent is IslandEvent.BluetoothDeviceDisconnected
 
-        val widthDp = if (mode == IslandMode.EXPANDED) {
+        val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
+                state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS
+        val widthDp = if (isQuickToolsExpanded) {
+            350f
+        } else if (mode == IslandMode.EXPANDED) {
             prefs.expandedWidthDp
         } else {
             if (state.isDualPill) {
@@ -1235,7 +1285,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
             }
         }
 
-        val heightDp = if (mode == IslandMode.EXPANDED) {
+        val heightDp = if (isQuickToolsExpanded) {
+            360f // Room for tiles, shortcuts, contacts and the bottom control row
+        } else if (mode == IslandMode.EXPANDED) {
             prefs.expandedHeightDp
         } else if (isEarbudActive) {
             132f // Room for the downward spring drop (72dp) plus the 52dp pill
