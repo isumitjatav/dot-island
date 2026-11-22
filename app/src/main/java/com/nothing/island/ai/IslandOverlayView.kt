@@ -10,6 +10,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,6 +48,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
@@ -566,6 +568,28 @@ fun IslandOverlayView(
                                 } else Modifier
                             )
                     ) {
+                        // Reference-style slide-down: the card drops out of the
+                        // capsule with a spring, and fades/slides in. Skipped when
+                        // reduced motion is enabled.
+                        val reveal by animateFloatAsState(
+                            targetValue = 1f,
+                            animationSpec = if (preferences.reducedMotionEnabled) {
+                                tween(1)
+                            } else {
+                                androidx.compose.animation.core.spring(
+                                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                                )
+                            },
+                            label = "notifSlideDown",
+                        )
+                        val slideOffsetDp = (1f - reveal) * -28f
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .offset(y = slideOffsetDp.dp)
+                                .alpha(reveal)
+                        ) {
                         if (presentationToRender != null) {
                             NotificationCard(
                                 packageName = presentationToRender.packageName,
@@ -628,6 +652,7 @@ fun IslandOverlayView(
                                 onCollapse = onCollapse,
                                 modifier = Modifier.fillMaxSize()
                             )
+                        }
                         }
                     }
                 }
