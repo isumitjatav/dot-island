@@ -147,6 +147,7 @@ fun HomeScreen(
             topOffsetDp = prefs.topMarginDp,
             horizontalOffsetDp = prefs.horizontalOffsetDp,
             accentColor = Color(prefs.accentColorHex),
+            isCameraCutoutEnabled = prefs.isCameraCutoutEnabled,
             statusText = "${Build.MODEL} (${Build.DEVICE})"
         )
 

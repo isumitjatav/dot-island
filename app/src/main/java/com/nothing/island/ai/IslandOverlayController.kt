@@ -1268,9 +1268,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
         val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS
-        val widthDp = if (isQuickToolsExpanded) {
-            350f
-        } else if (mode == IslandMode.EXPANDED) {
+        val widthDp = if (mode == IslandMode.EXPANDED) {
             prefs.expandedWidthDp
         } else {
             if (state.isDualPill) {
@@ -1308,7 +1306,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
             CutoutDetector.dpToPx(60f, ctx)
         } else 0
         val targetXPx = CutoutDetector.dpToPx(prefs.horizontalOffsetDp, ctx) - musicLeftShiftPx
-        val targetYPx = CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
+        val targetYPx = if (mode == IslandMode.EXPANDED) {
+            CutoutDetector.dpToPx(prefs.expandedTopMarginDp, ctx)
+        } else {
+            CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
+        }
 
         val baseFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or

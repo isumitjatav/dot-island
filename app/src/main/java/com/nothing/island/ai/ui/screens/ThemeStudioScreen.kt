@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -204,11 +205,12 @@ fun ThemeStudioScreen(
                                     selectedPreset = preset.name
                                     val accent = effectiveAccent(preset.primaryColor)
                                     val bg = backgroundFor(accent)
-                                    val accentHex = accent.value.toLong() and 0xFFFFFFFFL
-                                    val bgHex = bg.value.toLong() and 0xFFFFFFFFL
+                                    val accentHex = (accent.toArgb().toLong()) and 0xFFFFFFFFL
+                                    val bgArgb = (bg.toArgb().toLong()) and 0xFFFFFFFFL
+                                    val safeBgHex = if (bgArgb == 0L || (bgArgb and 0xFF000000L) == 0L) 0xFF000000L else bgArgb
                                     scope.launch {
                                         repository.updatePillTheme(
-                                            backgroundHex = bgHex,
+                                            backgroundHex = safeBgHex,
                                             accentHex = accentHex,
                                             presetName = preset.name,
                                         )

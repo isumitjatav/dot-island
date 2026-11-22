@@ -487,12 +487,19 @@ fun IslandOverlayView(
                     else -> 100
                 }
 
+                val rawPillBgHex = preferences.pillBackgroundColorHex
+                val pillBgColor = if (rawPillBgHex == 0L || (rawPillBgHex and 0xFF000000L) == 0L) {
+                    NothingBlack
+                } else {
+                    Color(rawPillBgHex)
+                }
+
                 Box(
                     modifier = Modifier
                         .width(preferences.compactWidthDp.dp)
                         .height(preferences.compactHeightDp.dp)
                         .clip(pillShape)
-                        .background(Color(preferences.pillBackgroundColorHex))
+                        .background(pillBgColor)
                         .islandProgressBorder(
                             shape = pillShape,
                             progressState = downloadState,
@@ -504,6 +511,7 @@ fun IslandOverlayView(
                             preferences = gesturePreferences,
                             executor = gestureExecutor,
                             isMediaIslandActive = false,
+                            onTap = onExpandDashboard,
                             onSwipeActivity = onSwipeActivity
                         ),
                     contentAlignment = Alignment.Center

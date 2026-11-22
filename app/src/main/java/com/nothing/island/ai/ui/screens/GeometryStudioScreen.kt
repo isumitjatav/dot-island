@@ -109,7 +109,8 @@ fun GeometryStudioScreen(
             pillWidthDp = prefs.compactWidthDp,
             pillHeightDp = prefs.compactHeightDp,
             cornerRadiusDp = prefs.cornerRadiusDp,
-            topOffsetDp = prefs.topMarginDp
+            topOffsetDp = prefs.topMarginDp,
+            isCameraCutoutEnabled = prefs.isCameraCutoutEnabled
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -149,7 +150,7 @@ fun GeometryStudioScreen(
                     onValueChange = { repository.updateLiveCalibration(topMarginDp = it) },
                     valueRange = 0f..40f,
                     stepSize = 1f,
-                    label = "Top Margin Offset",
+                    label = "Compact Top Margin (Y)",
                     formattedValue = "${prefs.topMarginDp.toInt()} DP"
                 )
             }
@@ -159,7 +160,7 @@ fun GeometryStudioScreen(
 
         NothingSectionHeader(title = "EXPANDED CARD CUTOUT", isAccent = true)
         NothingCard(variant = NothingCardVariant.STANDARD) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -195,6 +196,15 @@ fun GeometryStudioScreen(
                         )
                     )
                 }
+
+                NothingStepperSlider(
+                    value = prefs.expandedTopMarginDp,
+                    onValueChange = { repository.updateLiveCalibration(expandedTopMarginDp = it) },
+                    valueRange = 0f..30f,
+                    stepSize = 1f,
+                    label = "Expanded Top Margin (Y)",
+                    formattedValue = "${prefs.expandedTopMarginDp.toInt()} DP"
+                )
             }
         }
 

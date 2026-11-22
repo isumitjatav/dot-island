@@ -16,9 +16,9 @@ import androidx.compose.ui.unit.dp
  * the physical camera circle, matching Nothing OS hardware geometry and reference.
  */
 fun notchedCardShape(
-    notchWidthDp: Float = 52f,
-    notchDepthDp: Float = 26f,
-    cornerRadiusDp: Float = 26f,
+    notchWidthDp: Float = 42f,
+    notchDepthDp: Float = 42f,
+    cornerRadiusDp: Float = 28f,
 ): Shape = object : Shape {
     override fun createOutline(
         size: Size,
@@ -36,7 +36,7 @@ fun notchedCardShape(
             val notchRight = cx + nw / 2f
 
             // Smooth shoulder and bottom radii
-            val shoulderR = (10f).dp.toPx().coerceAtMost(nw / 4f)
+            val shoulderR = (6f).dp.toPx().coerceAtMost(nw / 4f)
             val bottomSpan = nw - 2f * shoulderR
             val bottomR = (bottomSpan / 2f).coerceAtMost(nd - shoulderR)
 

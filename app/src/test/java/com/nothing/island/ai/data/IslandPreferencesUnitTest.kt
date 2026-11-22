@@ -70,6 +70,7 @@ class IslandPreferencesUnitTest {
         assertEquals("Default compact width must be 124dp", 124.0f, defaults.compactWidthDp, 0.001f)
         assertEquals("Default compact height must be 36dp", 36.0f, defaults.compactHeightDp, 0.001f)
         assertEquals("Default top margin must be 9dp (27px)", 9.0f, defaults.topMarginDp, 0.001f)
+        assertEquals("Default expanded top margin must be 0dp (status bar dock)", 0.0f, defaults.expandedTopMarginDp, 0.001f)
         assertEquals("Default horizontal offset must be 0dp (centered)", 0.0f, defaults.horizontalOffsetDp, 0.001f)
         assertEquals("Default corner radius must be 18dp (half height = perfect capsule)", 18.0f, defaults.cornerRadiusDp, 0.001f)
         assertEquals("Default expanded width must be 350dp", 350.0f, defaults.expandedWidthDp, 0.001f)
@@ -92,6 +93,7 @@ class IslandPreferencesUnitTest {
         assertEquals(124.0f, initialPrefs.compactWidthDp, 0.001f)
         assertEquals(36.0f, initialPrefs.compactHeightDp, 0.001f)
         assertEquals(9.0f, initialPrefs.topMarginDp, 0.001f)
+        assertEquals(0.0f, initialPrefs.expandedTopMarginDp, 0.001f)
         assertEquals(0.0f, initialPrefs.horizontalOffsetDp, 0.001f)
         assertEquals(18.0f, initialPrefs.cornerRadiusDp, 0.001f)
         assertTrue(initialPrefs.isPulsing)
@@ -110,6 +112,25 @@ class IslandPreferencesUnitTest {
         repository.updateCameraCutoutEnabled(false)
         advanceUntilIdle()
         assertFalse(repository.livePreferences.value.isCameraCutoutEnabled)
+    }
+
+    @Test
+    fun test_decoupledVerticalOffsets() = testScope.runTest {
+        // Compact offset can be changed without altering expanded offset
+        repository.updateLiveCalibration(topMarginDp = 12f)
+        repository.persistCurrentCalibration()
+        advanceUntilIdle()
+        assertEquals(12f, repository.livePreferences.value.topMarginDp, 0.001f)
+        assertEquals(0f, repository.livePreferences.value.expandedTopMarginDp, 0.001f)
+
+        // Expanded offset can be changed independently
+        repository.updateExpandedTopMargin(6f)
+        advanceUntilIdle()
+        assertEquals(12f, repository.livePreferences.value.topMarginDp, 0.001f)
+        assertEquals(6f, repository.livePreferences.value.expandedTopMarginDp, 0.001f)
+        val persisted = repository.preferencesFlow.first()
+        assertEquals(12f, persisted.topMarginDp, 0.001f)
+        assertEquals(6f, persisted.expandedTopMarginDp, 0.001f)
     }
 
     // -------------------------------------------------------------

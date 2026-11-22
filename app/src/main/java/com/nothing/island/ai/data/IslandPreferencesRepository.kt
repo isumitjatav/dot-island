@@ -54,6 +54,7 @@ data class IslandPreferences(
     val expandedHeightDp: Float = CutoutDetector.DEFAULT_EXPANDED_HEIGHT_DP,
     val horizontalOffsetDp: Float = 0f,
     val topMarginDp: Float = CutoutDetector.DEFAULT_TOP_MARGIN_DP,
+    val expandedTopMarginDp: Float = CutoutDetector.DEFAULT_EXPANDED_TOP_MARGIN_DP,
     val cornerRadiusDp: Float = CutoutDetector.DEFAULT_COMPACT_CORNER_RADIUS_DP,
     val isPulsing: Boolean = true,
     val hapticFeedbackEnabled: Boolean = true,
@@ -90,12 +91,14 @@ class IslandPreferencesRepository internal constructor(
             expandedHeightDp = CutoutDetector.DEFAULT_EXPANDED_HEIGHT_DP,      // 210.0f
             horizontalOffsetDp = 0f,
             topMarginDp = CutoutDetector.DEFAULT_TOP_MARGIN_DP,                // 9.0f (27px)
+            expandedTopMarginDp = CutoutDetector.DEFAULT_EXPANDED_TOP_MARGIN_DP, // 0.0f (status bar dock)
             cornerRadiusDp = CutoutDetector.DEFAULT_COMPACT_CORNER_RADIUS_DP,  // 18.0f (54px)
             isPulsing = true,
             hapticFeedbackEnabled = true,
             reducedMotionEnabled = false,
             presetName = "Nothing Minimal",
             accentColorHex = 0xFFD71920L,
+            pillBackgroundColorHex = 0xFF000000L,
             isCameraCutoutEnabled = false
         )
 
@@ -125,6 +128,7 @@ class IslandPreferencesRepository internal constructor(
         val EXPANDED_HEIGHT_DP = floatPreferencesKey("expanded_height_dp")
         val HORIZONTAL_OFFSET_DP = floatPreferencesKey("horizontal_offset_dp")
         val TOP_MARGIN_DP = floatPreferencesKey("top_margin_dp")
+        val EXPANDED_TOP_MARGIN_DP = floatPreferencesKey("expanded_top_margin_dp")
         val CORNER_RADIUS_DP = floatPreferencesKey("corner_radius_dp")
         val IS_PULSING = booleanPreferencesKey("is_pulsing")
         val HAPTIC_FEEDBACK_ENABLED = booleanPreferencesKey("haptic_feedback_enabled")
@@ -402,6 +406,9 @@ class IslandPreferencesRepository internal constructor(
     }
 
     private fun mapPreferences(preferences: Preferences): IslandPreferences {
+        val rawPillBg = preferences[PreferencesKeys.PILL_BACKGROUND_COLOR_HEX] ?: HARDWARE_DEFAULTS.pillBackgroundColorHex
+        val safePillBg = if (rawPillBg == 0L || (rawPillBg and 0xFF000000L) == 0L) 0xFF000000L else rawPillBg
+
         return IslandPreferences(
             compactWidthDp = preferences[PreferencesKeys.COMPACT_WIDTH_DP] ?: HARDWARE_DEFAULTS.compactWidthDp,
             compactHeightDp = preferences[PreferencesKeys.COMPACT_HEIGHT_DP] ?: HARDWARE_DEFAULTS.compactHeightDp,
@@ -409,6 +416,7 @@ class IslandPreferencesRepository internal constructor(
             expandedHeightDp = preferences[PreferencesKeys.EXPANDED_HEIGHT_DP] ?: HARDWARE_DEFAULTS.expandedHeightDp,
             horizontalOffsetDp = preferences[PreferencesKeys.HORIZONTAL_OFFSET_DP] ?: HARDWARE_DEFAULTS.horizontalOffsetDp,
             topMarginDp = preferences[PreferencesKeys.TOP_MARGIN_DP] ?: HARDWARE_DEFAULTS.topMarginDp,
+            expandedTopMarginDp = preferences[PreferencesKeys.EXPANDED_TOP_MARGIN_DP] ?: HARDWARE_DEFAULTS.expandedTopMarginDp,
             cornerRadiusDp = preferences[PreferencesKeys.CORNER_RADIUS_DP] ?: HARDWARE_DEFAULTS.cornerRadiusDp,
             isPulsing = preferences[PreferencesKeys.IS_PULSING] ?: HARDWARE_DEFAULTS.isPulsing,
             hapticFeedbackEnabled = preferences[PreferencesKeys.HAPTIC_FEEDBACK_ENABLED] ?: HARDWARE_DEFAULTS.hapticFeedbackEnabled,
@@ -417,7 +425,7 @@ class IslandPreferencesRepository internal constructor(
             accentColorHex = preferences[PreferencesKeys.ACCENT_COLOR_HEX] ?: HARDWARE_DEFAULTS.accentColorHex,
             mascotEnabled = preferences[PreferencesKeys.MASCOT_ENABLED] ?: HARDWARE_DEFAULTS.mascotEnabled,
             mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName,
-            pillBackgroundColorHex = preferences[PreferencesKeys.PILL_BACKGROUND_COLOR_HEX] ?: HARDWARE_DEFAULTS.pillBackgroundColorHex,
+            pillBackgroundColorHex = safePillBg,
             isCameraCutoutEnabled = preferences[PreferencesKeys.CAMERA_CUTOUT_ENABLED] ?: HARDWARE_DEFAULTS.isCameraCutoutEnabled
         )
     }
@@ -516,6 +524,7 @@ class IslandPreferencesRepository internal constructor(
         compactHeightDp: Float = _livePreferences.value.compactHeightDp,
         cornerRadiusDp: Float = _livePreferences.value.cornerRadiusDp,
         topMarginDp: Float = _livePreferences.value.topMarginDp,
+        expandedTopMarginDp: Float = _livePreferences.value.expandedTopMarginDp,
         horizontalOffsetDp: Float = _livePreferences.value.horizontalOffsetDp,
         accentColorHex: Long = _livePreferences.value.accentColorHex,
         presetName: String = _livePreferences.value.presetName,
@@ -526,6 +535,7 @@ class IslandPreferencesRepository internal constructor(
             compactHeightDp = compactHeightDp,
             cornerRadiusDp = cornerRadiusDp,
             topMarginDp = topMarginDp,
+            expandedTopMarginDp = expandedTopMarginDp,
             horizontalOffsetDp = horizontalOffsetDp,
             accentColorHex = accentColorHex,
             presetName = presetName,
@@ -544,6 +554,7 @@ class IslandPreferencesRepository internal constructor(
             compactHeightDp = current.compactHeightDp,
             cornerRadiusDp = current.cornerRadiusDp,
             topMarginDp = current.topMarginDp,
+            expandedTopMarginDp = current.expandedTopMarginDp,
             horizontalOffsetDp = current.horizontalOffsetDp,
             accentColorHex = current.accentColorHex,
             presetName = current.presetName,
@@ -560,6 +571,7 @@ class IslandPreferencesRepository internal constructor(
         cornerRadiusDp: Float,
         topMarginDp: Float,
         horizontalOffsetDp: Float,
+        expandedTopMarginDp: Float = _livePreferences.value.expandedTopMarginDp,
         accentColorHex: Long = _livePreferences.value.accentColorHex,
         presetName: String = _livePreferences.value.presetName,
         isCameraCutoutEnabled: Boolean = _livePreferences.value.isCameraCutoutEnabled
@@ -570,6 +582,7 @@ class IslandPreferencesRepository internal constructor(
                 preferences[PreferencesKeys.COMPACT_HEIGHT_DP] = compactHeightDp
                 preferences[PreferencesKeys.CORNER_RADIUS_DP] = cornerRadiusDp
                 preferences[PreferencesKeys.TOP_MARGIN_DP] = topMarginDp
+                preferences[PreferencesKeys.EXPANDED_TOP_MARGIN_DP] = expandedTopMarginDp
                 preferences[PreferencesKeys.HORIZONTAL_OFFSET_DP] = horizontalOffsetDp
                 preferences[PreferencesKeys.ACCENT_COLOR_HEX] = accentColorHex
                 preferences[PreferencesKeys.PRESET_NAME] = presetName
@@ -577,6 +590,17 @@ class IslandPreferencesRepository internal constructor(
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist calibration to DataStore", e)
+        }
+    }
+
+    suspend fun updateExpandedTopMargin(marginDp: Float) {
+        _livePreferences.value = _livePreferences.value.copy(expandedTopMarginDp = marginDp)
+        try {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.EXPANDED_TOP_MARGIN_DP] = marginDp
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to persist expandedTopMarginDp to DataStore", e)
         }
     }
 
@@ -639,7 +663,8 @@ class IslandPreferencesRepository internal constructor(
             cornerRadiusDp = cornerRadiusDp,
             accentColorHex = accentColorHex,
             horizontalOffsetDp = 0f,
-            topMarginDp = CutoutDetector.DEFAULT_TOP_MARGIN_DP
+            topMarginDp = CutoutDetector.DEFAULT_TOP_MARGIN_DP,
+            expandedTopMarginDp = CutoutDetector.DEFAULT_EXPANDED_TOP_MARGIN_DP
         )
         try {
             dataStore.edit { preferences ->
@@ -650,6 +675,7 @@ class IslandPreferencesRepository internal constructor(
                 preferences[PreferencesKeys.ACCENT_COLOR_HEX] = accentColorHex
                 preferences[PreferencesKeys.HORIZONTAL_OFFSET_DP] = 0f
                 preferences[PreferencesKeys.TOP_MARGIN_DP] = CutoutDetector.DEFAULT_TOP_MARGIN_DP
+                preferences[PreferencesKeys.EXPANDED_TOP_MARGIN_DP] = CutoutDetector.DEFAULT_EXPANDED_TOP_MARGIN_DP
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist preset to DataStore", e)

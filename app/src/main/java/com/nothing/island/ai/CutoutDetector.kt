@@ -46,13 +46,14 @@ object CutoutDetector {
     const val A069_CUTOUT_WIDTH_PX = 106.0f      // 35.33 dp
 
     // Configurable calibration defaults in DP
-    const val DEFAULT_TOP_MARGIN_DP = 9.0f              // Vertical offset from top of glass (27px)
+    const val DEFAULT_TOP_MARGIN_DP = 9.0f              // Vertical offset for compact capsule (27px on 3.0 density)
+    const val DEFAULT_EXPANDED_TOP_MARGIN_DP = 0.0f     // Vertical offset for expanded card (docks at top glass)
     const val DEFAULT_COMPACT_WIDTH_DP = 124.0f         // Width of compact pill (372px)
     const val DEFAULT_COMPACT_VISIBLE_HEIGHT_DP = 36.0f // True visual height of capsule (108px)
     const val DEFAULT_COMPACT_CORNER_RADIUS_DP = 18.0f  // Half of height = perfect capsule silhouette (54px)
     const val DEFAULT_COMPACT_TOUCH_HEIGHT_DP = 58.0f   // WindowManager touch bridge height (174px, crosses 162px status bar)
     const val DEFAULT_COMPACT_HEIGHT_DP = 58.0f         // Backward-compatible touch window height
-    const val DEFAULT_EXPANDED_WIDTH_DP = 350.0f
+    const val DEFAULT_EXPANDED_WIDTH_DP = 390.0f
     const val DEFAULT_EXPANDED_HEIGHT_DP = 210.0f
 
     /**

@@ -90,6 +90,7 @@ fun IslandPreview(
     accentColor: Color = NothingTokens.NothingRed,
     pillBackgroundColor: Color = NothingTokens.NothingBlack,
     visualizerStyle: MusicVisualizerStyle = MusicVisualizerStyle.VERTICAL_EQUALIZER,
+    isCameraCutoutEnabled: Boolean = false,
     onModeChanged: ((IslandPreviewMode) -> Unit)? = null,
     // Backward compatibility parameters for legacy callers
     isExpanded: Boolean = false,
@@ -255,9 +256,9 @@ fun IslandPreview(
                     when (currentMode) {
                         IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, pillBackgroundColor, accentColor)
                         IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(pillBackgroundColor, accentColor, isCameraCutoutEnabled)
                         IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(pillBackgroundColor, accentColor, visualizerStyle)
-                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor, visualizerStyle)
+                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor, visualizerStyle, isCameraCutoutEnabled)
                         IslandPreviewMode.CHARGING -> PreviewChargingPill(pillBackgroundColor, accentColor)
                         IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(pillBackgroundColor, accentColor)
                         IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(pillBackgroundColor, accentColor)
@@ -372,14 +373,15 @@ private fun PreviewNotifCompact(bg: Color, accent: Color) {
 }
 
 @Composable
-private fun PreviewNotifExpanded(bg: Color, accent: Color) {
+private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled: Boolean = false) {
+    val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(shape)
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderProminent, RoundedCornerShape(22.dp))
+            .border(1.dp, NothingTokens.NothingBorderProminent, shape)
             .padding(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -541,14 +543,15 @@ private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: Music
 }
 
 @Composable
-private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle) {
+private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle, isCameraCutoutEnabled: Boolean = false) {
+    val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(shape)
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderProminent, RoundedCornerShape(22.dp))
+            .border(1.dp, NothingTokens.NothingBorderProminent, shape)
             .padding(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {

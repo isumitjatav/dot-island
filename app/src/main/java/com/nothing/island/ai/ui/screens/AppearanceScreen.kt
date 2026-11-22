@@ -109,7 +109,8 @@ fun AppearanceScreen(
             cornerRadiusDp = prefs.cornerRadiusDp,
             topOffsetDp = prefs.topMarginDp,
             horizontalOffsetDp = prefs.horizontalOffsetDp,
-            accentColor = Color(prefs.accentColorHex)
+            accentColor = Color(prefs.accentColorHex),
+            isCameraCutoutEnabled = prefs.isCameraCutoutEnabled
         )
 
         Spacer(modifier = Modifier.height(18.dp))
@@ -216,11 +217,22 @@ fun AppearanceScreen(
                 )
 
                 CustomSlider(
-                    label = "Vertical Top Offset (Y)",
+                    label = "Compact Top Offset (Y)",
                     value = prefs.topMarginDp,
                     range = 0f..24f,
                     unit = "dp",
                     onValueChange = { repository.updateLiveCalibration(topMarginDp = it) },
+                    onValueChangeFinished = {
+                        coroutineScope.launch { repository.persistCurrentCalibration() }
+                    }
+                )
+
+                CustomSlider(
+                    label = "Expanded Top Offset (Y)",
+                    value = prefs.expandedTopMarginDp,
+                    range = 0f..24f,
+                    unit = "dp",
+                    onValueChange = { repository.updateLiveCalibration(expandedTopMarginDp = it) },
                     onValueChangeFinished = {
                         coroutineScope.launch { repository.persistCurrentCalibration() }
                     }

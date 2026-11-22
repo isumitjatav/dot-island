@@ -182,13 +182,16 @@ fun CallExpandedView(
 
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 24f) else RoundedCornerShape(24.dp)
 
+    val topPadding = if (isCameraCutoutEnabled) 36.dp else 20.dp
+    val bottomPadding = if (isCameraCutoutEnabled) 16.dp else 20.dp
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
             .background(NothingPrimaryBackground)
             .border(1.dp, NothingDivider, cardShape)
-            .padding(20.dp),
+            .padding(start = 20.dp, end = 20.dp, top = topPadding, bottom = bottomPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
