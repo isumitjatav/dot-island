@@ -860,11 +860,11 @@ fun DashboardCard(
                         )
                     }
             ) {
-                // 1. Top Punch-hole clearance spacer (48dp / 144px below status bar)
+                // 1. Top Punch-hole clearance spacer
                 Spacer(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp)
+                        .height(if (isCameraCutoutEnabled) 18.dp else 24.dp)
                 )
 
                 // 2. Header Row: Clock & Date (Left), Weather (Center), COLLAPSE (Right)

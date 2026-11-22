@@ -16,8 +16,8 @@ import androidx.compose.ui.unit.dp
  * the physical camera circle, matching Nothing OS hardware geometry and reference.
  */
 fun notchedCardShape(
-    notchWidthDp: Float = 42f,
-    notchDepthDp: Float = 42f,
+    notchWidthDp: Float = 40f,
+    notchDepthDp: Float = 22f,
     cornerRadiusDp: Float = 28f,
 ): Shape = object : Shape {
     override fun createOutline(

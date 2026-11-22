@@ -90,14 +90,14 @@ fun CallCompactView(
     Box(modifier = modifier, contentAlignment = Alignment.CenterStart) {
         Box(
             modifier = Modifier
-                .padding(start = if (showEnd) 18.dp else 0.dp)
-                .width(200.dp)
+                .padding(start = if (showEnd) 15.dp else 0.dp)
+                .width(170.dp)
                 .height(36.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
                 .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(18.dp))
                 .clickable(onClick = onTap)
-                .padding(horizontal = 14.dp),
+                .padding(horizontal = 12.dp),
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -105,10 +105,10 @@ fun CallCompactView(
                 Text(
                     text = if (isSpeakerOn) "🔊" else "☎",
                     color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(8.dp))
                 // Live timer or dialing text
                 Text(
                     text = when {
@@ -124,7 +124,7 @@ fun CallCompactView(
                 Spacer(Modifier.weight(1f))
                 // Audio waveform bars
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    listOf(6f, 12f, 8f, 16f, 10f).forEachIndexed { index, h ->
+                    listOf(5f, 11f, 7f, 14f, 9f).forEachIndexed { index, h ->
                         val b by pulse.animateFloat(
                             initialValue = h * 0.6f, targetValue = h,
                             animationSpec = infiniteRepeatable(
@@ -149,14 +149,14 @@ fun CallCompactView(
         if (showEnd) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(30.dp)
                     .clip(CircleShape)
                     .background(NothingPrimaryAccent)
-                    .border(3.dp, NothingPrimaryBackground, CircleShape)
-                    .clickable(onClick = onEndCall!!),
+                    .border(2.dp, NothingPrimaryBackground, CircleShape)
+                    .clickable(onClick = { onEndCall?.invoke() }),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("✕", color = NothingPrimaryText, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                Text("✕", color = NothingPrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -187,8 +187,8 @@ fun CallExpandedView(
 
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
 
-    val topPadding = if (isCameraCutoutEnabled) 36.dp else 20.dp
-    val bottomPadding = if (isCameraCutoutEnabled) 16.dp else 20.dp
+    val topPadding = if (isCameraCutoutEnabled) 20.dp else 16.dp
+    val bottomPadding = if (isCameraCutoutEnabled) 14.dp else 16.dp
 
     Column(
         modifier = modifier

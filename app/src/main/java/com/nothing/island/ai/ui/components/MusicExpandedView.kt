@@ -165,8 +165,9 @@ fun MusicExpandedView(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Top Punch-hole clearance spacer (48dp / 144px below status bar)
-            Spacer(modifier = Modifier.height(topClearanceDp))
+            // 1. Top Punch-hole clearance spacer
+            val effectiveTopClearance = if (isCameraCutoutEnabled) 18.dp else 24.dp
+            Spacer(modifier = Modifier.height(effectiveTopClearance))
 
             // 2. Header Row: Source app, Audio device output, and Collapse chip
             Row(

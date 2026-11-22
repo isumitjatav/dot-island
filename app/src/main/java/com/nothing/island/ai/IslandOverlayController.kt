@@ -621,10 +621,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallController.decline(appContext)) {
-                                    stopCallTicker()
-                                    collapse()
+                                val currentCall = priorityManager?.activeEvent
+                                val callId = when (currentCall) {
+                                    is IslandEvent.CallConnected -> currentCall.callId
+                                    is IslandEvent.IncomingCallRinging -> currentCall.callId
+                                    else -> "active_call"
                                 }
+                                CallController.decline(appContext)
+                                stopCallTicker()
+                                eventEngine.emit(IslandEvent.CallEnded(id = "call_end_$callId", callId = callId))
+                                collapse()
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
@@ -935,10 +941,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
-                                if (CallController.decline(appContext)) {
-                                    stopCallTicker()
-                                    collapse()
+                                val currentCall = priorityManager?.activeEvent
+                                val callId = when (currentCall) {
+                                    is IslandEvent.CallConnected -> currentCall.callId
+                                    is IslandEvent.IncomingCallRinging -> currentCall.callId
+                                    else -> "active_call"
                                 }
+                                CallController.decline(appContext)
+                                stopCallTicker()
+                                eventEngine.emit(IslandEvent.CallEnded(id = "call_end_$callId", callId = callId))
+                                collapse()
                             },
                             onCollapse = {
                                 Log.d("IslandTouch", "onCollapse lambda invoked")
@@ -1276,7 +1288,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             } else if (isEarbudActive) {
                 320f // Full-width capsule for the earbud pill's horizontal spring expansion
             } else if (isCallActive) {
-                232f // 200dp call pill + 32dp for the attached red end button
+                200f // 170dp call pill + 30dp for the attached red end button
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {
