@@ -299,6 +299,9 @@ fun IslandOverlayView(
     val enabledQuickTools by remember {
         com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context).quickToolsFlow()
     }.collectAsState(initial = com.nothing.island.ai.ui.components.QuickTools.DEFAULT.toSet())
+    val callPrefs by remember {
+        com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context).callPreferencesFlow()
+    }.collectAsState(initial = com.nothing.island.ai.telephony.CallPreferences.DEFAULTS)
     val gestureExecutor = remember(context, onToggleExpand, onExpandDashboard, onClearHistory) {
         IslandGestureActionExecutor(
             context = context,
@@ -364,7 +367,7 @@ fun IslandOverlayView(
                     event = activeEvent!!,
                     onTap = onExpandCall,
                     onEndCall = onDeclineCall,
-                    showEndButton = true,
+                    showEndButton = callPrefs.doubleIncomingCallActions,
                 )
             } else if (isEarbudEvent) {
                 // Bluetooth headset pill with circular battery ring

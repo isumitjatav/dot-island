@@ -107,6 +107,14 @@ fun StudiosHubScreen(
             accentColor = NothingTokens.NothingTextSecondary
         ),
         StudioCardItem(
+            destination = IslandDestination.CallStudio,
+            title = "CALL STUDIO",
+            subtitle = "System & VoIP Call Notch, End Button & Live Preview",
+            badgeText = "CALL",
+            glyphSymbol = "📞",
+            accentColor = NothingTokens.NothingGreen
+        ),
+        StudioCardItem(
             destination = IslandDestination.Settings,
             title = "SYSTEM SETTINGS & GATEWAYS",
             subtitle = "AOSP Layer 24000 Anchor, Permissions & Hardware Info",

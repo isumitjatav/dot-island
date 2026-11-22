@@ -137,6 +137,9 @@ class IslandPreferencesRepository internal constructor(
         val ANIM_GLOW_SPEED = floatPreferencesKey("anim_glow_speed")
         val ANIM_GLOW_THICKNESS = floatPreferencesKey("anim_glow_thickness")
         val QUICK_TOOLS_ENABLED = stringSetPreferencesKey("quick_tools_enabled")
+        val CALL_ENABLED = booleanPreferencesKey("call_enabled")
+        val CALL_DOUBLE_ACTIONS = booleanPreferencesKey("call_double_actions")
+        val CALL_OTHER_APPS = booleanPreferencesKey("call_other_apps")
     }
 
     object NotificationPreferencesKeys {
@@ -446,6 +449,24 @@ class IslandPreferencesRepository internal constructor(
                 glowThickness = p[PreferencesKeys.ANIM_GLOW_THICKNESS] ?: 2.0f,
             )
         }
+
+    /** Call studio settings. */
+    fun callPreferencesFlow(): kotlinx.coroutines.flow.Flow<com.nothing.island.ai.telephony.CallPreferences> =
+        dataStore.data.map { p ->
+            com.nothing.island.ai.telephony.CallPreferences(
+                systemCallEnabled = p[PreferencesKeys.CALL_ENABLED] ?: true,
+                doubleIncomingCallActions = p[PreferencesKeys.CALL_DOUBLE_ACTIONS] ?: true,
+                otherAppsCalls = p[PreferencesKeys.CALL_OTHER_APPS] ?: true,
+            )
+        }
+
+    suspend fun updateCallPreferences(prefs: com.nothing.island.ai.telephony.CallPreferences) {
+        dataStore.edit { p ->
+            p[PreferencesKeys.CALL_ENABLED] = prefs.systemCallEnabled
+            p[PreferencesKeys.CALL_DOUBLE_ACTIONS] = prefs.doubleIncomingCallActions
+            p[PreferencesKeys.CALL_OTHER_APPS] = prefs.otherAppsCalls
+        }
+    }
 
     /** Enabled quick-tool ids shown in the island's quick controls drawer. */
     fun quickToolsFlow(): kotlinx.coroutines.flow.Flow<Set<String>> =

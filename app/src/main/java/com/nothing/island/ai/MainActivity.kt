@@ -210,6 +210,13 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
+                                    is IslandDestination.CallStudio -> {
+                                        com.nothing.island.ai.ui.screens.CallStudioScreen(
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Studios
+                                            }
+                                        )
+                                    }
 
                                     // Preserved Legacy Destinations (Backward Compatibility)
                                     is IslandDestination.Appearance -> {

@@ -61,7 +61,7 @@ class DesignSystemAndNavigationTest {
     @Test
     fun testStudioHubSubDestinations() {
         val hubDestinations = IslandDestination.studioHubDestinations
-        assertEquals(7, hubDestinations.size)
+        assertEquals(8, hubDestinations.size)
 
         assertTrue(hubDestinations.contains(IslandDestination.ThemeStudio))
         assertTrue(hubDestinations.contains(IslandDestination.AnimationStudio))
@@ -70,6 +70,7 @@ class DesignSystemAndNavigationTest {
         assertTrue(hubDestinations.contains(IslandDestination.MascotStudio))
         assertTrue(hubDestinations.contains(IslandDestination.GeometryStudio))
         assertTrue(hubDestinations.contains(IslandDestination.Settings))
+        assertTrue(hubDestinations.contains(IslandDestination.CallStudio))
 
         // Verify routes
         assertEquals("studio_theme", IslandDestination.ThemeStudio.route)
@@ -78,6 +79,7 @@ class DesignSystemAndNavigationTest {
         assertEquals("studio_peripherals", IslandDestination.PeripheralsStudio.route)
         assertEquals("studio_geometry", IslandDestination.GeometryStudio.route)
         assertEquals("settings", IslandDestination.Settings.route)
+        assertEquals("studio_call", IslandDestination.CallStudio.route)
     }
 
     @Test
