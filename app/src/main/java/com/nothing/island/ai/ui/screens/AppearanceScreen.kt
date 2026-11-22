@@ -236,6 +236,17 @@ fun AppearanceScreen(
                         coroutineScope.launch { repository.persistCurrentCalibration() }
                     }
                 )
+
+                PreferenceToggleRow(
+                    title = "Camera Cutout Notch",
+                    subtitle = "Wrap expanded cards around front camera lens (reference style). When disabled, cards use smooth rounded corners.",
+                    checked = prefs.isCameraCutoutEnabled,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            repository.updateCameraCutoutEnabled(enabled)
+                        }
+                    }
+                )
             }
         }
 

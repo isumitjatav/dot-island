@@ -83,9 +83,10 @@ fun MusicExpandedView(
     onCollapse: () -> Unit,
     onSwipe: (SwipeDirection) -> Unit = {},
     topClearanceDp: androidx.compose.ui.unit.Dp = 48.dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isCameraCutoutEnabled: Boolean = false
 ) {
-    val cardShape = notchedCardShape()
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
     val accentColor = preferences.resolveAccent(trackState.dominantColor)
 
     var totalDrag by remember { mutableFloatStateOf(0f) }

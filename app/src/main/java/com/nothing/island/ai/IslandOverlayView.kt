@@ -621,7 +621,8 @@ fun IslandOverlayView(
                                 onOpenContent = onOpenContent,
                                 onExecuteAction = onExecuteAction,
                                 onSendReply = onSendReply,
-                                onInputFocusChanged = onInputFocusChanged
+                                onInputFocusChanged = onInputFocusChanged,
+                                isCameraCutoutEnabled = preferences.isCameraCutoutEnabled
                             )
                         } else if (activeNotification != null) {
                             NotificationCard(
@@ -644,6 +645,7 @@ fun IslandOverlayView(
                                 onExecuteAction = onExecuteAction,
                                 onSendReply = onSendReply,
                                 onInputFocusChanged = onInputFocusChanged,
+                                isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
@@ -675,6 +677,7 @@ fun IslandOverlayView(
                         onCollapse = onCollapse,
                         onSwipe = onSwipeActivity,
                         listState = dashboardListState,
+                        isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -693,6 +696,7 @@ fun IslandOverlayView(
                         onSeekTo = onSeekTo,
                         onCollapse = onCollapse,
                         onSwipe = onSwipeActivity,
+                        isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -707,6 +711,7 @@ fun IslandOverlayView(
                         preferences = batteryPreferences,
                         onCollapse = onCollapse,
                         onSwipe = onSwipeActivity,
+                        isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -727,6 +732,7 @@ fun IslandOverlayView(
                             elapsedSeconds = elapsed,
                             onAnswer = onAnswerCall,
                             onDecline = onDeclineCall,
+                            isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -747,6 +753,7 @@ fun IslandOverlayView(
                         onVolumeChange = onQuickVolume,
                         onHistory = onQuickHistory,
                         onAi = onQuickAi,
+                        isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -776,9 +783,10 @@ fun DashboardCard(
     onCollapse: () -> Unit,
     onSwipe: (SwipeDirection) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isCameraCutoutEnabled: Boolean = false
 ) {
-    val cardShape = com.nothing.island.ai.ui.components.notchedCardShape()
+    val cardShape = if (isCameraCutoutEnabled) com.nothing.island.ai.ui.components.notchedCardShape() else RoundedCornerShape(26.dp)
     var isConfirmingClear by remember { mutableStateOf(false) }
 
     var totalHeaderDrag by remember { mutableFloatStateOf(0f) }

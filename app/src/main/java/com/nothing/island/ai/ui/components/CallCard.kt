@@ -171,6 +171,7 @@ fun CallExpandedView(
     onAnswer: () -> Unit,
     onDecline: () -> Unit,
     modifier: Modifier = Modifier,
+    isCameraCutoutEnabled: Boolean = false,
 ) {
     val isRinging = event is IslandEvent.IncomingCallRinging
     val caller = when (event) {
@@ -179,12 +180,14 @@ fun CallExpandedView(
         else -> "Call"
     }
 
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 24f) else RoundedCornerShape(24.dp)
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(notchedCardShape())
+            .clip(cardShape)
             .background(NothingPrimaryBackground)
-            .border(1.dp, NothingDivider, notchedCardShape())
+            .border(1.dp, NothingDivider, cardShape)
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

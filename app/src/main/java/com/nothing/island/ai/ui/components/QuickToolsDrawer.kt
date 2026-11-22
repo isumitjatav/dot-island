@@ -88,16 +88,18 @@ fun QuickToolsDrawer(
     onHistory: () -> Unit = {},
     onAi: () -> Unit = {},
     modifier: Modifier = Modifier,
+    isCameraCutoutEnabled: Boolean = false,
 ) {
     val context = LocalContext.current
     val scroll = rememberScrollState()
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 24f) else RoundedCornerShape(24.dp)
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .clip(notchedCardShape())
+            .clip(cardShape)
             .background(NothingPrimaryBackground)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, notchedCardShape())
+            .border(1.dp, NothingTokens.NothingBorderSubtle, cardShape)
             .verticalScroll(scroll)
             .padding(16.dp),
     ) {

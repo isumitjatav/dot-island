@@ -243,7 +243,8 @@ fun NotificationCard(
     onOpenContent: ((String) -> Unit)? = null,
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
-    onInputFocusChanged: ((Boolean) -> Unit)? = null
+    onInputFocusChanged: ((Boolean) -> Unit)? = null,
+    isCameraCutoutEnabled: Boolean = false
 ) {
     val context = LocalContext.current
     val resolvedAppLabel = appName ?: remember(event.packageName) {
@@ -280,7 +281,8 @@ fun NotificationCard(
         onOpenContent = onOpenContent,
         onExecuteAction = onExecuteAction,
         onSendReply = onSendReply,
-        onInputFocusChanged = onInputFocusChanged
+        onInputFocusChanged = onInputFocusChanged,
+        isCameraCutoutEnabled = isCameraCutoutEnabled
     )
 }
 
@@ -313,7 +315,8 @@ fun NotificationCard(
     onOpenContent: ((String) -> Unit)? = null,
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
-    onInputFocusChanged: ((Boolean) -> Unit)? = null
+    onInputFocusChanged: ((Boolean) -> Unit)? = null,
+    isCameraCutoutEnabled: Boolean = false
 ) {
     val state = remember(packageName, title, text, subText, timestamp, previewMode, appName, progress, maxProgress, isIndeterminate, hasProgress, progressState) {
         NotificationCardResolver.resolve(
@@ -362,7 +365,7 @@ fun NotificationCard(
         }
     }
 
-    val cardShape = notchedCardShape()
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 50f
 

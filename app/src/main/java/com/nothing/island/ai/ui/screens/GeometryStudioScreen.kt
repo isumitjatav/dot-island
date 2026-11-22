@@ -17,11 +17,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,6 +33,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.ui.components.IslandPreview
 import com.nothing.island.ai.ui.components.NothingCard
@@ -51,6 +55,7 @@ fun GeometryStudioScreen(
 ) {
     val context = LocalContext.current
     val repository = remember { IslandPreferencesRepository.getInstance(context) }
+    val coroutineScope = rememberCoroutineScope()
     val prefs by repository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
 
@@ -147,6 +152,49 @@ fun GeometryStudioScreen(
                     label = "Top Margin Offset",
                     formattedValue = "${prefs.topMarginDp.toInt()} DP"
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        NothingSectionHeader(title = "EXPANDED CARD CUTOUT", isAccent = true)
+        NothingCard(variant = NothingCardVariant.STANDARD) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Camera Cutout Notch",
+                            color = NothingTokens.NothingTextPrimary,
+                            fontSize = 13.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "Contour expanded cards around front camera lens",
+                            color = NothingTokens.NothingTextTertiary,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                    Switch(
+                        checked = prefs.isCameraCutoutEnabled,
+                        onCheckedChange = { enabled ->
+                            coroutineScope.launch {
+                                repository.updateCameraCutoutEnabled(enabled)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = NothingTokens.NothingTextPrimary,
+                            checkedTrackColor = NothingTokens.NothingRed,
+                            uncheckedThumbColor = NothingTokens.NothingTextTertiary,
+                            uncheckedTrackColor = NothingTokens.NothingSurfaceMedium
+                        )
+                    )
+                }
             }
         }
 

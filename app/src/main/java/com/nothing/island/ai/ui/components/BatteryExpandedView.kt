@@ -58,9 +58,10 @@ fun BatteryExpandedView(
     onCollapse: () -> Unit,
     onSwipe: (SwipeDirection) -> Unit = {},
     topClearanceDp: Dp = 48.dp,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isCameraCutoutEnabled: Boolean = false
 ) {
-    val cardShape = notchedCardShape()
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
     val accentColor = Color(preferences.accentColorHex)
 
     var totalDrag by remember { mutableFloatStateOf(0f) }

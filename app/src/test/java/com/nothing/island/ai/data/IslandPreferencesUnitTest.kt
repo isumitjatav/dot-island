@@ -79,6 +79,7 @@ class IslandPreferencesUnitTest {
         assertFalse("Default reduced motion must be disabled", defaults.reducedMotionEnabled)
         assertEquals("Default preset must be Nothing Minimal", "Nothing Minimal", defaults.presetName)
         assertEquals("Default accent color must be Nothing Red", 0xFFD71920L, defaults.accentColorHex)
+        assertFalse("Default camera cutout notch must be disabled", defaults.isCameraCutoutEnabled)
     }
 
     // -------------------------------------------------------------
@@ -94,6 +95,21 @@ class IslandPreferencesUnitTest {
         assertEquals(0.0f, initialPrefs.horizontalOffsetDp, 0.001f)
         assertEquals(18.0f, initialPrefs.cornerRadiusDp, 0.001f)
         assertTrue(initialPrefs.isPulsing)
+        assertFalse(initialPrefs.isCameraCutoutEnabled)
+    }
+
+    @Test
+    fun test_cameraCutoutEnabledToggle() = testScope.runTest {
+        assertFalse(repository.livePreferences.value.isCameraCutoutEnabled)
+        repository.updateCameraCutoutEnabled(true)
+        advanceUntilIdle()
+        assertTrue(repository.livePreferences.value.isCameraCutoutEnabled)
+        val persisted = repository.preferencesFlow.first()
+        assertTrue(persisted.isCameraCutoutEnabled)
+
+        repository.updateCameraCutoutEnabled(false)
+        advanceUntilIdle()
+        assertFalse(repository.livePreferences.value.isCameraCutoutEnabled)
     }
 
     // -------------------------------------------------------------
