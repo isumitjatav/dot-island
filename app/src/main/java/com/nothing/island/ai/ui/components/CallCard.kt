@@ -59,6 +59,7 @@ fun CallCompactView(
     onTap: () -> Unit,
     onEndCall: (() -> Unit)? = null,
     showEndButton: Boolean = true,
+    isSpeakerOn: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val caller = when (event) {
@@ -68,6 +69,7 @@ fun CallCompactView(
         else -> "Call"
     }
     val isRinging = event is IslandEvent.IncomingCallRinging
+    val isDialing = (event as? IslandEvent.CallConnected)?.isDialing == true
 
     val pulse = rememberInfiniteTransition(label = "callPulse")
     val glow by pulse.animateFloat(
@@ -99,22 +101,22 @@ fun CallCompactView(
             contentAlignment = Alignment.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Green phone glyph
+                // Phone or speaker glyph
                 Text(
-                    text = "☎",
-                    color = NothingSuccess,
+                    text = if (isSpeakerOn) "🔊" else "☎",
+                    color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.width(10.dp))
-                // Live timer (green, matches reference)
+                // Live timer or dialing text
                 Text(
-                    text = if (isRinging) {
-                        if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL"
-                    } else {
-                        formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
+                    text = when {
+                        isRinging -> if ((event as IslandEvent.IncomingCallRinging).isVideoCall) "VIDEO" else "CALL"
+                        isDialing -> "CALLING"
+                        else -> formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
                     },
-                    color = if (isRinging) NothingPrimaryAccent else NothingSuccess,
+                    color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
                     fontSize = 12.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
@@ -136,7 +138,7 @@ fun CallCompactView(
                                 .width(2.dp)
                                 .height(b.dp)
                                 .clip(RoundedCornerShape(1.dp))
-                                .background(NothingSuccess)
+                                .background(if (isDialing) NothingSecondaryText else NothingSuccess)
                         )
                     }
                 }
@@ -170,17 +172,20 @@ fun CallExpandedView(
     elapsedSeconds: Long,
     onAnswer: () -> Unit,
     onDecline: () -> Unit,
+    onToggleSpeaker: (() -> Unit)? = null,
+    isSpeakerOn: Boolean = false,
     modifier: Modifier = Modifier,
     isCameraCutoutEnabled: Boolean = false,
 ) {
     val isRinging = event is IslandEvent.IncomingCallRinging
+    val isDialing = (event as? IslandEvent.CallConnected)?.isDialing == true
     val caller = when (event) {
         is IslandEvent.IncomingCallRinging -> event.callerDisplayName
         is IslandEvent.CallConnected -> event.callerDisplayName
         else -> "Call"
     }
 
-    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 24f) else RoundedCornerShape(24.dp)
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
 
     val topPadding = if (isCameraCutoutEnabled) 36.dp else 20.dp
     val bottomPadding = if (isCameraCutoutEnabled) 16.dp else 20.dp
@@ -196,8 +201,16 @@ fun CallExpandedView(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            text = if (isRinging) "INCOMING CALL" else "ACTIVE CALL",
-            color = if (isRinging) NothingPrimaryAccent else NothingSuccess,
+            text = when {
+                isRinging -> "INCOMING CALL"
+                isDialing -> "OUTGOING CALL"
+                else -> "ACTIVE CALL"
+            },
+            color = when {
+                isRinging -> NothingPrimaryAccent
+                isDialing -> NothingSecondaryText
+                else -> NothingSuccess
+            },
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             letterSpacing = 2.sp,
@@ -216,8 +229,9 @@ fun CallExpandedView(
         Text(
             text = when {
                 isRinging && (event as? IslandEvent.IncomingCallRinging)?.isVideoCall == true -> "VIDEO CALL"
-                event is IslandEvent.CallConnected -> formatCallDuration(elapsedSeconds)
                 isRinging -> "INCOMING"
+                isDialing -> "CALLING..."
+                event is IslandEvent.CallConnected -> formatCallDuration(elapsedSeconds)
                 else -> "CALL"
             },
             color = NothingSecondaryText,
@@ -256,17 +270,42 @@ fun CallExpandedView(
                 }
             }
         } else {
-            // Ongoing call: a single END CALL button (no ANSWER)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(NothingPrimaryAccent)
-                    .clickable(onClick = onDecline),
-                contentAlignment = Alignment.Center,
+            // Ongoing or Dialing call: SPEAKER + END CALL
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("END CALL", color = NothingPrimaryText, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                if (onToggleSpeaker != null) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (isSpeakerOn) NothingPrimaryText.copy(alpha = 0.15f) else NothingElevatedSurface)
+                            .border(1.dp, if (isSpeakerOn) NothingPrimaryText else NothingDivider, RoundedCornerShape(14.dp))
+                            .clickable(onClick = onToggleSpeaker),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = if (isSpeakerOn) "🔊 SPEAKER ON" else "🔈 SPEAKER",
+                            color = if (isSpeakerOn) NothingPrimaryText else NothingSecondaryText,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = if (isSpeakerOn) FontWeight.Bold else FontWeight.Normal,
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(NothingPrimaryAccent)
+                        .clickable(onClick = onDecline),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("END CALL", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

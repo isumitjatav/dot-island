@@ -12,9 +12,11 @@ data class CallSignal(
     val title: String?,
     val text: String?,
     val actionTitles: List<String>,
+    val showChronometer: Boolean = false,
+    val subText: String? = null,
 )
 
-enum class CallPhase { INCOMING, ONGOING }
+enum class CallPhase { INCOMING, DIALING, ONGOING }
 
 data class CallNotificationInfo(
     val callerDisplayName: String,
@@ -34,15 +36,32 @@ object CallNotificationParser {
             ?: return null
 
         val actions = signal.actionTitles.map { it.lowercase() }
-        val isIncoming = actions.any { title ->
-            title.contains("answer") || title.contains("accept") ||
-                title.contains("reject") || title.contains("decline") || title.contains("hang")
+        val allText = "${signal.title.orEmpty()} ${signal.text.orEmpty()} ${signal.subText.orEmpty()}".lowercase()
+
+        // 1. Incoming call check: actions contain Answer / Accept / Decline / Hang Up, OR text contains "incoming"
+        val hasAnswerAction = actions.any { it.contains("answer") || it.contains("accept") }
+        val isExplicitIncoming = hasAnswerAction || allText.contains("incoming call") || allText.contains("incoming voice")
+
+        // 2. Outgoing dialing / connecting check:
+        // Dialers (Google Dialer, Nothing OS) show "Calling…", "Dialing…", "Connecting…", "Outgoing call", "Ringing…"
+        // before the other party answers, and showChronometer is false.
+        val isDialingText = allText.contains("calling") ||
+                allText.contains("dialing") ||
+                allText.contains("connecting") ||
+                allText.contains("ringing") ||
+                allText.contains("outgoing call")
+
+        val phase = when {
+            isExplicitIncoming -> CallPhase.INCOMING
+            !signal.showChronometer && isDialingText -> CallPhase.DIALING
+            else -> CallPhase.ONGOING
         }
-        val isVideoCall = actions.any { it.contains("video") }
+
+        val isVideoCall = actions.any { it.contains("video") } || allText.contains("video call")
 
         return CallNotificationInfo(
             callerDisplayName = caller,
-            phase = if (isIncoming) CallPhase.INCOMING else CallPhase.ONGOING,
+            phase = phase,
             isVideoCall = isVideoCall,
         )
     }

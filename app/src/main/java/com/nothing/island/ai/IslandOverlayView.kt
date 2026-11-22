@@ -307,6 +307,12 @@ fun IslandOverlayView(
     val callPrefs by remember {
         com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context).callPreferencesFlow()
     }.collectAsState(initial = com.nothing.island.ai.telephony.CallPreferences.DEFAULTS)
+    var isSpeakerOn by remember {
+        mutableStateOf(com.nothing.island.ai.telephony.CallController.isSpeakerOn(context))
+    }
+    val onToggleSpeaker = {
+        isSpeakerOn = com.nothing.island.ai.telephony.CallController.toggleSpeaker(context)
+    }
     val gestureExecutor = remember(context, onToggleExpand, onExpandDashboard, onClearHistory) {
         IslandGestureActionExecutor(
             context = context,
@@ -373,6 +379,7 @@ fun IslandOverlayView(
                     onTap = onExpandCall,
                     onEndCall = onDeclineCall,
                     showEndButton = callPrefs.doubleIncomingCallActions,
+                    isSpeakerOn = isSpeakerOn,
                 )
             } else if (isEarbudEvent) {
                 // Bluetooth headset pill with circular battery ring
@@ -740,6 +747,8 @@ fun IslandOverlayView(
                             elapsedSeconds = elapsed,
                             onAnswer = onAnswerCall,
                             onDecline = onDeclineCall,
+                            onToggleSpeaker = onToggleSpeaker,
+                            isSpeakerOn = isSpeakerOn,
                             isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                             modifier = Modifier.fillMaxSize()
                         )

@@ -61,6 +61,67 @@ class CallNotificationParserUnitTest {
     }
 
     @Test
+    fun dialingCall_withCallingText_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "Calling…",
+                actionTitles = listOf("Hang up"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
+    fun dialingCall_withConnectingText_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "Connecting…",
+                actionTitles = listOf("End call"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
+    fun dialingCall_withOutgoingSubText_isDetectedAsDialing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "",
+                subText = "Outgoing call",
+                actionTitles = listOf("End call"),
+                showChronometer = false,
+            )
+        )
+        assertEquals(CallPhase.DIALING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
+    fun connectedCall_withChronometer_isDetectedAsOngoing() {
+        val info = CallNotificationParser.parse(
+            CallSignal(
+                category = CallNotificationParser.CATEGORY_CALL,
+                title = "Papa",
+                text = "Calling…",
+                actionTitles = listOf("End call"),
+                showChronometer = true,
+            )
+        )
+        assertEquals(CallPhase.ONGOING, info?.phase)
+        assertEquals("Papa", info?.callerDisplayName)
+    }
+
+    @Test
     fun blankCaller_isIgnored() {
         assertNull(
             CallNotificationParser.parse(

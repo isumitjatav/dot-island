@@ -11,6 +11,7 @@
 
     <!-- R9: optional, user-granted permission for in-island answer/decline -->
     <uses-permission android:name="android.permission.ANSWER_PHONE_CALLS" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
 
     <application
         android:allowBackup="true"

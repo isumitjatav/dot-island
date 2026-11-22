@@ -73,7 +73,7 @@ class IslandPreferencesUnitTest {
         assertEquals("Default expanded top margin must be 0dp (status bar dock)", 0.0f, defaults.expandedTopMarginDp, 0.001f)
         assertEquals("Default horizontal offset must be 0dp (centered)", 0.0f, defaults.horizontalOffsetDp, 0.001f)
         assertEquals("Default corner radius must be 18dp (half height = perfect capsule)", 18.0f, defaults.cornerRadiusDp, 0.001f)
-        assertEquals("Default expanded width must be 350dp", 350.0f, defaults.expandedWidthDp, 0.001f)
+        assertEquals("Default expanded width must be 390dp", 390.0f, defaults.expandedWidthDp, 0.001f)
         assertEquals("Default expanded height must be 210dp", 210.0f, defaults.expandedHeightDp, 0.001f)
         assertTrue("Default pulse must be enabled", defaults.isPulsing)
         assertTrue("Default haptic feedback must be enabled", defaults.hapticFeedbackEnabled)

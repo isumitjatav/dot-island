@@ -87,7 +87,7 @@ class IslandPreferencesRepository internal constructor(
         val HARDWARE_DEFAULTS = IslandPreferences(
             compactWidthDp = CutoutDetector.DEFAULT_COMPACT_WIDTH_DP,          // 124.0f
             compactHeightDp = CutoutDetector.DEFAULT_COMPACT_VISIBLE_HEIGHT_DP, // 36.0f
-            expandedWidthDp = CutoutDetector.DEFAULT_EXPANDED_WIDTH_DP,        // 350.0f
+            expandedWidthDp = CutoutDetector.DEFAULT_EXPANDED_WIDTH_DP,        // 390.0f
             expandedHeightDp = CutoutDetector.DEFAULT_EXPANDED_HEIGHT_DP,      // 210.0f
             horizontalOffsetDp = 0f,
             topMarginDp = CutoutDetector.DEFAULT_TOP_MARGIN_DP,                // 9.0f (27px)
@@ -146,6 +146,7 @@ class IslandPreferencesRepository internal constructor(
         val CALL_ENABLED = booleanPreferencesKey("call_enabled")
         val CALL_DOUBLE_ACTIONS = booleanPreferencesKey("call_double_actions")
         val CALL_OTHER_APPS = booleanPreferencesKey("call_other_apps")
+        val CALL_AUTO_EXPAND = booleanPreferencesKey("call_auto_expand")
         val CAMERA_CUTOUT_ENABLED = booleanPreferencesKey("camera_cutout_enabled")
     }
 
@@ -352,12 +353,16 @@ class IslandPreferencesRepository internal constructor(
     private val _liveSystemEventsPreferences = MutableStateFlow(SystemEventsPreferences.DEFAULTS)
     val liveSystemEventsPreferences: StateFlow<SystemEventsPreferences> = _liveSystemEventsPreferences.asStateFlow()
 
+    private val _liveCallPreferences = MutableStateFlow(com.nothing.island.ai.telephony.CallPreferences.DEFAULTS)
+    val liveCallPreferences: StateFlow<com.nothing.island.ai.telephony.CallPreferences> = _liveCallPreferences.asStateFlow()
+
     private var syncJob: Job? = null
     private var notificationSyncJob: Job? = null
     private var musicSyncJob: Job? = null
     private var batterySyncJob: Job? = null
     private var gestureSyncJob: Job? = null
     private var systemEventsSyncJob: Job? = null
+    private var callSyncJob: Job? = null
 
     init {
         // Synchronize live StateFlow with persisted DataStore values on launch
@@ -391,6 +396,11 @@ class IslandPreferencesRepository internal constructor(
                 _liveSystemEventsPreferences.value = persisted
             }
         }
+        callSyncJob = scope.launch {
+            callPreferencesFlow().collect { persisted ->
+                _liveCallPreferences.value = persisted
+            }
+        }
     }
 
     /**
@@ -403,6 +413,7 @@ class IslandPreferencesRepository internal constructor(
         batterySyncJob?.cancel()
         gestureSyncJob?.cancel()
         systemEventsSyncJob?.cancel()
+        callSyncJob?.cancel()
     }
 
     private fun mapPreferences(preferences: Preferences): IslandPreferences {
@@ -469,14 +480,17 @@ class IslandPreferencesRepository internal constructor(
                 systemCallEnabled = p[PreferencesKeys.CALL_ENABLED] ?: true,
                 doubleIncomingCallActions = p[PreferencesKeys.CALL_DOUBLE_ACTIONS] ?: true,
                 otherAppsCalls = p[PreferencesKeys.CALL_OTHER_APPS] ?: true,
+                autoExpandCall = p[PreferencesKeys.CALL_AUTO_EXPAND] ?: false,
             )
         }
 
     suspend fun updateCallPreferences(prefs: com.nothing.island.ai.telephony.CallPreferences) {
+        _liveCallPreferences.value = prefs
         dataStore.edit { p ->
             p[PreferencesKeys.CALL_ENABLED] = prefs.systemCallEnabled
             p[PreferencesKeys.CALL_DOUBLE_ACTIONS] = prefs.doubleIncomingCallActions
             p[PreferencesKeys.CALL_OTHER_APPS] = prefs.otherAppsCalls
+            p[PreferencesKeys.CALL_AUTO_EXPAND] = prefs.autoExpandCall
         }
     }
 

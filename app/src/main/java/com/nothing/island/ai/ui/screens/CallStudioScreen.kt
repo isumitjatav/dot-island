@@ -187,6 +187,13 @@ fun CallStudioScreen(onNavigateBack: () -> Unit, modifier: Modifier = Modifier) 
                     badgeText = "END BTN",
                 )
                 NothingSwitchRow(
+                    title = "Auto-Expand Call Card",
+                    description = "Automatically expand into a full card when a call connects, instead of staying in compact pill mode.",
+                    checked = prefs.autoExpandCall,
+                    onCheckedChange = { enabled -> update { it.copy(autoExpandCall = enabled) } },
+                    badgeText = if (prefs.autoExpandCall) "EXPANDED" else "COMPACT",
+                )
+                NothingSwitchRow(
                     title = "Other Apps / VoIP Calls",
                     description = "Handle calls from third-party and VoIP applications on the notch.",
                     checked = prefs.otherAppsCalls,

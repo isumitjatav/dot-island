@@ -357,7 +357,8 @@ sealed interface IslandEvent {
         override val timeoutMs: Long = 0L,
         val callId: String,
         val callerDisplayName: String,
-        val durationSeconds: Long = 0L
+        val durationSeconds: Long = 0L,
+        val isDialing: Boolean = false
     ) : IslandEvent
 
     data class CallEnded(

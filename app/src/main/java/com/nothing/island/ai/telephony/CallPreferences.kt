@@ -5,6 +5,7 @@ data class CallPreferences(
     val systemCallEnabled: Boolean = true,
     val doubleIncomingCallActions: Boolean = true,
     val otherAppsCalls: Boolean = true,
+    val autoExpandCall: Boolean = false,
 ) {
     companion object {
         val DEFAULTS = CallPreferences()

@@ -182,23 +182,27 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     title = sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
                     text = sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
                     actionTitles = sbn.notification.actions?.mapNotNull { it.title?.toString() } ?: emptyList(),
+                    showChronometer = sbn.notification.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false),
+                    subText = sbn.notification.extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString(),
                 )
             )
             if (callInfo != null) {
                 val controller = IslandOverlayController.getInstance(applicationContext)
+                val callPrefs = controller.repository.liveCallPreferences.value
+                val callActions = sbn.notification.actions.orEmpty()
+                fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
+                    val label = action.title?.toString()?.lowercase().orEmpty()
+                    keywords.any { label.contains(it) }
+                }?.actionIntent
+
                 when (callInfo.phase) {
                     CallPhase.INCOMING -> {
                         activeCallKey = key
-                        val callActions = sbn.notification.actions.orEmpty()
-                        fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
-                            val label = action.title?.toString()?.lowercase().orEmpty()
-                            keywords.any { label.contains(it) }
-                        }?.actionIntent
                         CallActionRegistry.register(
                             CallActionRegistry.CallActions(
                                 key = key,
                                 answer = actionFor("answer", "accept"),
-                                decline = actionFor("decline", "reject", "hang"),
+                                decline = actionFor("decline", "reject", "hang", "end"),
                             )
                         )
                         controller.apply {
@@ -210,14 +214,50 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                     isVideoCall = callInfo.isVideoCall,
                                 )
                             )
-                            repository.expandCall()
+                            if (callPrefs.autoExpandCall) {
+                                repository.expandCall()
+                            }
                         }
                         Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
                     }
 
+                    CallPhase.DIALING -> {
+                        activeCallKey = key
+                        CallActionRegistry.register(
+                            CallActionRegistry.CallActions(
+                                key = key,
+                                answer = null,
+                                decline = actionFor("decline", "reject", "hang", "end"),
+                            )
+                        )
+                        controller.stopCallTicker()
+                        controller.eventEngine.emit(
+                            IslandEvent.CallConnected(
+                                id = "call_connected_$key",
+                                callId = key,
+                                callerDisplayName = callInfo.callerDisplayName,
+                                durationSeconds = 0L,
+                                isDialing = true,
+                            )
+                        )
+                        if (callPrefs.autoExpandCall) {
+                            controller.repository.expandCall()
+                        }
+                        Log.i(TAG, "R9 call dialing/outgoing: ${callInfo.callerDisplayName}")
+                    }
+
                     CallPhase.ONGOING -> {
                         activeCallKey = key
-                        val isAlreadyConnected = controller.priorityManager?.activeEvent is IslandEvent.CallConnected
+                        CallActionRegistry.register(
+                            CallActionRegistry.CallActions(
+                                key = key,
+                                answer = null,
+                                decline = actionFor("decline", "reject", "hang", "end"),
+                            )
+                        )
+                        val active = controller.priorityManager?.activeEvent as? IslandEvent.CallConnected
+                        val wasDialing = active?.isDialing == true
+                        val isAlreadyConnected = active != null && !wasDialing
                         if (!isAlreadyConnected) {
                             controller.eventEngine.emit(
                                 IslandEvent.CallConnected(
@@ -225,9 +265,12 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                     callId = key,
                                     callerDisplayName = callInfo.callerDisplayName,
                                     durationSeconds = 0L,
+                                    isDialing = false,
                                 )
                             )
-                            controller.repository.expandCall()
+                            if (callPrefs.autoExpandCall) {
+                                controller.repository.expandCall()
+                            }
                             controller.startCallTicker(key, callInfo.callerDisplayName)
                             Log.i(TAG, "R9 call connected: ${callInfo.callerDisplayName}")
                         }

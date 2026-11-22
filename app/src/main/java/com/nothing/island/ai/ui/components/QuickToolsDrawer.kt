@@ -92,7 +92,7 @@ fun QuickToolsDrawer(
 ) {
     val context = LocalContext.current
     val scroll = rememberScrollState()
-    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 24f) else RoundedCornerShape(24.dp)
+    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
 
     Column(
         modifier = modifier
