@@ -101,9 +101,9 @@ fun CallCompactView(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Green phone glyph
                 Text(
-                    text = "⌕",
+                    text = "☎",
                     color = NothingSuccess,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Spacer(Modifier.width(10.dp))
