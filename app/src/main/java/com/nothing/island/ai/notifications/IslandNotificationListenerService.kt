@@ -188,7 +188,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
             )
             if (callInfo != null) {
                 val controller = IslandOverlayController.getInstance(applicationContext)
-                val callPrefs = controller.repository.liveCallPreferences.value
+                val callPrefs = controller.preferencesRepository.liveCallPreferences.value
                 val callActions = sbn.notification.actions.orEmpty()
                 fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
                     val label = action.title?.toString()?.lowercase().orEmpty()

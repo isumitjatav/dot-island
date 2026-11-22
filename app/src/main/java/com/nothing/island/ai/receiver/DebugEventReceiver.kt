@@ -61,12 +61,15 @@ class DebugEventReceiver : BroadcastReceiver() {
                 IslandOverlayController.getInstance(context).repository.expandQuickTools()
             }
             ACTION_CALL -> {
+                val isDialing = intent.getBooleanExtra("is_dialing", false)
+                val duration = if (isDialing) 0L else intent.getLongExtra("duration", 8L)
                 controller.eventEngine.emit(
                     IslandEvent.CallConnected(
                         id = "debug_call_${System.currentTimeMillis()}",
                         callId = "debug_call_id",
                         callerDisplayName = intent.getStringExtra(EXTRA_NAME) ?: "Daisy Williams",
-                        durationSeconds = 8L,
+                        durationSeconds = duration,
+                        isDialing = isDialing,
                     )
                 )
             }
