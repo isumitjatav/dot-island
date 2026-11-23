@@ -1,5 +1,11 @@
 package com.nothing.island.ai.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +31,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -78,12 +94,69 @@ fun BatteryExpandedView(
         else -> NothingBorder
     }
 
+    // Animata-style Luminous Perimeter Comet for Charging
+    val infiniteTransition = rememberInfiniteTransition(label = "charging_border_anim")
+    val trailPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "charging_trail_phase"
+    )
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
             .background(NothingBlack)
             .border(1.dp, borderColor, cardShape)
+            .drawWithContent {
+                drawContent()
+                if (isCharging && !preferences.reducedMotion) {
+                    val strokeWidthPx = 2.dp.toPx()
+                    val rPx = 26.dp.toPx()
+                    val roundRectPath = Path().apply {
+                        addRoundRect(
+                            RoundRect(
+                                rect = Rect(
+                                    offset = Offset(strokeWidthPx / 2f, strokeWidthPx / 2f),
+                                    size = Size(size.width - strokeWidthPx, size.height - strokeWidthPx)
+                                ),
+                                cornerRadius = CornerRadius(rPx, rPx)
+                            )
+                        )
+                    }
+                    val pathMeasure = PathMeasure()
+                    pathMeasure.setPath(roundRectPath, false)
+                    val totalLength = pathMeasure.length
+                    if (totalLength > 0f) {
+                        val cometLength = totalLength * 0.22f
+                        val start = trailPhase * totalLength
+                        val end = start + cometLength
+                        val dst = Path()
+                        if (end <= totalLength) {
+                            pathMeasure.getSegment(start, end, dst, true)
+                        } else {
+                            pathMeasure.getSegment(start, totalLength, dst, true)
+                            pathMeasure.getSegment(0f, end - totalLength, dst, true)
+                        }
+                        // Soft glow aura underlayer
+                        drawPath(
+                            path = dst,
+                            color = accentColor.copy(alpha = 0.35f),
+                            style = Stroke(width = strokeWidthPx * 2.2f, cap = StrokeCap.Round)
+                        )
+                        // Crisp laser beam foreground
+                        drawPath(
+                            path = dst,
+                            color = accentColor.copy(alpha = 0.90f),
+                            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+                        )
+                    }
+                }
+            }
             .pointerInput(Unit) {
                 var dragX = 0f
                 var dragY = 0f

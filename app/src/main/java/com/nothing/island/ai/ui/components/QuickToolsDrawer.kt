@@ -1,6 +1,13 @@
 package com.nothing.island.ai.ui.components
 
 import android.media.AudioManager
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,15 +31,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -45,6 +59,8 @@ import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
 import com.nothing.island.ai.ui.theme.NothingSuccess
 import com.nothing.island.ai.ui.theme.NothingTokens
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Identifiers for the built-in quick tools. */
@@ -94,8 +110,100 @@ data class QuickTool(
     val action: () -> Unit,
 )
 
+private class DotSpark(
+    var x: Float,
+    var y: Float,
+    var radius: Float,
+    var alpha: Float,
+    var vx: Float,
+    var vy: Float
+)
+
 /**
- * Authentic Nothing OS-style interactive slider with smooth tap and drag tracking.
+ * Animated Quick Tool Tile with spring-loaded squash and shockwave ring micro-interaction.
+ */
+@Composable
+fun QuickToolTile(
+    tool: QuickTool,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
+    val shockwave = remember { Animatable(0f) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = modifier,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(52.dp)
+                .graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
+                .clip(RoundedCornerShape(16.dp))
+                .background(if (tool.active) Color(0xFFE8E8E8) else NothingTokens.NothingSurfaceMedium)
+                .border(
+                    1.dp,
+                    if (tool.active) Color.Transparent else NothingTokens.NothingBorderSubtle,
+                    RoundedCornerShape(16.dp)
+                )
+                .clickable {
+                    coroutineScope.launch {
+                        scale.animateTo(0.88f, tween(40))
+                        scale.animateTo(
+                            1.0f,
+                            spring(
+                                dampingRatio = Spring.DampingRatioMediumBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                    }
+                    coroutineScope.launch {
+                        shockwave.snapTo(0f)
+                        shockwave.animateTo(1f, tween(320, easing = LinearOutSlowInEasing))
+                    }
+                    tool.action()
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            // Animated shockwave ring on tap (Sakuga / Animata micro-interaction)
+            if (shockwave.value > 0f && shockwave.value < 1f) {
+                val waveAlpha = (1f - shockwave.value) * 0.75f
+                val waveSize = (24f + shockwave.value * 28f).dp
+                Box(
+                    modifier = Modifier
+                        .size(waveSize)
+                        .border(
+                            width = (1.5f * (1f - shockwave.value)).dp,
+                            color = (if (tool.active) Color.Black else NothingPrimaryAccent).copy(alpha = waveAlpha),
+                            shape = CircleShape
+                        )
+                )
+            }
+
+            Text(
+                text = tool.glyph,
+                color = if (tool.active) Color.Black else NothingPrimaryText,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Text(
+            text = tool.label,
+            color = NothingSecondaryText,
+            fontSize = 8.sp,
+            fontFamily = FontFamily.Monospace,
+            maxLines = 1
+        )
+    }
+}
+
+/**
+ * Authentic Nothing OS-style interactive slider with Sakuga VFX velocity-driven
+ * squash & stretch physics, trailing dot-matrix sparks, and damped spring recoil.
  */
 @Composable
 fun NothingSliderControl(
@@ -108,11 +216,88 @@ fun NothingSliderControl(
 ) {
     var isDragging by remember { mutableStateOf(false) }
     var currentPercent by remember(percent) { mutableFloatStateOf(percent) }
+    var dragVelocity by remember { mutableFloatStateOf(0f) }
+    var lastDragX by remember { mutableFloatStateOf(0f) }
+    var lastDragTime by remember { mutableLongStateOf(0L) }
+    var sliderWidthPx by remember { mutableFloatStateOf(1f) }
+
+    // Damped spring interpolation for percent (smooth overshoot)
+    val animatedPercent by animateFloatAsState(
+        targetValue = if (isDragging) currentPercent else percent,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "slider_percent"
+    )
+
+    // Velocity-driven squash & stretch (Sakuga VFX principle)
+    val targetStretchX = 1f + (abs(dragVelocity) / 3800f).coerceIn(0f, 0.20f)
+    val targetSquashY = 1f - (abs(dragVelocity) / 7000f).coerceIn(0f, 0.12f)
+    val stretchX by animateFloatAsState(
+        targetValue = if (isDragging) targetStretchX else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "slider_stretch"
+    )
+    val squashY by animateFloatAsState(
+        targetValue = if (isDragging) targetSquashY else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "slider_squash"
+    )
+
+    // Trailing dot-matrix spark particles
+    val particles = remember { mutableStateListOf<DotSpark>() }
+
+    LaunchedEffect(isDragging) {
+        if (isDragging) {
+            while (isDragging) {
+                withFrameNanos {
+                    val iterator = particles.listIterator()
+                    while (iterator.hasNext()) {
+                        val p = iterator.next()
+                        p.x += p.vx
+                        p.y += p.vy
+                        p.alpha -= 0.05f
+                        if (p.alpha <= 0f) {
+                            iterator.remove()
+                        }
+                    }
+                    // Spawn new spark if moving fast
+                    if (abs(dragVelocity) > 200f && particles.size < 16) {
+                        val edgeX = animatedPercent * sliderWidthPx
+                        particles.add(
+                            DotSpark(
+                                x = edgeX + (kotlin.random.Random.nextFloat() - 0.5f) * 10f,
+                                y = 23f + (kotlin.random.Random.nextFloat() - 0.5f) * 14f,
+                                radius = kotlin.random.Random.nextFloat() * 2f + 1.2f,
+                                alpha = 0.85f,
+                                vx = -kotlin.math.sign(dragVelocity) * (kotlin.random.Random.nextFloat() * 2f + 0.5f),
+                                vy = (kotlin.random.Random.nextFloat() - 0.5f) * 1.5f
+                            )
+                        )
+                    }
+                }
+            }
+        } else {
+            particles.clear()
+            dragVelocity = 0f
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(46.dp)
+            .graphicsLayer {
+                scaleX = stretchX
+                scaleY = squashY
+            }
             .clip(RoundedCornerShape(23.dp))
             .background(NothingTokens.NothingSurfaceMedium)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(23.dp))
@@ -127,14 +312,32 @@ fun NothingSliderControl(
                 detectDragGestures(
                     onDragStart = { offset ->
                         isDragging = true
+                        lastDragX = offset.x
+                        lastDragTime = System.currentTimeMillis()
+                        dragVelocity = 0f
+                        sliderWidthPx = size.width.toFloat().coerceAtLeast(1f)
                         val newP = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                         currentPercent = newP
                         onValueChange(newP)
                     },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false },
+                    onDragEnd = {
+                        isDragging = false
+                        dragVelocity = 0f
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        dragVelocity = 0f
+                    },
                     onDrag = { change, _ ->
                         change.consume()
+                        val now = System.currentTimeMillis()
+                        val dt = (now - lastDragTime).coerceAtLeast(1L)
+                        val dx = change.position.x - lastDragX
+                        dragVelocity = (dx / dt) * 1000f
+                        lastDragTime = now
+                        lastDragX = change.position.x
+                        sliderWidthPx = size.width.toFloat().coerceAtLeast(1f)
+
                         val newP = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                         currentPercent = newP
                         onValueChange(newP)
@@ -143,13 +346,44 @@ fun NothingSliderControl(
             }
     ) {
         // Filled Progress Track
-        val fillWidthFraction = if (isDragging) currentPercent else percent
+        val fillWidthFraction = animatedPercent.coerceIn(0.02f, 1f)
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(fillWidthFraction.coerceIn(0.02f, 1f))
+                .fillMaxWidth(fillWidthFraction)
                 .background(activeColor.copy(alpha = 0.28f))
         )
+
+        // Trailing particles Canvas
+        if (particles.isNotEmpty()) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                particles.forEach { p ->
+                    if (p.alpha > 0f) {
+                        drawCircle(
+                            color = activeColor.copy(alpha = p.alpha.coerceIn(0f, 1f)),
+                            radius = p.radius,
+                            center = Offset(p.x, p.y)
+                        )
+                    }
+                }
+            }
+        }
+
+        // Leading pill thumb edge
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fillWidthFraction)
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(3.dp)
+                    .fillMaxHeight(0.55f)
+                    .clip(RoundedCornerShape(1.5.dp))
+                    .background(activeColor.copy(alpha = 0.85f))
+            )
+        }
 
         // Content Row: Glyph on left, Label + Percent on right
         Row(
@@ -177,7 +411,7 @@ fun NothingSliderControl(
                 )
             }
             Text(
-                text = "${((if (isDragging) currentPercent else percent) * 100).roundToInt()}%",
+                text = "${(animatedPercent * 100).roundToInt()}%",
                 color = NothingPrimaryText,
                 fontSize = 12.sp,
                 fontFamily = FontFamily.Monospace,
@@ -359,39 +593,10 @@ fun QuickToolsDrawer(
                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                 ) {
                     chunk.forEach { tool ->
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(6.dp),
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(52.dp)
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .background(if (tool.active) Color(0xFFE8E8E8) else NothingTokens.NothingSurfaceMedium)
-                                    .border(
-                                        1.dp,
-                                        if (tool.active) Color.Transparent else NothingTokens.NothingBorderSubtle,
-                                        RoundedCornerShape(16.dp)
-                                    )
-                                    .clickable { tool.action() },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(
-                                    text = tool.glyph,
-                                    color = if (tool.active) Color.Black else NothingPrimaryText,
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            Text(
-                                text = tool.label,
-                                color = NothingSecondaryText,
-                                fontSize = 8.sp,
-                                fontFamily = FontFamily.Monospace,
-                                maxLines = 1
-                            )
-                        }
+                        QuickToolTile(
+                            tool = tool,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                     repeat(5 - chunk.size) {
                         Spacer(modifier = Modifier.weight(1f))

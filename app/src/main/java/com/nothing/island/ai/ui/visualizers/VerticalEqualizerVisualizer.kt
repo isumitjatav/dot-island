@@ -43,9 +43,9 @@ fun VerticalEqualizerVisualizer(
 
     val phase by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = if (isPlaying) 6.28318f else 0f,
+        targetValue = 6.28318f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = cycleTimeMs, easing = LinearEasing),
+            animation = tween(durationMillis = if (isPlaying) cycleTimeMs else (cycleTimeMs * 3), easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "EqualizerPhase"
@@ -54,13 +54,14 @@ fun VerticalEqualizerVisualizer(
     Canvas(modifier = modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
+        val centerY = height / 2f
 
         val totalSpacing = width * 0.25f
         val barSpacing = totalSpacing / (barCount + 1).coerceAtLeast(1)
         val barWidth = (width - (barSpacing * (barCount + 1))) / barCount.coerceAtLeast(1)
 
-        val minBarHeight = height * 0.15f
-        val maxBarHeight = height * 0.90f
+        val minBarHeight = height * 0.18f
+        val maxBarHeight = height * 0.92f
         val dynamicRange = (maxBarHeight - minBarHeight) * effectiveIntensity.coerceIn(0.2f, 1.5f)
 
         for (i in 0 until barCount) {
@@ -68,26 +69,28 @@ fun VerticalEqualizerVisualizer(
             val wave = if (isPlaying) {
                 (sin(phase + barPhaseOffset) * 0.5f + 0.5f)
             } else {
-                0.2f // Steady resting height when paused
+                // AudioCN-style organic idle breathing wave when paused
+                (sin(phase * 0.4f + i * 0.8f) * 0.08f + 0.15f)
             }
 
             val currentBarHeight = (minBarHeight + wave * dynamicRange).coerceIn(minBarHeight, height)
             val x = barSpacing + i * (barWidth + barSpacing)
-            val y = height - currentBarHeight
+            // Symmetrical expansion around vertical center (AudioCN Mirrored Visualizer)
+            val y = centerY - currentBarHeight / 2f
 
             // Draw glowing background bar reflection if glow enabled
             if (glowIntensity > 0f) {
                 drawRoundRect(
-                    color = accentColor.copy(alpha = 0.20f * glowIntensity),
-                    topLeft = Offset(x - 1f, y - 1f),
-                    size = Size(barWidth + 2f, currentBarHeight + 2f),
+                    color = accentColor.copy(alpha = if (isPlaying) 0.25f * glowIntensity else 0.10f),
+                    topLeft = Offset(x - 1.5f, y - 1.5f),
+                    size = Size(barWidth + 3f, currentBarHeight + 3f),
                     cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
                 )
             }
 
-            // Draw main active bar
+            // Draw main active bar with rounded pill caps
             drawRoundRect(
-                color = accentColor,
+                color = if (isPlaying) accentColor else accentColor.copy(alpha = 0.65f),
                 topLeft = Offset(x, y),
                 size = Size(barWidth, currentBarHeight),
                 cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
