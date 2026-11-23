@@ -277,6 +277,16 @@ class NotificationAutoExpansionPolicyUnitTest {
     }
 
     @Test
+    fun batteryExpandedAllowsNotificationExpansion() {
+        // When charging, incoming notifications must be allowed to expand so user gets messages.
+        val outcome = evaluate(
+            mode = IslandMode.EXPANDED,
+            expandedViewType = ExpandedViewType.BATTERY
+        )
+        assertTrue(outcome is NotificationAutoExpansionPolicy.ExpansionOutcome.Expand)
+    }
+
+    @Test
     fun notificationPreferenceDoesNotAffectMusicPreference() {
         // Notification auto-expand is OFF; music auto-expand stays independent and ON by default.
         val notifPrefs = NotificationPreferences.DEFAULTS.copy(autoExpandOnNotification = false)

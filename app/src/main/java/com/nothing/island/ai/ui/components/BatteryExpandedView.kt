@@ -3,7 +3,7 @@ package com.nothing.island.ai.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -85,21 +85,37 @@ fun BatteryExpandedView(
             .background(NothingBlack)
             .border(1.dp, borderColor, cardShape)
             .pointerInput(Unit) {
-                detectHorizontalDragGestures(
-                    onDragStart = { totalDrag = 0f },
-                    onHorizontalDrag = { change, dragAmount ->
+                var dragX = 0f
+                var dragY = 0f
+                detectDragGestures(
+                    onDragStart = {
+                        dragX = 0f
+                        dragY = 0f
+                    },
+                    onDrag = { change, dragAmount ->
                         change.consume()
-                        totalDrag += dragAmount
+                        dragX += dragAmount.x
+                        dragY += dragAmount.y
                     },
                     onDragEnd = {
-                        if (totalDrag > swipeThresholdPx) {
+                        val absX = kotlin.math.abs(dragX)
+                        val absY = kotlin.math.abs(dragY)
+                        if (absY > absX && dragY > swipeThresholdPx) {
+                            onSwipe(SwipeDirection.DOWN)
+                        } else if (absY > absX && dragY < -swipeThresholdPx) {
+                            onCollapse()
+                        } else if (absX > absY && dragX > swipeThresholdPx) {
                             onSwipe(SwipeDirection.RIGHT)
-                        } else if (totalDrag < -swipeThresholdPx) {
+                        } else if (absX > absY && dragX < -swipeThresholdPx) {
                             onSwipe(SwipeDirection.LEFT)
                         }
-                        totalDrag = 0f
+                        dragX = 0f
+                        dragY = 0f
                     },
-                    onDragCancel = { totalDrag = 0f }
+                    onDragCancel = {
+                        dragX = 0f
+                        dragY = 0f
+                    }
                 )
             }
             .padding(horizontal = 14.dp, vertical = 8.dp)
@@ -177,20 +193,41 @@ fun BatteryExpandedView(
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NothingDarkGray)
-                        .clickable { onCollapse() }
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = "COLLAPSE",
-                        color = NothingWhite,
-                        fontSize = 10.5.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NothingDarkGray)
+                            .clickable { onSwipe(SwipeDirection.RIGHT) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "ALERTS",
+                            color = NothingWhite,
+                            fontSize = 10.5.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NothingDarkGray)
+                            .clickable { onCollapse() }
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "COLLAPSE",
+                            color = NothingWhite,
+                            fontSize = 10.5.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 

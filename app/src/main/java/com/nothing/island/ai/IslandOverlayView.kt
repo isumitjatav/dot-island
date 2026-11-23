@@ -15,6 +15,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -289,6 +290,10 @@ fun IslandOverlayView(
     onSkipPrevious: () -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
     onQuickVolume: (Int) -> Unit = {},
+    onQuickVolumePercent: (Float) -> Unit = {},
+    onQuickBrightnessPercent: (Float) -> Unit = {},
+    getQuickVolumePercent: () -> Float = { 0.5f },
+    getQuickBrightnessPercent: () -> Float = { 0.5f },
     onQuickHistory: () -> Unit = {},
     onQuickAi: () -> Unit = {},
     onSwipeActivity: (SwipeDirection) -> Unit = {},
@@ -556,7 +561,8 @@ fun IslandOverlayView(
                         }
                     }
 
-                    var totalNotifDrag by remember { mutableFloatStateOf(0f) }
+                    var totalNotifDragX by remember { mutableFloatStateOf(0f) }
+                    var totalNotifDragY by remember { mutableFloatStateOf(0f) }
                     val swipeThresholdPx = 60f
 
                     Box(
@@ -565,19 +571,33 @@ fun IslandOverlayView(
                             .then(
                                 if (!notificationPreferences.swipeToDismissEnabled) {
                                     Modifier.pointerInput(Unit) {
-                                        detectHorizontalDragGestures(
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                totalNotifDragX = 0f
+                                                totalNotifDragY = 0f
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                totalNotifDragX += dragAmount.x
+                                                totalNotifDragY += dragAmount.y
+                                            },
                                             onDragEnd = {
-                                                if (abs(totalNotifDrag) >= swipeThresholdPx) {
-                                                    val dir = if (totalNotifDrag < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
+                                                val absX = abs(totalNotifDragX)
+                                                val absY = abs(totalNotifDragY)
+                                                if (absY > absX && totalNotifDragY >= swipeThresholdPx) {
+                                                    onSwipeActivity(SwipeDirection.DOWN)
+                                                } else if (absY > absX && totalNotifDragY <= -swipeThresholdPx) {
+                                                    onCollapse()
+                                                } else if (absX > absY && absX >= swipeThresholdPx) {
+                                                    val dir = if (totalNotifDragX < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
                                                     onSwipeActivity(dir)
                                                 }
-                                                totalNotifDrag = 0f
+                                                totalNotifDragX = 0f
+                                                totalNotifDragY = 0f
                                             },
                                             onDragCancel = {
-                                                totalNotifDrag = 0f
-                                            },
-                                            onHorizontalDrag = { _, dragAmount ->
-                                                totalNotifDrag += dragAmount
+                                                totalNotifDragX = 0f
+                                                totalNotifDragY = 0f
                                             }
                                         )
                                     }
@@ -758,8 +778,13 @@ fun IslandOverlayView(
 
                 ExpandedViewType.QUICK_TOOLS -> {
                     val qt = com.nothing.island.ai.ui.components.QuickTools
+                    var vol by remember { mutableFloatStateOf(getQuickVolumePercent()) }
+                    var bri by remember { mutableFloatStateOf(getQuickBrightnessPercent()) }
+                    val overlayScope = rememberCoroutineScope()
+                    val prefsRepo = remember(context) { com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context) }
+
                     com.nothing.island.ai.ui.components.QuickToolsDrawer(
-                        tools = qt.DEFAULT.filter { id -> id in enabledQuickTools }.map { id ->
+                        tools = qt.ALL.filter { id -> id in enabledQuickTools }.map { id ->
                             com.nothing.island.ai.ui.components.QuickTool(
                                 id = id,
                                 label = qt.label(id),
@@ -768,9 +793,24 @@ fun IslandOverlayView(
                             )
                         },
                         onCollapse = onCollapse,
-                        onVolumeChange = onQuickVolume,
-                        onHistory = onQuickHistory,
-                        onAi = onQuickAi,
+                        volumePercent = vol,
+                        onVolumeChange = { newVol ->
+                            vol = newVol
+                            onQuickVolumePercent(newVol)
+                        },
+                        brightnessPercent = bri,
+                        onBrightnessChange = { newBri ->
+                            bri = newBri
+                            onQuickBrightnessPercent(newBri)
+                        },
+                        allAvailableToolIds = qt.ALL,
+                        enabledToolIds = enabledQuickTools,
+                        onToggleToolEnabled = { toolId ->
+                            val next = if (toolId in enabledQuickTools) enabledQuickTools - toolId else enabledQuickTools + toolId
+                            overlayScope.launch {
+                                prefsRepo.updateQuickTools(next)
+                            }
+                        },
                         isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -839,24 +879,42 @@ fun DashboardCard(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
             // Header Region with Activity Switcher swipe detection (Punch-hole clearance spacer + Clock/Date/Weather)
+            var totalHeaderDragX by remember { mutableFloatStateOf(0f) }
+            var totalHeaderDragY by remember { mutableFloatStateOf(0f) }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .pointerInput(Unit) {
-                        detectHorizontalDragGestures(
+                        detectDragGestures(
+                            onDragStart = {
+                                totalHeaderDragX = 0f
+                                totalHeaderDragY = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                totalHeaderDragX += dragAmount.x
+                                totalHeaderDragY += dragAmount.y
+                            },
                             onDragEnd = {
-                                if (abs(totalHeaderDrag) >= swipeThresholdPx) {
-                                    val dir = if (totalHeaderDrag < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
-                                    Log.d("IslandTouch", "DashboardCard header swiped $dir (drag: $totalHeaderDrag px)")
+                                val absX = abs(totalHeaderDragX)
+                                val absY = abs(totalHeaderDragY)
+                                if (absY > absX && totalHeaderDragY >= swipeThresholdPx) {
+                                    Log.d("IslandTouch", "DashboardCard header swiped DOWN -> Quick Tools")
+                                    onSwipe(SwipeDirection.DOWN)
+                                } else if (absY > absX && totalHeaderDragY <= -swipeThresholdPx) {
+                                    Log.d("IslandTouch", "DashboardCard header swiped UP -> Collapse")
+                                    onCollapse()
+                                } else if (absX > absY && absX >= swipeThresholdPx) {
+                                    val dir = if (totalHeaderDragX < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
+                                    Log.d("IslandTouch", "DashboardCard header swiped $dir (drag: $totalHeaderDragX px)")
                                     onSwipe(dir)
                                 }
-                                totalHeaderDrag = 0f
+                                totalHeaderDragX = 0f
+                                totalHeaderDragY = 0f
                             },
                             onDragCancel = {
-                                totalHeaderDrag = 0f
-                            },
-                            onHorizontalDrag = { _, dragAmount ->
-                                totalHeaderDrag += dragAmount
+                                totalHeaderDragX = 0f
+                                totalHeaderDragY = 0f
                             }
                         )
                     }

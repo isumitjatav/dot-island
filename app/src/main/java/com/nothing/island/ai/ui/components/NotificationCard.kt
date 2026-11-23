@@ -492,8 +492,8 @@ fun NotificationCard(
                 }
             }
 
-            // 3. Body: Message Container (clickable if contentIntent is available and not replying)
-            val isBodyClickable = notificationKey != null && actionEntry?.contentIntent != null && onOpenContent != null && replyingActionIndex == null
+            // 3. Body: Message Container (clickable to open app if not replying)
+            val isBodyClickable = notificationKey != null && onOpenContent != null && replyingActionIndex == null
             Column(
                 modifier = Modifier
                     .fillMaxWidth()

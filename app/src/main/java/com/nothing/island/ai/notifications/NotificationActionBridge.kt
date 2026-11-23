@@ -142,11 +142,19 @@ object NotificationActionBridge {
      * Returns true if successfully fired; false if missing or canceled.
      * Automatically removes dead registration upon CanceledException.
      */
-    fun executeContentIntent(key: String): Boolean {
+    fun executeContentIntent(context: Context? = null, key: String): Boolean {
         val entry = entries[key] ?: return false
         val intent = entry.contentIntent ?: return false
         return try {
-            intent.send()
+            if (context != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val options = android.app.ActivityOptions.makeBasic()
+                options.setPendingIntentBackgroundActivityStartMode(
+                    android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                )
+                intent.send(context, 0, null, null, null, null, options.toBundle())
+            } else {
+                intent.send()
+            }
             Log.d(TAG, "Fired content PendingIntent for key=$key")
             true
         } catch (e: PendingIntent.CanceledException) {
@@ -158,6 +166,11 @@ object NotificationActionBridge {
             false
         }
     }
+
+    /**
+     * Backward-compatible overload without explicit context.
+     */
+    fun executeContentIntent(key: String): Boolean = executeContentIntent(null, key)
 
     /**
      * Safely executes an action button intent by index.

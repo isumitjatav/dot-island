@@ -199,7 +199,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
     }
 
     /** Adjusts media volume from the quick controls drawer. */
-    private fun adjustQuickVolume(delta: Int) {
+    fun adjustQuickVolume(delta: Int) {
         try {
             val audio = appContext.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
             audio?.adjustStreamVolume(
@@ -212,8 +212,74 @@ class IslandOverlayController private constructor(private val appContext: Contex
         }
     }
 
+    /** Gets media volume percentage (0.0f to 1.0f). */
+    fun getMediaVolumePercent(): Float {
+        return try {
+            val audio = appContext.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return 0.5f
+            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC).toFloat()
+            val current = audio.getStreamVolume(android.media.AudioManager.STREAM_MUSIC).toFloat()
+            if (max > 0f) (current / max).coerceIn(0f, 1f) else 0.5f
+        } catch (e: Exception) {
+            0.5f
+        }
+    }
+
+    /** Sets media volume percentage (0.0f to 1.0f). */
+    fun setMediaVolumePercent(percent: Float) {
+        try {
+            val audio = appContext.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return
+            val max = audio.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC)
+            val target = kotlin.math.round(percent * max).toInt().coerceIn(0, max)
+            audio.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, target, 0)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to set media volume", e)
+        }
+    }
+
+    /** Gets screen brightness percentage (0.0f to 1.0f). */
+    fun getScreenBrightnessPercent(): Float {
+        return try {
+            val value = android.provider.Settings.System.getInt(
+                appContext.contentResolver,
+                android.provider.Settings.System.SCREEN_BRIGHTNESS
+            )
+            (value / 255f).coerceIn(0f, 1f)
+        } catch (e: Exception) {
+            0.5f
+        }
+    }
+
+    /** Sets screen brightness percentage (0.0f to 1.0f). */
+    fun setScreenBrightnessPercent(percent: Float) {
+        val clamped = percent.coerceIn(0.01f, 1f)
+        try {
+            val params = layoutParams
+            val wm = activeWindowManager
+            val view = composeView
+            if (params != null && wm != null && view != null) {
+                params.screenBrightness = clamped
+                wm.updateViewLayout(view, params)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to update window brightness", e)
+        }
+
+        try {
+            if (android.provider.Settings.System.canWrite(appContext)) {
+                val intVal = kotlin.math.round(clamped * 255f).toInt().coerceIn(1, 255)
+                android.provider.Settings.System.putInt(
+                    appContext.contentResolver,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS,
+                    intVal
+                )
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to write system brightness", e)
+        }
+    }
+
     /** Opens the system call history from quick controls. */
-    private fun openQuickHistory() {
+    fun openQuickHistory() {
         try {
             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
             intent.type = "vnd.android.cursor.dir/calls"
@@ -226,7 +292,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
     }
 
     /** Opens the AI assistant gateway from quick controls. */
-    private fun openQuickAi() {
+    fun openQuickAi() {
         try {
             val intent = android.content.Intent(appContext, MainActivity::class.java)
             intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
@@ -239,7 +305,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
     }
 
     /** Handles a quick-tools button press. */
-    private fun handleQuickTool(id: String) {
+    fun handleQuickTool(id: String) {
         Log.d(TAG, "QuickTool: $id")
         when (id) {
             "torch" -> torchHandler.toggleTorch()
@@ -263,6 +329,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
                 runCatching { appContext.startActivity(intent) }
             }
+            "hotspot" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
+            "sound" -> {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS)
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                runCatching { appContext.startActivity(intent) }
+            }
             "music" -> expandMusic()
             "settings" -> {
                 val intent = android.content.Intent(appContext, MainActivity::class.java)
@@ -270,7 +346,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 runCatching { appContext.startActivity(intent) }
             }
         }
-        collapse()
+        if (id != "torch") {
+            collapse()
+        }
     }
 
     val audioOutputTracker = AudioOutputDeviceTracker(appContext)
@@ -617,6 +695,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
                             onQuickVolume = { delta -> adjustQuickVolume(delta) },
+                            onQuickVolumePercent = { percent -> setMediaVolumePercent(percent) },
+                            onQuickBrightnessPercent = { percent -> setScreenBrightnessPercent(percent) },
+                            getQuickVolumePercent = { getMediaVolumePercent() },
+                            getQuickBrightnessPercent = { getScreenBrightnessPercent() },
                             onQuickHistory = { openQuickHistory() },
                             onQuickAi = { openQuickAi() },
                             onDeclineCall = {
@@ -670,8 +752,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
-                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT -> repository.setMusicPillLeft(true)
-                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> repository.setMusicPillLeft(false)
+                                    com.nothing.island.ai.switcher.SwipeDirection.UP -> collapse()
+                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT,
+                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> handleActivitySwipe(direction)
                                 }
                             },
                             gesturePreferences = gesturePrefs
@@ -937,6 +1020,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
                             onQuickVolume = { delta -> adjustQuickVolume(delta) },
+                            onQuickVolumePercent = { percent -> setMediaVolumePercent(percent) },
+                            onQuickBrightnessPercent = { percent -> setScreenBrightnessPercent(percent) },
+                            getQuickVolumePercent = { getMediaVolumePercent() },
+                            getQuickBrightnessPercent = { getScreenBrightnessPercent() },
                             onQuickHistory = { openQuickHistory() },
                             onQuickAi = { openQuickAi() },
                             onDeclineCall = {
@@ -990,8 +1077,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
-                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT -> repository.setMusicPillLeft(true)
-                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> repository.setMusicPillLeft(false)
+                                    com.nothing.island.ai.switcher.SwipeDirection.UP -> collapse()
+                                    com.nothing.island.ai.switcher.SwipeDirection.LEFT,
+                                    com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> handleActivitySwipe(direction)
                                 }
                             },
                             gesturePreferences = gesturePrefs
@@ -1385,23 +1473,31 @@ class IslandOverlayController private constructor(private val appContext: Contex
      * Launches notification primary content intent and collapses the island.
      */
     fun openNotificationContent(notificationId: String, packageName: String? = null) {
-        var fired = NotificationActionBridge.executeContentIntent(notificationId)
         val resolvedPackage = packageName ?: historyRepository.getEntry(notificationId)?.packageName
-        // Fallback: if the notification has no content PendingIntent, launch the app
-        // by package name so tapping the message still opens the source app.
+        var fired = NotificationActionBridge.executeContentIntent(appContext, notificationId)
+        // Fallback: if the notification has no content PendingIntent or execution failed, launch the app
+        // by package name so tapping the message always reliably opens the source app on Android 14+.
         if (!fired && !resolvedPackage.isNullOrBlank()) {
             try {
                 val launchIntent = appContext.packageManager.getLaunchIntentForPackage(resolvedPackage)
                 if (launchIntent != null) {
                     launchIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-                    appContext.startActivity(launchIntent)
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        val options = android.app.ActivityOptions.makeBasic()
+                        options.setPendingIntentBackgroundActivityStartMode(
+                            android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                        )
+                        appContext.startActivity(launchIntent, options.toBundle())
+                    } else {
+                        appContext.startActivity(launchIntent)
+                    }
                     fired = true
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Fallback launch failed for $resolvedPackage", e)
             }
         }
-        Log.d(TAG, "openNotificationContent: id=$notificationId, fired=$fired")
+        Log.d(TAG, "openNotificationContent: id=$notificationId, pkg=$resolvedPackage, fired=$fired")
         repository.setMode(IslandMode.COLLAPSED)
     }
 

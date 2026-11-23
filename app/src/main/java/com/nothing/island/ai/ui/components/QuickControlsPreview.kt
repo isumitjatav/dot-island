@@ -12,15 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +47,8 @@ fun QuickControlsPreview(modifier: Modifier = Modifier) {
     val repository = remember { IslandPreferencesRepository.getInstance(context) }
     val scope = rememberCoroutineScope()
     val enabled by repository.quickToolsFlow().collectAsState(initial = QuickTools.DEFAULT.toSet())
+    var previewVolume by remember { mutableFloatStateOf(0.75f) }
+    var previewBrightness by remember { mutableFloatStateOf(0.6f) }
 
     fun toggle(id: String) {
         val next = if (id in enabled) enabled - id else enabled + id
@@ -66,138 +68,86 @@ fun QuickControlsPreview(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Quick Controls", color = NothingSecondaryText, fontSize = 14.sp)
+            Text("Quick Controls Preview", color = NothingSecondaryText, fontSize = 14.sp)
             Box(
                 Modifier
                     .clip(RoundedCornerShape(14.dp))
                     .background(NothingTokens.NothingSurfaceMedium)
                     .padding(horizontal = 12.dp, vertical = 5.dp)
-            ) { Text("Edit", color = NothingPrimaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("LIVE", color = NothingPrimaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
         }
 
         Spacer(Modifier.height(14.dp))
 
-        // Toggle row — reflects and controls the real overlay tools
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            QuickTools.DEFAULT.forEach { id ->
-                val active = id in enabled
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(if (active) Color(0xFFE8E8E8) else NothingTokens.NothingSurfaceMedium)
-                            .clickable { toggle(id) },
-                        contentAlignment = Alignment.Center,
+        // Tool toggles grid — reflects and controls the real overlay tools
+        val rows = QuickTools.ALL.chunked(4)
+        rows.forEach { rowItems ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                rowItems.forEach { id ->
+                    val active = id in enabled
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.weight(1f),
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (active) NothingPrimaryAccent.copy(alpha = 0.3f) else NothingTokens.NothingSurfaceMedium)
+                                .border(1.dp, if (active) NothingPrimaryAccent else NothingTokens.NothingBorderSubtle, RoundedCornerShape(14.dp))
+                                .clickable { toggle(id) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(
+                                text = QuickTools.glyph(id),
+                                color = if (active) Color.White else NothingSecondaryText,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                         Text(
-                            QuickTools.glyph(id),
-                            color = if (active) Color.Black else NothingSecondaryText,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = QuickTools.label(id),
+                            color = if (active) Color.White else NothingSecondaryText,
+                            fontSize = 7.5.sp,
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
                         )
                     }
-                    Text(
-                        QuickTools.label(id),
-                        color = NothingSecondaryText,
-                        fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1,
-                    )
+                }
+                repeat(4 - rowItems.size) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
         }
 
-        Spacer(Modifier.height(18.dp))
-
-        // App Shortcuts placeholder row (reference styling)
-        SectionLabel("App Shortcuts")
-        Spacer(Modifier.height(8.dp))
-        PlaceholderRow()
-
         Spacer(Modifier.height(16.dp))
 
-        // Favorite Contacts placeholder row
-        SectionLabel("Favorite Contacts")
-        Spacer(Modifier.height(8.dp))
-        PlaceholderRow()
-
-        Spacer(Modifier.height(18.dp))
-
-        // Bottom control row: volume + history + AI
-        Row(
+        // Hardware Controls Preview: Volume & Brightness Sliders
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                Modifier
-                    .weight(1.2f)
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(NothingTokens.NothingSurfaceMedium),
-                contentAlignment = Alignment.Center
-            ) { Text("◀  🔊  ▶", color = NothingPrimaryText, fontSize = 13.sp) }
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(NothingTokens.NothingSurfaceMedium),
-                contentAlignment = Alignment.Center
-            ) { Text("☎ History", color = NothingPrimaryText, fontSize = 11.sp) }
-            Box(
-                Modifier
-                    .weight(0.7f)
-                    .height(40.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(NothingPrimaryAccent.copy(alpha = 0.25f)),
-                contentAlignment = Alignment.Center
-            ) { Text("Ai", color = NothingPrimaryText, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-        }
-    }
-}
+            NothingSliderControl(
+                glyph = "♪",
+                label = "VOLUME",
+                percent = previewVolume,
+                onValueChange = { previewVolume = it },
+                activeColor = NothingPrimaryAccent
+            )
 
-@Composable
-private fun SectionLabel(text: String) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(text, color = NothingPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-        Box(
-            Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(NothingTokens.NothingSurfaceMedium)
-                .padding(horizontal = 10.dp, vertical = 4.dp)
-        ) { Text("Edit", color = NothingPrimaryText, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
-    }
-}
-
-@Composable
-private fun PlaceholderRow() {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        repeat(5) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.Transparent)
-                    .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center,
-            ) { Text("✎", color = NothingSecondaryText, fontSize = 14.sp) }
+            NothingSliderControl(
+                glyph = "☀",
+                label = "BRIGHTNESS",
+                percent = previewBrightness,
+                onValueChange = { previewBrightness = it },
+                activeColor = Color(0xFFFFD54F)
+            )
         }
     }
 }

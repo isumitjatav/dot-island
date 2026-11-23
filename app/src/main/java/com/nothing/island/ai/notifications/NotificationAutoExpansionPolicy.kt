@@ -109,9 +109,10 @@ object NotificationAutoExpansionPolicy {
         }
 
         // --- Respect an already-open Island -----------------------------------
-        // If the user (or the music engine) already has the Island open, never yank them
-        // into the notification view. This keeps R7 music auto-expansion behaviour intact.
-        if (mode == IslandMode.EXPANDED) {
+        // If the user (or the music engine/call) already has the Island open, never yank them
+        // into the notification view. However, if the Island is in BATTERY charging view, an
+        // arriving message expands so the user reliably gets their messages while charging.
+        if (mode == IslandMode.EXPANDED && expandedViewType != ExpandedViewType.BATTERY) {
             return ExpansionOutcome.Skip(Reasons.ALREADY_EXPANDED)
         }
 
