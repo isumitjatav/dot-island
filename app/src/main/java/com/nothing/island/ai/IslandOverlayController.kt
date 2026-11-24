@@ -19,6 +19,7 @@ import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.lifecycle.setViewTreeLifecycleOwner
 import androidx.lifecycle.setViewTreeViewModelStoreOwner
@@ -625,8 +626,14 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
+                        val signatureTheme = remember(prefs.presetName) {
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
+                        }
 
-                        IslandOverlayView(
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.nothing.island.ai.ui.theme.LocalIslandTheme provides signatureTheme
+                        ) {
+                            IslandOverlayView(
                             state = masterState.toLegacyIslandState(),
                             geometry = geometry,
                             preferences = prefs,
@@ -759,6 +766,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs
                         )
+                        }
                     }
                 }
 
@@ -950,8 +958,14 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
+                        val signatureTheme = remember(prefs.presetName) {
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
+                        }
 
-                        IslandOverlayView(
+                        androidx.compose.runtime.CompositionLocalProvider(
+                            com.nothing.island.ai.ui.theme.LocalIslandTheme provides signatureTheme
+                        ) {
+                            IslandOverlayView(
                             state = masterState.toLegacyIslandState(),
                             geometry = geometry,
                             preferences = prefs,
@@ -1084,6 +1098,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs
                         )
+                        }
                     }
                 }
 

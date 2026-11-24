@@ -86,8 +86,10 @@ fun NothingSwitch(
     )
 
     val maxTravel = 20.dp
-    val offsetDp = maxTravel * knobPosition + 2.dp
-    val stretch = 1f + kotlin.math.abs(knobPosition - (if (checked) 1f else 0f)) * 0.32f
+    val safeKnobPosition = if (knobPosition.isNaN() || knobPosition.isInfinite()) (if (checked) 1f else 0f) else knobPosition
+    val offsetDp = maxTravel * safeKnobPosition + 2.dp
+    val rawStretch = 1f + kotlin.math.abs(safeKnobPosition - (if (checked) 1f else 0f)) * 0.32f
+    val safeStretch = if (rawStretch.isNaN() || rawStretch.isInfinite()) 1f else rawStretch.coerceIn(1f, 1.35f)
 
     Box(
         modifier = modifier
@@ -117,7 +119,7 @@ fun NothingSwitch(
                 .offset(x = offsetDp)
                 .size(20.dp)
                 .graphicsLayer {
-                    scaleX = stretch.coerceIn(1f, 1.35f)
+                    scaleX = safeStretch
                 }
                 .clip(CircleShape)
                 .background(thumbColor)

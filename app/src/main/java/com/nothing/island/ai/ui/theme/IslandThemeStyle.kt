@@ -180,21 +180,24 @@ fun GlyphArcCompactDecorations(
     arcColor: Color = Color.White
 ) {
     Canvas(modifier = modifier.fillMaxSize()) {
-        val strokeWidthPx = 2.4.dp.toPx()
-        val glowWidthPx = 5.0.dp.toPx()
         val h = size.height
         val w = size.width
+        if (h <= 0f || w <= 0f || w < h || h.isNaN() || w.isNaN()) return@Canvas
+
+        val strokeWidthPx = 2.4.dp.toPx()
+        val glowWidthPx = 5.0.dp.toPx()
+        val arcSize = (h - strokeWidthPx - 3.dp.toPx()).coerceAtLeast(1f)
 
         // Left Arc (hugging left edge)
         val leftRect = androidx.compose.ui.geometry.Rect(
             offset = Offset(strokeWidthPx / 2f + 1.5.dp.toPx(), strokeWidthPx / 2f + 1.5.dp.toPx()),
-            size = Size(h - strokeWidthPx - 3.dp.toPx(), h - strokeWidthPx - 3.dp.toPx())
+            size = Size(arcSize, arcSize)
         )
 
         // Right Arc (hugging right edge)
         val rightRect = androidx.compose.ui.geometry.Rect(
-            offset = Offset(w - h + strokeWidthPx / 2f + 1.5.dp.toPx(), strokeWidthPx / 2f + 1.5.dp.toPx()),
-            size = Size(h - strokeWidthPx - 3.dp.toPx(), h - strokeWidthPx - 3.dp.toPx())
+            offset = Offset((w - h + strokeWidthPx / 2f + 1.5.dp.toPx()).coerceAtLeast(0f), strokeWidthPx / 2f + 1.5.dp.toPx()),
+            size = Size(arcSize, arcSize)
         )
 
         // 1. Soft Glow underlayers
@@ -241,7 +244,7 @@ fun GlyphArcCompactDecorations(
 
 /**
  * Tape Deck: Dual cassette reel indicator on compact pill.
- * Gently rotates when isPlaying is true.
+ * Gently rotates when isPlaying is true with zero divide-by-zero risk.
  */
 @Composable
 fun TapeDeckReelsIndicator(
@@ -251,15 +254,16 @@ fun TapeDeckReelsIndicator(
     reelColor: Color = Color(0xFFDCDCDC)
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "tape_reels")
-    val rotation by infiniteTransition.animateFloat(
+    val rawRotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(if (isPlaying) 2800 else 0, easing = LinearEasing),
+            animation = tween(2800, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         ),
         label = "reel_spin"
     )
+    val rotation = if (isPlaying) rawRotation else 0f
 
     Row(
         modifier = modifier,
@@ -364,8 +368,9 @@ fun SegmentedLedProgressBar(
     activeColor: Color = Color.White,
     inactiveColor: Color = Color(0xFF282828)
 ) {
-    val clampedProgress = progress.coerceIn(0f, 1f)
-    val activeCount = (clampedProgress * totalSegments).toInt().coerceIn(0, totalSegments)
+    val safeProgress = if (progress.isNaN() || progress.isInfinite()) 0f else progress.coerceIn(0f, 1f)
+    val safeSegments = totalSegments.coerceAtLeast(1)
+    val activeCount = (safeProgress * safeSegments).toInt().coerceIn(0, safeSegments)
 
     Row(
         modifier = modifier

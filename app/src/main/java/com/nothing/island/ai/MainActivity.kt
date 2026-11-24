@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -38,6 +41,8 @@ import com.nothing.island.ai.ui.screens.GeometryStudioScreen
 import com.nothing.island.ai.ui.screens.GestureStudioScreen
 import com.nothing.island.ai.ui.screens.HomeScreen
 import com.nothing.island.ai.ui.screens.MusicStudioScreen
+import com.nothing.island.ai.ui.theme.IslandSignatureTheme
+import com.nothing.island.ai.ui.theme.LocalIslandTheme
 import com.nothing.island.ai.ui.screens.NotificationStudioScreen
 import com.nothing.island.ai.ui.screens.PeripheralsStudioScreen
 import com.nothing.island.ai.ui.screens.SettingsScreen
@@ -73,14 +78,21 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            NothingIslandTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = NothingTokens.NothingBlack
-                ) {
-                    val currentDestination = remember { mutableStateOf<IslandDestination>(IslandDestination.Home) }
-                    val context = LocalContext.current
-                    val geometry = remember { CutoutDetector.detectCutout(context) }
+            val context = LocalContext.current
+            val preferencesRepo = remember { IslandPreferencesRepository.getInstance(context) }
+            val preferences by preferencesRepo.livePreferences.collectAsState()
+            val signatureTheme = remember(preferences.presetName) {
+                IslandSignatureTheme.resolve(preferences.presetName)
+            }
+
+            CompositionLocalProvider(LocalIslandTheme provides signatureTheme) {
+                NothingIslandTheme {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = NothingTokens.NothingBlack
+                    ) {
+                        val currentDestination = remember { mutableStateOf<IslandDestination>(IslandDestination.Home) }
+                        val geometry = remember { CutoutDetector.detectCutout(context) }
 
                     // Intelligent Back Navigation:
                     // Sub-studios return to Studios Hub; Primary tabs return to Home
@@ -246,6 +258,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
 
     override fun onResume() {
         super.onResume()
