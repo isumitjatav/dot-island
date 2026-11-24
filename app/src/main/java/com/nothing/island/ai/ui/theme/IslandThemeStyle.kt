@@ -37,12 +37,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+
 /**
  * The 5 Signature Themes inspired by authentic Nothing OS hardware & industrial design:
  * 1. Nothing Classic: Pitch-black, crisp white monospace/dot-matrix, Nothing Red indicators, solid white action pills.
  * 2. Glyph Arc: Pitch-black, glowing white curved arcs on left & right pill edges, segmented white/dark-gray LED progress bars.
  * 3. Tape Deck: Matte charcoal (#1E1E1E), dual cassette reels, Nothing Red mini waveform, cassette-housed album art.
- * 4. Glassmorphic Frosted: Translucent dark frosted container (#222222 at 82% alpha) with specular white border and glass pill buttons.
+ * 4. Glassmorphic Frosted: Translucent dark frosted container (#222222 at 84% alpha) with specular white border and glass pill buttons.
  * 5. High-Contrast Inverted: Crisp off-white (#F2F2F2) surface, pure #000000 text/icons, Nothing Red alert highlights, solid black action pills.
  */
 enum class IslandSignatureTheme(
@@ -59,6 +62,12 @@ enum class IslandSignatureTheme(
     val borderColor: Color,
     val primaryButtonBackground: Color,
     val primaryButtonTextColor: Color,
+    val displayFont: FontFamily,
+    val bodyFont: FontFamily,
+    val displayFontWeight: FontWeight = FontWeight.Normal,
+    val bodyFontWeight: FontWeight = FontWeight.Normal,
+    val fontFeatureSettings: String? = null,
+    val compactProgressColor: Color = Color(0xFFD71921),
     val isGlassmorphic: Boolean = false,
     val isInverted: Boolean = false
 ) {
@@ -75,7 +84,12 @@ enum class IslandSignatureTheme(
         textColorSecondary = Color(0xFF9E9E9E),
         borderColor = Color(0xFF262626),
         primaryButtonBackground = Color(0xFFF2F2F2),
-        primaryButtonTextColor = Color(0xFF000000)
+        primaryButtonTextColor = Color(0xFF000000),
+        displayFont = NdotFontFamily,
+        bodyFont = FontFamily.Monospace,
+        displayFontWeight = FontWeight.Normal,
+        bodyFontWeight = FontWeight.Normal,
+        compactProgressColor = Color(0xFFD71921)
     ),
 
     GLYPH_ARC(
@@ -91,7 +105,13 @@ enum class IslandSignatureTheme(
         textColorSecondary = Color(0xFF888888),
         borderColor = Color(0xFF333333),
         primaryButtonBackground = Color(0xFF1C1C1C),
-        primaryButtonTextColor = Color(0xFFFFFFFF)
+        primaryButtonTextColor = Color(0xFFFFFFFF),
+        displayFont = FontFamily.SansSerif,
+        bodyFont = FontFamily.SansSerif,
+        displayFontWeight = FontWeight.Normal,
+        bodyFontWeight = FontWeight.Normal,
+        fontFeatureSettings = "tnum",
+        compactProgressColor = Color(0xFFFFFFFF)
     ),
 
     TAPE_DECK(
@@ -107,23 +127,33 @@ enum class IslandSignatureTheme(
         textColorSecondary = Color(0xFF9E9E9E),
         borderColor = Color(0xFF383838),
         primaryButtonBackground = Color(0xFFE5E5E5),
-        primaryButtonTextColor = Color(0xFF1E1E1E)
+        primaryButtonTextColor = Color(0xFF1E1E1E),
+        displayFont = FontFamily.Monospace,
+        bodyFont = FontFamily.Monospace,
+        displayFontWeight = FontWeight.Bold,
+        bodyFontWeight = FontWeight.Normal,
+        compactProgressColor = Color(0xFFD71921)
     ),
 
     GLASSMORPHIC_FROSTED(
         id = "glassmorphic_frosted",
         displayName = "Glassmorphic Frosted",
         description = "Translucent frosted acrylic with specular highlight border and glass pills",
-        pillBackgroundColorHex = 0xD1222222L,
+        pillBackgroundColorHex = 0xD6222222L,
         accentColorHex = 0xFFFFFFFFL,
-        pillBackgroundColor = Color(0xD1222222), // 82% alpha #222222
+        pillBackgroundColor = Color(0xD6222222), // 84% alpha #222222
         accentColor = Color(0xFFFFFFFF),
         surfaceColor = Color(0xB3333333), // 70% alpha #333333
         textColorPrimary = Color(0xFFFFFFFF),
         textColorSecondary = Color(0xCCFFFFFF),
-        borderColor = Color(0x38FFFFFF), // specular white
+        borderColor = Color(0x45FFFFFF), // specular white
         primaryButtonBackground = Color(0xB3333333),
         primaryButtonTextColor = Color(0xFFFFFFFF),
+        displayFont = FontFamily.SansSerif,
+        bodyFont = FontFamily.SansSerif,
+        displayFontWeight = FontWeight.Medium,
+        bodyFontWeight = FontWeight.Normal,
+        compactProgressColor = Color(0xFFFFFFFF),
         isGlassmorphic = true
     ),
 
@@ -138,9 +168,14 @@ enum class IslandSignatureTheme(
         surfaceColor = Color(0xFFE5E5E5),
         textColorPrimary = Color(0xFF000000),
         textColorSecondary = Color(0xFF555555),
-        borderColor = Color(0xFFCCCCCC),
+        borderColor = Color(0xFFD0D0D0),
         primaryButtonBackground = Color(0xFF000000),
         primaryButtonTextColor = Color(0xFFFFFFFF),
+        displayFont = NdotFontFamily,
+        bodyFont = FontFamily.SansSerif,
+        displayFontWeight = FontWeight.Normal,
+        bodyFontWeight = FontWeight.Bold,
+        compactProgressColor = Color(0xFFD71921),
         isInverted = true
     );
 
@@ -392,6 +427,68 @@ fun SegmentedLedProgressBar(
                         else Modifier
                     )
             )
+        }
+    }
+}
+
+/**
+ * Live Track Progress Border: Traces a smooth 2.dp stroke clockwise around the compact pill capsule
+ * tracing playback progress (0f..1f) over a subtle 20% alpha track.
+ */
+@Composable
+fun CompactMusicProgressBorder(
+    progressFraction: Float,
+    accentColor: Color,
+    cornerRadiusDp: Dp = 18.dp,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        if (w <= 0f || h <= 0f || w.isNaN() || h.isNaN()) return@Canvas
+
+        val strokeWidthPx = 2.dp.toPx()
+        val cornerRadiusPx = cornerRadiusDp.toPx().coerceIn(0f, h / 2f)
+
+        val strokeOffset = strokeWidthPx / 2f
+        val rectW = (w - strokeWidthPx).coerceAtLeast(1f)
+        val rectH = (h - strokeWidthPx).coerceAtLeast(1f)
+
+        val fullPath = androidx.compose.ui.graphics.Path().apply {
+            addRoundRect(
+                androidx.compose.ui.geometry.RoundRect(
+                    rect = androidx.compose.ui.geometry.Rect(
+                        offset = Offset(strokeOffset, strokeOffset),
+                        size = Size(rectW, rectH)
+                    ),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusPx, cornerRadiusPx)
+                )
+            )
+        }
+
+        // 1. Subtle 20% alpha background track
+        drawPath(
+            path = fullPath,
+            color = accentColor.copy(alpha = 0.20f),
+            style = Stroke(width = strokeWidthPx)
+        )
+
+        // 2. Smooth active progress stroke measured clockwise
+        val safeProgress = if (progressFraction.isNaN() || progressFraction.isInfinite()) 0f else progressFraction.coerceIn(0f, 1f)
+        if (safeProgress > 0f) {
+            val pathMeasure = androidx.compose.ui.graphics.PathMeasure()
+            pathMeasure.setPath(fullPath, forceClosed = true)
+            val totalLength = pathMeasure.length
+            if (totalLength > 0f && !totalLength.isNaN()) {
+                val progressSegment = androidx.compose.ui.graphics.Path()
+                val stopDist = (totalLength * safeProgress).coerceIn(0f, totalLength)
+                pathMeasure.getSegment(0f, stopDist, progressSegment, startWithMoveTo = true)
+                drawPath(
+                    path = progressSegment,
+                    color = accentColor,
+                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+                )
+            }
         }
     }
 }

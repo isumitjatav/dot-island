@@ -19,6 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -204,6 +208,25 @@ fun MusicExpandedView(
             Spacer(modifier = Modifier.height(effectiveTopClearance))
 
             // 2. Header Row: Source app, Audio device output, and Collapse chip
+            val outputPillBg = when {
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingDarkGray
+            }
+            val outputPillText = when {
+                theme.isInverted -> Color(0xFF000000)
+                else -> NothingMutedText
+            }
+            val collapseBg = when {
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingDarkGray
+            }
+            val collapseText = when {
+                theme.isInverted -> Color(0xFF000000)
+                else -> NothingWhite
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -215,9 +238,9 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = if (trackState.isHistorical) "AUDIO STANDBY" else trackState.appDisplayName.uppercase(),
-                        color = NothingWhite,
+                        color = theme.textColorPrimary,
                         fontSize = 11.5.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
                         maxLines = 1,
@@ -230,14 +253,15 @@ fun MusicExpandedView(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(NothingDarkGray)
+                            .background(outputPillBg)
+                            .then(if (theme.isGlassmorphic) Modifier.border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(6.dp)) else if (theme.isInverted) Modifier.border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(6.dp)) else Modifier)
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             text = trackState.audioOutputName.uppercase(),
-                            color = NothingMutedText,
+                            color = outputPillText,
                             fontSize = 8.5.sp,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = theme.bodyFont,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -248,15 +272,16 @@ fun MusicExpandedView(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(NothingDarkGray)
+                        .background(collapseBg)
+                        .then(if (theme.isGlassmorphic) Modifier.border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(8.dp)) else if (theme.isInverted) Modifier.border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(8.dp)) else Modifier)
                         .clickable { onCollapse() }
                         .padding(horizontal = 10.dp, vertical = 5.dp)
                 ) {
                     Text(
                         text = "COLLAPSE",
-                        color = NothingWhite,
+                        color = collapseText,
                         fontSize = 10.5.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -329,8 +354,8 @@ fun MusicExpandedView(
                         text = trackState.trackTitle,
                         color = theme.textColorPrimary,
                         fontSize = 13.5.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
+                        fontFamily = theme.displayFont,
+                        fontWeight = theme.displayFontWeight,
                         lineHeight = 17.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -344,7 +369,7 @@ fun MusicExpandedView(
                         },
                         color = theme.textColorSecondary,
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = theme.bodyFont,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -354,7 +379,7 @@ fun MusicExpandedView(
                             text = "(LAST KNOWN PLAYBACK)",
                             color = Color(0xFFE5A93C),
                             fontSize = 8.5.sp,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = theme.bodyFont,
                             fontWeight = FontWeight.Bold
                         )
                     }
@@ -390,13 +415,13 @@ fun MusicExpandedView(
                         text = formatDurationMs(displayPositionMs),
                         color = theme.textColorSecondary,
                         fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = theme.displayFont
                     )
                     Text(
                         text = formatDurationMs(trackState.durationMs),
                         color = theme.textColorSecondary,
                         fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = theme.displayFont
                     )
                 }
 
@@ -526,11 +551,11 @@ fun MusicExpandedView(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = if (trackState.isPlaying) "⏸" else "▶",
-                        color = playPauseIconColor,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                    Icon(
+                        imageVector = if (trackState.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = if (trackState.isPlaying) "Pause" else "Play",
+                        tint = playPauseIconColor,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 

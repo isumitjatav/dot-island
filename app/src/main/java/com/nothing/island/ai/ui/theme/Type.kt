@@ -12,6 +12,13 @@ import androidx.compose.ui.unit.sp
  * Utilizes Monospace for technical telemetry, numbers, badges, and NDot styling;
  * and clean Sans-Serif for primary headers and readable body copy.
  */
+val NdotFontFamily: FontFamily by lazy {
+    try {
+        FontFamily(androidx.compose.ui.text.font.Font(com.nothing.island.ai.R.font.ndot_matrix))
+    } catch (_: Throwable) {
+        FontFamily.Monospace
+    }
+}
 val MonospaceFamily = FontFamily.Monospace
 val SansSerifFamily = FontFamily.SansSerif
 

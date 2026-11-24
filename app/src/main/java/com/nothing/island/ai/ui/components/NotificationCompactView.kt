@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,18 +72,26 @@ fun NotificationCompactView(
         event.title.ifBlank { event.packageName.substringAfterLast('.') }
     }
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+    val pillBorderColor = when {
+        theme.isGlassmorphic -> Color(0x45FFFFFF)
+        theme.isInverted -> Color(0xFFD0D0D0)
+        else -> theme.borderColor
+    }
+
     Box(
         modifier = modifier
             .width(200.dp)
             .height(36.dp)
             .clip(pillShape)
-            .background(NothingBlack)
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, pillBorderColor, pillShape)
             .islandProgressBorder(
                 shape = pillShape,
                 progressState = event.progressState,
                 progress = event.progress,
                 maxProgress = event.maxProgress,
-                accentColor = NothingWhite
+                accentColor = theme.accentColor
             )
             .then(
                 if (onSwipeDismiss != null) {
@@ -144,10 +153,10 @@ fun NotificationCompactView(
             ) {
                 Text(
                     text = rightWingText,
-                    color = NothingWhite,
+                    color = theme.textColorPrimary,
                     fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily = theme.bodyFont,
+                    fontWeight = theme.bodyFontWeight,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

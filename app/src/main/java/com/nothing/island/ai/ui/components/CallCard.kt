@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -109,14 +110,22 @@ fun CallCompactView(
         }
 
         // Main Call Capsule (trimmed to 104dp with end button, or 124dp standalone)
+        val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
         val pillWidth = if (showEnd) 104.dp else 124.dp
+        val compactBorderColor = when {
+            isRinging -> theme.accentColor
+            theme.isGlassmorphic -> Color(0x45FFFFFF)
+            theme.isInverted -> Color(0xFFD0D0D0)
+            else -> theme.borderColor
+        }
+
         Box(
             modifier = Modifier
                 .width(pillWidth)
                 .height(32.dp)
                 .clip(RoundedCornerShape(16.dp))
-                .background(if (isRinging) NothingPrimaryAccent.copy(alpha = 0.18f + glow * 0.12f) else NothingPrimaryBackground)
-                .border(1.dp, if (isRinging) NothingPrimaryAccent else NothingDivider, RoundedCornerShape(16.dp))
+                .background(if (isRinging) theme.accentColor.copy(alpha = 0.18f + glow * 0.12f) else theme.pillBackgroundColor)
+                .border(1.dp, compactBorderColor, RoundedCornerShape(16.dp))
                 .clickable(onClick = onTap)
                 .padding(horizontal = 8.dp),
             contentAlignment = Alignment.Center,
@@ -142,7 +151,7 @@ fun CallCompactView(
                 ) {
                     Text(
                         text = if (isSpeakerOn) "🔊" else "☎",
-                        color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
+                        color = if (isRinging) theme.accentColor else if (isDialing) theme.textColorSecondary else if (theme.isInverted) Color(0xFF000000) else NothingSuccess,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                     )
@@ -157,10 +166,10 @@ fun CallCompactView(
                         isDialing -> "CALLING"
                         else -> formatCallDuration((event as? IslandEvent.CallConnected)?.durationSeconds ?: 0L)
                     },
-                    color = if (isRinging) NothingPrimaryAccent else if (isDialing) NothingSecondaryText else NothingSuccess,
+                    color = if (isRinging) theme.accentColor else if (isDialing) theme.textColorSecondary else if (theme.isInverted) Color(0xFF000000) else NothingSuccess,
                     fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
+                    fontFamily = theme.displayFont,
+                    fontWeight = theme.displayFontWeight,
                     maxLines = 1,
                 )
 
@@ -242,10 +251,10 @@ fun CallExpandedView(
             color = when {
                 isRinging -> theme.accentColor
                 isDialing -> theme.textColorSecondary
-                else -> NothingSuccess
+                else -> if (theme.isInverted) Color(0xFF000000) else NothingSuccess
             },
             fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = theme.bodyFont,
             letterSpacing = 2.sp,
         )
         Spacer(Modifier.height(12.dp))
@@ -253,8 +262,8 @@ fun CallExpandedView(
             text = caller,
             color = theme.textColorPrimary,
             fontSize = 20.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Bold,
+            fontFamily = theme.displayFont,
+            fontWeight = theme.displayFontWeight,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -269,11 +278,20 @@ fun CallExpandedView(
             },
             color = theme.textColorSecondary,
             fontSize = 12.sp,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = theme.displayFont,
         )
         Spacer(Modifier.height(20.dp))
         if (isRinging) {
             // Incoming call: DECLINE + ANSWER
+            val declineBg = when {
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingElevatedSurface
+            }
+            val declineText = when {
+                theme.isInverted -> Color(0xFF000000)
+                else -> NothingSecondaryText
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -283,12 +301,12 @@ fun CallExpandedView(
                         .weight(1f)
                         .height(48.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(NothingElevatedSurface)
-                        .border(1.dp, NothingDivider, RoundedCornerShape(14.dp))
+                        .background(declineBg)
+                        .border(1.dp, if (theme.isGlassmorphic) Color(0x28FFFFFF) else if (theme.isInverted) Color(0xFFCCCCCC) else NothingDivider, RoundedCornerShape(14.dp))
                         .clickable(onClick = onDecline),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("DECLINE", color = NothingSecondaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+                    Text("DECLINE", color = declineText, fontSize = 11.sp, fontFamily = theme.bodyFont)
                 }
                 Box(
                     modifier = Modifier
@@ -299,11 +317,22 @@ fun CallExpandedView(
                         .clickable(onClick = onAnswer),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("ANSWER", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Text("ANSWER", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
             // Ongoing or Dialing call: SPEAKER + END CALL
+            val speakerBg = when {
+                isSpeakerOn -> if (theme.isInverted) Color(0xFFCCCCCC) else NothingPrimaryText.copy(alpha = 0.15f)
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingElevatedSurface
+            }
+            val speakerTextColor = when {
+                theme.isInverted -> Color(0xFF000000)
+                isSpeakerOn -> NothingPrimaryText
+                else -> NothingSecondaryText
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -314,16 +343,16 @@ fun CallExpandedView(
                             .weight(1f)
                             .height(48.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (isSpeakerOn) NothingPrimaryText.copy(alpha = 0.15f) else NothingElevatedSurface)
-                            .border(1.dp, if (isSpeakerOn) NothingPrimaryText else NothingDivider, RoundedCornerShape(14.dp))
+                            .background(speakerBg)
+                            .border(1.dp, if (isSpeakerOn) (if (theme.isInverted) Color(0xFF000000) else NothingPrimaryText) else if (theme.isGlassmorphic) Color(0x28FFFFFF) else if (theme.isInverted) Color(0xFFCCCCCC) else NothingDivider, RoundedCornerShape(14.dp))
                             .clickable(onClick = onToggleSpeaker),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
                             text = if (isSpeakerOn) "🔊 SPEAKER ON" else "🔈 SPEAKER",
-                            color = if (isSpeakerOn) NothingPrimaryText else NothingSecondaryText,
+                            color = speakerTextColor,
                             fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = theme.bodyFont,
                             fontWeight = if (isSpeakerOn) FontWeight.Bold else FontWeight.Normal,
                         )
                     }
@@ -342,7 +371,7 @@ fun CallExpandedView(
                         .clickable(onClick = onDecline),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("END CALL", color = theme.primaryButtonTextColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Text("END CALL", color = theme.primaryButtonTextColor, fontSize = 11.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
                 }
             }
         }

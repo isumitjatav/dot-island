@@ -562,10 +562,11 @@ fun IslandOverlayView(
                                 com.nothing.island.ai.ui.theme.GlyphArcCompactDecorations(arcColor = Color.White)
                             }
                             com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> {
+                                val reelStartPadding = if (currentTrack.isPlaying) 34.dp else 8.dp
                                 Row(
                                     modifier = Modifier
                                         .fillMaxSize()
-                                        .padding(horizontal = 6.dp),
+                                        .padding(start = reelStartPadding, end = 6.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -581,7 +582,7 @@ fun IslandOverlayView(
                                     modifier = Modifier
                                         .fillMaxSize()
                                         .clip(RoundedCornerShape(preferences.cornerRadiusDp.dp))
-                                        .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(preferences.cornerRadiusDp.dp))
+                                        .border(1.dp, Color(0x45FFFFFF), RoundedCornerShape(preferences.cornerRadiusDp.dp))
                                 )
                             }
                             else -> Unit
@@ -990,15 +991,15 @@ fun DashboardCard(
                             text = currentTimeText,
                             color = theme.textColorPrimary,
                             fontSize = 22.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
+                            fontFamily = theme.displayFont,
+                            fontWeight = theme.displayFontWeight,
                             letterSpacing = 1.sp
                         )
                         Text(
                             text = currentDateText,
                             color = theme.textColorSecondary,
                             fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = theme.bodyFont,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -1046,12 +1047,28 @@ fun DashboardCard(
 
             // 3. Body: Recent Notifications Preview Section
             // Strictly bounded with weight(1f) to prevent content clipping or infinite-height conflicts
+            val recentAlertsBg = when {
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingDarkGray
+            }
+            val recentAlertsBorder = when {
+                theme.isInverted -> Color(0xFFCCCCCC)
+                theme.isGlassmorphic -> Color(0x28FFFFFF)
+                else -> Color.Transparent
+            }
+            val alertsHeaderColor = when {
+                theme.isInverted -> Color(0xFF000000)
+                else -> NothingMutedText
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(NothingDarkGray)
+                    .background(recentAlertsBg)
+                    .then(if (recentAlertsBorder != Color.Transparent) Modifier.border(1.dp, recentAlertsBorder, RoundedCornerShape(12.dp)) else Modifier)
                     .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 6.dp)
             ) {
                 // Pinned Header row for Recent Alerts (always visible above the list)
@@ -1064,9 +1081,9 @@ fun DashboardCard(
                 ) {
                     Text(
                         text = "RECENT ALERTS",
-                        color = NothingMutedText,
+                        color = alertsHeaderColor,
                         fontSize = 10.5.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold
                     )
 

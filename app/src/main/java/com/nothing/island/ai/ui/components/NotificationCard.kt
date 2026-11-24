@@ -427,9 +427,9 @@ fun NotificationCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = state.appDisplayName.uppercase(),
-                        color = NothingWhite,
+                        color = theme.textColorPrimary,
                         fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
+                        fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
                         maxLines = 1,
@@ -461,10 +461,20 @@ fun NotificationCard(
                     }
 
                     if (onCollapse != null) {
+                        val collapseBg = when {
+                            theme.isInverted -> Color(0xFFE4E4E4)
+                            theme.isGlassmorphic -> Color(0xB3333333)
+                            else -> NothingDarkGray
+                        }
+                        val collapseText = when {
+                            theme.isInverted -> Color(0xFF000000)
+                            else -> NothingWhite
+                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(NothingDarkGray)
+                                .background(collapseBg)
+                                .then(if (theme.isGlassmorphic) Modifier.border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(8.dp)) else if (theme.isInverted) Modifier.border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(8.dp)) else Modifier)
                                 .clickable {
                                     replyingActionIndex = null
                                     replyText = ""
@@ -475,18 +485,18 @@ fun NotificationCard(
                         ) {
                             Text(
                                 text = "COLLAPSE",
-                                color = NothingWhite,
+                                color = collapseText,
                                 fontSize = 10.5.sp,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = theme.bodyFont,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     } else {
                         Text(
                             text = state.formattedTime ?: "JUST NOW",
-                            color = NothingMutedText,
+                            color = theme.textColorSecondary,
                             fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
+                            fontFamily = theme.displayFont,
                             letterSpacing = 1.sp
                         )
                     }
@@ -495,11 +505,22 @@ fun NotificationCard(
 
             // 3. Body: Message Container (clickable to open app if not replying)
             val isBodyClickable = notificationKey != null && onOpenContent != null && replyingActionIndex == null
+            val bodyBg = when {
+                theme.isInverted -> Color(0xFFE4E4E4)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingDarkGray
+            }
+            val bodyBorder = when {
+                theme.isGlassmorphic -> Color(0x28FFFFFF)
+                theme.isInverted -> Color(0xFFCCCCCC)
+                else -> Color.Transparent
+            }
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(NothingDarkGray)
+                    .background(bodyBg)
+                    .then(if (bodyBorder != Color.Transparent) Modifier.border(1.dp, bodyBorder, RoundedCornerShape(12.dp)) else Modifier)
                     .then(
                         if (isBodyClickable) {
                             Modifier.clickable { onOpenContent?.invoke(notificationKey!!) }
@@ -523,10 +544,10 @@ fun NotificationCard(
                         if (!state.title.isNullOrBlank()) {
                             Text(
                                 text = state.title.uppercase(),
-                                color = NothingWhite,
+                                color = theme.textColorPrimary,
                                 fontSize = 16.sp,
-                                fontFamily = FontFamily.Monospace,
-                                fontWeight = if (state.previewMode == NotificationPreviewMode.APP_ONLY) FontWeight.Normal else FontWeight.Bold,
+                                fontFamily = theme.displayFont,
+                                fontWeight = theme.displayFontWeight,
                                 lineHeight = 20.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -537,9 +558,9 @@ fun NotificationCard(
                         if (!state.body.isNullOrBlank()) {
                             Text(
                                 text = state.body.uppercase(),
-                                color = NothingWhite.copy(alpha = 0.85f),
+                                color = if (theme.isInverted) Color(0xFF222222) else NothingWhite.copy(alpha = 0.85f),
                                 fontSize = 13.sp,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = theme.bodyFont,
                                 fontWeight = FontWeight.Medium,
                                 lineHeight = 17.sp,
                                 maxLines = 2,
@@ -551,9 +572,9 @@ fun NotificationCard(
                         if (!state.subText.isNullOrBlank()) {
                             Text(
                                 text = state.subText,
-                                color = NothingMutedText,
+                                color = theme.textColorSecondary,
                                 fontSize = 10.5.sp,
-                                fontFamily = FontFamily.Monospace,
+                                fontFamily = theme.bodyFont,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -830,7 +851,7 @@ fun NotificationCard(
                                         text = "REPLY",
                                         color = if (isPrimary && theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonTextColor else actionPillTextColor,
                                         fontSize = 11.sp,
-                                        fontFamily = FontFamily.Monospace,
+                                        fontFamily = theme.bodyFont,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
@@ -862,7 +883,7 @@ fun NotificationCard(
                                     text = "OPEN",
                                     color = openTextColor,
                                     fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = theme.bodyFont,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -884,7 +905,7 @@ fun NotificationCard(
                                     text = "DISMISS",
                                     color = actionPillTextColor,
                                     fontSize = 11.sp,
-                                    fontFamily = FontFamily.Monospace,
+                                    fontFamily = theme.bodyFont,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -901,24 +922,24 @@ fun NotificationCard(
             ) {
                 Text(
                     text = if (isSystemActive) "NOTHING ISLAND • NOTIFICATION" else "NOTHING ISLAND • (REMOVED)",
-                    color = NothingMutedText,
+                    color = theme.textColorSecondary,
                     fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = theme.bodyFont
                 )
 
                 if (state.formattedTime != null && onCollapse != null) {
                     Text(
                         text = state.formattedTime,
-                        color = NothingMutedText,
+                        color = theme.textColorSecondary,
                         fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = theme.displayFont
                     )
                 } else if (state.previewMode != NotificationPreviewMode.FULL) {
                     Text(
                         text = state.previewMode.name.replace('_', ' '),
-                        color = NothingMutedText,
+                        color = theme.textColorSecondary,
                         fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace
+                        fontFamily = theme.bodyFont
                     )
                 }
             }

@@ -48,6 +48,11 @@ object NothingTokens {
     val NothingTextTertiary = Color(0xFF5E5E5E)      // 37% Dimmed Gray for Timestamps & Badges
     val NothingTextDisabled = Color(0xFF383838)      // Disabled Controls & Inactive Steppers
 
+    // --- Typography Families ---
+    val NdotFamily get() = NdotFontFamily
+    val MonospaceFamily get() = androidx.compose.ui.text.font.FontFamily.Monospace
+    val SansSerifFamily get() = androidx.compose.ui.text.font.FontFamily.SansSerif
+
     // --- Dimensional Grid & Radii ---
     val CardRadius: Dp = 16.dp                       // Standard Card Corner Radius
     val ControlRadius: Dp = 12.dp                    // Button / Stepper / Switch Radius

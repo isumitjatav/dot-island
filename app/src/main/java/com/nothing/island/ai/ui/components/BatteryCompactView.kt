@@ -102,13 +102,20 @@ fun BatteryCompactView(
         else -> NothingBorder
     }
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+    val pillBorderColor = when {
+        theme.isGlassmorphic -> Color(0x45FFFFFF)
+        theme.isInverted -> Color(0xFFD0D0D0)
+        else -> borderColor
+    }
+
     Box(
         modifier = modifier
             .width(200.dp)
             .height(36.dp)
             .clip(pillShape)
-            .background(NothingBlack)
-            .border(1.dp, borderColor, pillShape)
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, pillBorderColor, pillShape)
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { totalDrag = 0f },
@@ -302,11 +309,11 @@ fun BatteryCompactView(
                         color = when {
                             isOverheat -> Color(0xFFFF5252)
                             isLowBattery -> Color(0xFFFFB300)
-                            else -> NothingWhite
+                            else -> theme.textColorPrimary
                         },
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
+                        fontFamily = theme.displayFont,
+                        fontWeight = theme.displayFontWeight,
                         maxLines = 1
                     )
                 }

@@ -55,27 +55,30 @@ fun MusicCompactView(
     onSwipe: (SwipeDirection) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
     val pillShape = RoundedCornerShape(18.dp)
-    val accentColor = preferences.resolveAccent(trackState.dominantColor)
+    val accentColor = theme.accentColor
 
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 35f
+
+    val progressFraction = if (trackState.durationMs > 0L) {
+        (trackState.computeCurrentPosition().toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+
+    val pillBorderColor = when {
+        theme.isGlassmorphic -> Color(0x45FFFFFF)
+        theme.isInverted -> Color(0xFFD0D0D0)
+        else -> theme.borderColor
+    }
 
     Box(
         modifier = modifier
             .width(200.dp)
             .height(36.dp)
             .clip(pillShape)
-            .background(NothingBlack)
-            .border(
-                1.dp,
-                if (trackState.isPlaying && preferences.glowIntensity > 0f) {
-                    accentColor.copy(alpha = 0.5f * preferences.glowIntensity)
-                } else {
-                    NothingBorder
-                },
-                pillShape
-            )
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, pillBorderColor, pillShape)
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
                     onDragStart = { totalDrag = 0f },
@@ -102,6 +105,15 @@ fun MusicCompactView(
             },
         contentAlignment = Alignment.Center
     ) {
+        // Live track progress border clockwise around compact pill when music is playing
+        if (trackState.isPlaying) {
+            com.nothing.island.ai.ui.theme.CompactMusicProgressBorder(
+                progressFraction = progressFraction,
+                accentColor = theme.compactProgressColor,
+                cornerRadiusDp = 18.dp,
+                modifier = Modifier.matchParentSize()
+            )
+        }
         Row(
             modifier = Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically
@@ -173,14 +185,14 @@ fun MusicCompactView(
                     // Concise track label
                     Text(
                         text = if (trackState.isPlaying) {
-                            trackState.trackTitle
+                            if (theme.id == "tape_deck") trackState.trackTitle.uppercase() else trackState.trackTitle
                         } else {
                             "PAUSED"
                         },
-                        color = if (trackState.isPlaying) NothingWhite else NothingMutedText,
+                        color = if (trackState.isPlaying) theme.textColorPrimary else theme.textColorSecondary,
                         fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
+                        fontFamily = theme.bodyFont,
+                        fontWeight = theme.bodyFontWeight,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

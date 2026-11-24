@@ -267,10 +267,10 @@ fun IslandPreview(
 
                     when (currentMode) {
                         IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, effectiveBg, effectiveAccent)
-                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(effectiveBg, effectiveAccent)
-                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(effectiveBg, effectiveAccent, isCameraCutoutEnabled)
-                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(effectiveBg, effectiveAccent, visualizerStyle)
-                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(effectiveBg, effectiveAccent, visualizerStyle, isCameraCutoutEnabled)
+                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(effectiveBg, effectiveAccent, theme)
+                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(effectiveBg, effectiveAccent, isCameraCutoutEnabled, theme)
+                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(effectiveBg, effectiveAccent, visualizerStyle, theme)
+                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(effectiveBg, effectiveAccent, visualizerStyle, isCameraCutoutEnabled, theme)
                         IslandPreviewMode.CHARGING -> PreviewChargingPill(effectiveBg, effectiveAccent)
                         IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(effectiveBg, effectiveAccent)
                         IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(effectiveBg, effectiveAccent)
@@ -352,14 +352,23 @@ private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float, bg
 }
 
 @Composable
-private fun PreviewNotifCompact(bg: Color, accent: Color) {
+private fun PreviewNotifCompact(
+    bg: Color,
+    accent: Color,
+    theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
+) {
+    val borderColor = when {
+        theme.isGlassmorphic -> Color(0x45FFFFFF)
+        theme.isInverted -> Color(0xFFCCCCCC)
+        else -> accent.copy(alpha = 0.6f)
+    }
     Box(
         modifier = Modifier
             .width(184.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(bg)
-            .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(18.dp))
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.CenterStart
     ) {
@@ -383,15 +392,17 @@ private fun PreviewNotifCompact(bg: Color, accent: Color) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "WhatsApp",
-                    color = NothingTokens.NothingTextPrimary,
+                    color = theme.textColorPrimary,
                     fontSize = 11.sp,
+                    fontFamily = theme.bodyFont,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1
                 )
                 Text(
                     text = "Meeting at 3 PM?",
-                    color = NothingTokens.NothingTextSecondary,
+                    color = theme.textColorSecondary,
                     fontSize = 9.sp,
+                    fontFamily = theme.bodyFont,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -399,24 +410,34 @@ private fun PreviewNotifCompact(bg: Color, accent: Color) {
 
             Text(
                 text = "Now",
-                color = NothingTokens.NothingTextTertiary,
+                color = theme.textColorSecondary,
                 fontSize = 9.sp,
-                fontFamily = FontFamily.Monospace
+                fontFamily = theme.displayFont
             )
         }
     }
 }
 
 @Composable
-private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled: Boolean = false) {
+private fun PreviewNotifExpanded(
+    bg: Color,
+    accent: Color,
+    isCameraCutoutEnabled: Boolean = false,
+    theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
+) {
     val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
+    val cardBorder = when {
+        theme.isGlassmorphic -> Color(0x38FFFFFF)
+        theme.isInverted -> Color(0xFFCCCCCC)
+        else -> NothingTokens.NothingBorderProminent
+    }
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
             .clip(shape)
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderProminent, shape)
+            .border(1.dp, cardBorder, shape)
             .padding(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -437,9 +458,9 @@ private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "WHATSAPP • 2m ago",
-                    color = NothingTokens.NothingTextSecondary,
+                    color = theme.textColorSecondary,
                     fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = theme.bodyFont,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -447,7 +468,7 @@ private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled
                     text = "CLEAR ALL",
                     color = accent,
                     fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
+                    fontFamily = theme.bodyFont,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -460,23 +481,25 @@ private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(NothingTokens.NothingSurfaceHigh),
+                        .background(if (theme.isInverted) Color(0xFFE5E5E5) else NothingTokens.NothingSurfaceHigh),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("JD", color = NothingTokens.NothingTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("JD", color = theme.textColorPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Spacer(modifier = Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "John Doe",
-                        color = NothingTokens.NothingTextPrimary,
+                        color = theme.textColorPrimary,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        fontFamily = theme.displayFont,
+                        fontWeight = theme.displayFontWeight
                     )
                     Text(
                         text = "Are we still on for the design review meeting today?",
-                        color = NothingTokens.NothingTextSecondary,
+                        color = theme.textColorSecondary,
                         fontSize = 11.sp,
+                        fontFamily = theme.bodyFont,
                         maxLines = 2,
                         lineHeight = 15.sp
                     )
@@ -486,39 +509,60 @@ private fun PreviewNotifExpanded(bg: Color, accent: Color, isCameraCutoutEnabled
             Spacer(modifier = Modifier.weight(1f))
 
             // Action Buttons
+            val chipBg = when {
+                theme.isInverted -> Color(0xFFE5E5E5)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingTokens.NothingSurfaceMedium
+            }
+            val chipBorder = when {
+                theme.isGlassmorphic -> Color(0x28FFFFFF)
+                theme.isInverted -> Color(0xFFCCCCCC)
+                else -> NothingTokens.NothingBorderSubtle
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                PreviewActionChip("REPLY", NothingTokens.NothingTextPrimary)
-                PreviewActionChip("MARK READ", NothingTokens.NothingTextSecondary)
-                PreviewActionChip("MUTE", NothingTokens.NothingTextTertiary)
+                PreviewActionChip("REPLY", theme.textColorPrimary, chipBg, chipBorder, theme.bodyFont)
+                PreviewActionChip("MARK READ", theme.textColorSecondary, chipBg, chipBorder, theme.bodyFont)
+                PreviewActionChip("MUTE", theme.textColorSecondary, chipBg, chipBorder, theme.bodyFont)
             }
         }
     }
 }
 
 @Composable
-private fun PreviewActionChip(text: String, textColor: Color) {
+private fun PreviewActionChip(
+    text: String,
+    textColor: Color,
+    bg: Color = NothingTokens.NothingSurfaceMedium,
+    borderColor: Color = NothingTokens.NothingBorderSubtle,
+    fontFamily: FontFamily = FontFamily.Monospace
+) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(NothingTokens.NothingSurfaceMedium)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(8.dp))
+            .background(bg)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             color = textColor,
             fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
+            fontFamily = fontFamily,
             fontWeight = FontWeight.Bold
         )
     }
 }
 
 @Composable
-private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle) {
+private fun PreviewMusicCompact(
+    bg: Color,
+    accent: Color,
+    visualizerStyle: MusicVisualizerStyle,
+    theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -530,18 +574,31 @@ private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: Music
         label = "VinylAngle"
     )
 
+    val compactBorderColor = when {
+        theme.isGlassmorphic -> Color(0x45FFFFFF)
+        theme.isInverted -> Color(0xFFCCCCCC)
+        else -> NothingTokens.NothingBorderSubtle
+    }
+
     Box(
         modifier = Modifier
             .width(190.dp)
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
-            .padding(horizontal = 8.dp),
+            .border(1.dp, compactBorderColor, RoundedCornerShape(18.dp)),
         contentAlignment = Alignment.Center
     ) {
+        com.nothing.island.ai.ui.theme.CompactMusicProgressBorder(
+            progressFraction = 0.42f,
+            accentColor = theme.compactProgressColor,
+            cornerRadiusDp = 18.dp,
+            modifier = Modifier.matchParentSize()
+        )
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -551,8 +608,8 @@ private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: Music
                     .size(24.dp)
                     .rotate(rotation)
                     .clip(CircleShape)
-                    .background(Color(0xFF151515))
-                    .border(1.dp, Color(0xFF333333), CircleShape),
+                    .background(if (theme.isInverted) Color(0xFFE5E5E5) else Color(0xFF151515))
+                    .border(1.dp, if (theme.isInverted) Color(0xFFCCCCCC) else Color(0xFF333333), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -565,28 +622,41 @@ private fun PreviewMusicCompact(bg: Color, accent: Color, visualizerStyle: Music
 
             Text(
                 text = "Circles",
-                color = NothingTokens.NothingTextPrimary,
+                color = theme.textColorPrimary,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
+                fontFamily = theme.bodyFont,
+                fontWeight = theme.bodyFontWeight,
                 maxLines = 1
             )
 
             // Animated visualizer reflecting the selected style
-            PreviewMusicVisualizer(visualizerStyle, NothingTokens.NothingBlue)
+            PreviewMusicVisualizer(visualizerStyle, if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC) Color.White else NothingTokens.NothingBlue)
         }
     }
 }
 
 @Composable
-private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: MusicVisualizerStyle, isCameraCutoutEnabled: Boolean = false) {
+private fun PreviewMusicExpanded(
+    bg: Color,
+    accent: Color,
+    visualizerStyle: MusicVisualizerStyle,
+    isCameraCutoutEnabled: Boolean = false,
+    theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
+) {
     val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
+    val cardBorder = when {
+        theme.isGlassmorphic -> Color(0x38FFFFFF)
+        theme.isInverted -> Color(0xFFCCCCCC)
+        else -> NothingTokens.NothingBorderProminent
+    }
+
     Box(
         modifier = Modifier
             .width(300.dp)
             .height(160.dp)
             .clip(shape)
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderProminent, shape)
+            .border(1.dp, cardBorder, shape)
             .padding(12.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -599,8 +669,8 @@ private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: Musi
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF181818))
-                        .border(1.dp, Color(0xFF333333), CircleShape),
+                        .background(if (theme.isInverted) Color(0xFFE5E5E5) else Color(0xFF181818))
+                        .border(1.dp, if (theme.isInverted) Color(0xFFCCCCCC) else Color(0xFF333333), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(accent))
@@ -611,70 +681,92 @@ private fun PreviewMusicExpanded(bg: Color, accent: Color, visualizerStyle: Musi
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Circles",
-                        color = NothingTokens.NothingTextPrimary,
+                        color = theme.textColorPrimary,
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontFamily = theme.displayFont,
+                        fontWeight = theme.displayFontWeight,
                         maxLines = 1
                     )
                     Text(
                         text = "Post Malone",
-                        color = NothingTokens.NothingTextSecondary,
+                        color = theme.textColorSecondary,
                         fontSize = 11.sp,
+                        fontFamily = theme.bodyFont,
                         maxLines = 1
                     )
                 }
 
-                PreviewMusicVisualizer(visualizerStyle, NothingTokens.NothingBlue)
+                PreviewMusicVisualizer(visualizerStyle, if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC) Color.White else NothingTokens.NothingBlue)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Track Progress Bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("1:30", color = NothingTokens.NothingTextTertiary, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(
+            // Track Progress Bar / LED
+            if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC) {
+                com.nothing.island.ai.ui.theme.SegmentedLedProgressBar(
+                    progress = 0.42f,
                     modifier = Modifier
-                        .weight(1f)
-                        .height(3.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(NothingTokens.NothingSurfaceHighest)
+                        .fillMaxWidth()
+                        .height(14.dp)
+                        .padding(vertical = 2.dp),
+                    activeColor = Color.White
+                )
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Text("1:30", color = theme.textColorSecondary, fontSize = 9.sp, fontFamily = theme.displayFont)
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.42f)
-                            .fillMaxHeight()
-                            .background(NothingTokens.NothingTextPrimary)
-                    )
+                            .weight(1f)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(if (theme.isInverted) Color(0xFFCCCCCC) else NothingTokens.NothingSurfaceHighest)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(0.42f)
+                                .fillMaxHeight()
+                                .background(if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK) Color(0xFFD71921) else theme.accentColor)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("3:35", color = theme.textColorSecondary, fontSize = 9.sp, fontFamily = theme.displayFont)
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("3:35", color = NothingTokens.NothingTextTertiary, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
             }
 
             Spacer(modifier = Modifier.weight(1f))
 
             // Transport Controls: (10) |<< || >>| (10)
+            val btnColor = if (theme.isInverted) Color(0xFF000000) else NothingTokens.NothingTextPrimary
+            val btnMuted = if (theme.isInverted) Color(0xFF666666) else NothingTokens.NothingTextSecondary
+            val centerBtnBg = when {
+                theme.isInverted -> Color(0xFFE5E5E5)
+                theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF1C1C1C)
+                theme.isGlassmorphic -> Color(0xB3333333)
+                else -> NothingTokens.NothingSurfaceMedium
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("(10)", color = NothingTokens.NothingTextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                Text("|<<", color = NothingTokens.NothingTextPrimary, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text("(10)", color = btnMuted, fontSize = 11.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
+                Text("|<<", color = btnColor, fontSize = 13.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(NothingTokens.NothingSurfaceMedium),
+                        .background(centerBtnBg)
+                        .then(if (theme.isGlassmorphic) Modifier.border(1.dp, Color(0x28FFFFFF), CircleShape) else Modifier),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("||", color = NothingTokens.NothingTextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text("||", color = btnColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
-                Text(">>|", color = NothingTokens.NothingTextPrimary, fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                Text("(10)", color = NothingTokens.NothingTextSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                Text(">>|", color = btnColor, fontSize = 13.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
+                Text("(10)", color = btnMuted, fontSize = 11.sp, fontFamily = theme.bodyFont, fontWeight = FontWeight.Bold)
             }
         }
     }
