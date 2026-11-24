@@ -680,15 +680,9 @@ fun PreferenceToggleRow(
             )
         }
 
-        Switch(
+        com.nothing.island.ai.ui.components.NothingSwitch(
             checked = checked,
-            onCheckedChange = null,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = NothingPrimaryText,
-                checkedTrackColor = NothingPrimaryAccent,
-                uncheckedThumbColor = NothingMutedText,
-                uncheckedTrackColor = NothingDivider
-            )
+            onCheckedChange = onCheckedChange
         )
     }
 }

@@ -438,17 +438,20 @@ fun QuickToolsDrawer(
     onToggleToolEnabled: (String) -> Unit = {},
     modifier: Modifier = Modifier,
     isCameraCutoutEnabled: Boolean = false,
+    accentColor: Color = NothingPrimaryAccent,
 ) {
     val scroll = rememberScrollState()
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
     var isEditing by remember { mutableStateOf(false) }
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+
     Column(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingPrimaryBackground)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, cardShape)
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, theme.borderColor, cardShape)
             .pointerInput(Unit) {
                 var dragY = 0f
                 detectDragGestures(
@@ -618,7 +621,7 @@ fun QuickToolsDrawer(
                 label = "VOLUME",
                 percent = volumePercent,
                 onValueChange = onVolumeChange,
-                activeColor = NothingPrimaryAccent
+                activeColor = accentColor
             )
 
             // Brightness Slider

@@ -218,6 +218,7 @@ fun CallExpandedView(
     }
 
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
 
     val topPadding = if (isCameraCutoutEnabled) 20.dp else 16.dp
     val bottomPadding = if (isCameraCutoutEnabled) 14.dp else 16.dp
@@ -226,8 +227,8 @@ fun CallExpandedView(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingPrimaryBackground)
-            .border(1.dp, NothingDivider, cardShape)
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, theme.borderColor, cardShape)
             .padding(start = 20.dp, end = 20.dp, top = topPadding, bottom = bottomPadding),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -239,8 +240,8 @@ fun CallExpandedView(
                 else -> "ACTIVE CALL"
             },
             color = when {
-                isRinging -> NothingPrimaryAccent
-                isDialing -> NothingSecondaryText
+                isRinging -> theme.accentColor
+                isDialing -> theme.textColorSecondary
                 else -> NothingSuccess
             },
             fontSize = 10.sp,
@@ -250,7 +251,7 @@ fun CallExpandedView(
         Spacer(Modifier.height(12.dp))
         Text(
             text = caller,
-            color = NothingPrimaryText,
+            color = theme.textColorPrimary,
             fontSize = 20.sp,
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
@@ -266,7 +267,7 @@ fun CallExpandedView(
                 event is IslandEvent.CallConnected -> formatCallDuration(elapsedSeconds)
                 else -> "CALL"
             },
-            color = NothingSecondaryText,
+            color = theme.textColorSecondary,
             fontSize = 12.sp,
             fontFamily = FontFamily.Monospace,
         )
@@ -332,11 +333,16 @@ fun CallExpandedView(
                         .weight(1f)
                         .height(48.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(NothingPrimaryAccent)
+                        .background(theme.primaryButtonBackground)
+                        .then(
+                            if (theme.isGlassmorphic) Modifier.border(1.dp, androidx.compose.ui.graphics.Color(0x28FFFFFF), RoundedCornerShape(14.dp))
+                            else if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC) Modifier.border(1.dp, androidx.compose.ui.graphics.Color(0xFF333333), RoundedCornerShape(14.dp))
+                            else Modifier
+                        )
                         .clickable(onClick = onDecline),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text("END CALL", color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Text("END CALL", color = theme.primaryButtonTextColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                 }
             }
         }

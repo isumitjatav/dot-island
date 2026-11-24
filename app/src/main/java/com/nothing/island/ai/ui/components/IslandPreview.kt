@@ -96,7 +96,8 @@ fun IslandPreview(
     isExpanded: Boolean = false,
     onToggleExpanded: (() -> Unit)? = null,
     title: String = "NOTHING ISLAND",
-    statusText: String = "SIMULATED PREVIEW"
+    statusText: String = "SIMULATED PREVIEW",
+    theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
 ) {
     var currentMode by remember {
         mutableStateOf(if (isExpanded) IslandPreviewMode.MUSIC_EXPANDED else initialMode)
@@ -253,15 +254,49 @@ fun IslandPreview(
                             onModeChanged?.invoke(currentMode)
                         }
                 ) {
+                    val effectiveBg = when (theme) {
+                        com.nothing.island.ai.ui.theme.IslandSignatureTheme.HIGH_CONTRAST_INVERTED -> Color(0xFFF2F2F2)
+                        com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLASSMORPHIC_FROSTED -> Color(0xD1222222)
+                        com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> Color(0xFF1E1E1E)
+                        else -> pillBackgroundColor
+                    }
+                    val effectiveAccent = when (theme) {
+                        com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color.White
+                        else -> accentColor
+                    }
+
                     when (currentMode) {
-                        IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, pillBackgroundColor, accentColor)
-                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(pillBackgroundColor, accentColor, isCameraCutoutEnabled)
-                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(pillBackgroundColor, accentColor, visualizerStyle)
-                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(pillBackgroundColor, accentColor, visualizerStyle, isCameraCutoutEnabled)
-                        IslandPreviewMode.CHARGING -> PreviewChargingPill(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(pillBackgroundColor, accentColor)
-                        IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(pillBackgroundColor, accentColor)
+                        IslandPreviewMode.IDLE -> PreviewIdlePill(pillWidthDp, pillHeightDp, cornerRadiusDp, effectiveBg, effectiveAccent)
+                        IslandPreviewMode.NOTIF_COMPACT -> PreviewNotifCompact(effectiveBg, effectiveAccent)
+                        IslandPreviewMode.NOTIF_EXPANDED -> PreviewNotifExpanded(effectiveBg, effectiveAccent, isCameraCutoutEnabled)
+                        IslandPreviewMode.MUSIC_COMPACT -> PreviewMusicCompact(effectiveBg, effectiveAccent, visualizerStyle)
+                        IslandPreviewMode.MUSIC_EXPANDED -> PreviewMusicExpanded(effectiveBg, effectiveAccent, visualizerStyle, isCameraCutoutEnabled)
+                        IslandPreviewMode.CHARGING -> PreviewChargingPill(effectiveBg, effectiveAccent)
+                        IslandPreviewMode.BLUETOOTH_COMPACT -> PreviewBluetoothCompact(effectiveBg, effectiveAccent)
+                        IslandPreviewMode.BLUETOOTH_EXPANDED -> PreviewBluetoothExpanded(effectiveBg, effectiveAccent)
+                    }
+
+                    // Signature Theme Compact Overlays
+                    if (!currentMode.isExpanded) {
+                        when (theme) {
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> {
+                                com.nothing.island.ai.ui.theme.GlyphArcCompactDecorations(arcColor = Color.White)
+                            }
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> {
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .padding(horizontal = 8.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    com.nothing.island.ai.ui.theme.TapeDeckReelsIndicator(
+                                        isPlaying = currentMode == IslandPreviewMode.MUSIC_COMPACT,
+                                        sizeDp = 10.dp
+                                    )
+                                }
+                            }
+                            else -> Unit
+                        }
                     }
                 }
             }
@@ -292,7 +327,7 @@ private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float, bg
             .height(heightDp.dp)
             .clip(RoundedCornerShape(radiusDp.dp))
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(radiusDp.dp)),
+            .border(1.dp, accent.copy(alpha = 0.55f), RoundedCornerShape(radiusDp.dp)),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -301,16 +336,16 @@ private fun PreviewIdlePill(widthDp: Float, heightDp: Float, radiusDp: Float, bg
         ) {
             Box(
                 modifier = Modifier
-                    .size(4.dp)
+                    .size(5.dp)
                     .clip(CircleShape)
-                    .background(NothingTokens.NothingTextTertiary)
+                    .background(accent)
             )
             Spacer(modifier = Modifier.weight(1f))
             Box(
                 modifier = Modifier
-                    .size(4.dp)
+                    .size(5.dp)
                     .clip(CircleShape)
-                    .background(NothingTokens.NothingTextTertiary)
+                    .background(accent)
             )
         }
     }
@@ -324,7 +359,7 @@ private fun PreviewNotifCompact(bg: Color, accent: Color) {
             .height(36.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(bg)
-            .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(18.dp))
+            .border(1.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(18.dp))
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.CenterStart
     ) {

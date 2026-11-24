@@ -170,7 +170,7 @@ fun MascotStudioScreen(
                         fontFamily = FontFamily.Monospace,
                     )
                 }
-                Switch(
+                com.nothing.island.ai.ui.components.NothingSwitch(
                     checked = enabled,
                     onCheckedChange = { value ->
                         enabled = value

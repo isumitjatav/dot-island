@@ -114,17 +114,35 @@ fun MusicExpandedView(
         currentSeekPosition
     }
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+
+    val buttonBg = when {
+        theme.isGlassmorphic -> Color(0xB3333333)
+        theme.isInverted -> Color(0xFF000000)
+        theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF1C1C1C)
+        else -> NothingDarkGray
+    }
+    val buttonBorder = when {
+        theme.isGlassmorphic -> Color(0x28FFFFFF)
+        theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF333333)
+        else -> Color.Transparent
+    }
+    val buttonIconColor = when {
+        theme.isInverted -> Color(0xFFFFFFFF)
+        else -> NothingWhite
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingBlack)
+            .background(theme.pillBackgroundColor)
             .border(
                 1.dp,
                 if (trackState.isPlaying && preferences.glowIntensity > 0f) {
                     accentColor.copy(alpha = 0.35f * preferences.glowIntensity)
                 } else {
-                    NothingBorder
+                    theme.borderColor
                 },
                 cardShape
             )
@@ -245,25 +263,60 @@ fun MusicExpandedView(
             }
 
             // 3. Body Row: Artwork + Track Details + Mini Visualizer
+            val bodyBg = when {
+                theme.isGlassmorphic -> Color(0xB3333333)
+                theme.isInverted -> Color(0xFFE5E5E5)
+                theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> Color(0xFF262626)
+                else -> NothingDarkGray
+            }
+            val bodyBorder = when {
+                theme.isGlassmorphic -> Color(0x28FFFFFF)
+                theme.isInverted -> Color(0xFFCCCCCC)
+                else -> Color.Transparent
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(NothingDarkGray)
+                    .background(bodyBg)
+                    .then(if (bodyBorder != Color.Transparent) Modifier.border(1.dp, bodyBorder, RoundedCornerShape(12.dp)) else Modifier)
                     .padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Album Artwork
-                MusicArtworkView(
-                    bitmap = trackState.artworkBitmap,
-                    fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
-                    shape = preferences.artworkShape,
-                    isPlaying = trackState.isPlaying,
-                    rotationEnabled = preferences.albumRotationEnabled,
-                    sizeDp = 48.dp,
-                    accentColor = accentColor,
-                    glowIntensity = preferences.glowIntensity
-                )
+                if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE5E5E5))
+                            .border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(8.dp))
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        MusicArtworkView(
+                            bitmap = trackState.artworkBitmap,
+                            fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
+                            shape = preferences.artworkShape,
+                            isPlaying = trackState.isPlaying,
+                            rotationEnabled = preferences.albumRotationEnabled,
+                            sizeDp = 40.dp,
+                            accentColor = theme.accentColor,
+                            glowIntensity = preferences.glowIntensity
+                        )
+                    }
+                } else {
+                    MusicArtworkView(
+                        bitmap = trackState.artworkBitmap,
+                        fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
+                        shape = preferences.artworkShape,
+                        isPlaying = trackState.isPlaying,
+                        rotationEnabled = preferences.albumRotationEnabled,
+                        sizeDp = 48.dp,
+                        accentColor = accentColor,
+                        glowIntensity = preferences.glowIntensity
+                    )
+                }
 
                 Spacer(modifier = Modifier.width(10.dp))
 
@@ -274,7 +327,7 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = trackState.trackTitle,
-                        color = NothingWhite,
+                        color = theme.textColorPrimary,
                         fontSize = 13.5.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -289,7 +342,7 @@ fun MusicExpandedView(
                         } else {
                             trackState.artistName
                         },
-                        color = NothingWhite.copy(alpha = 0.85f),
+                        color = theme.textColorSecondary,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
                         maxLines = 1,
@@ -335,44 +388,55 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = formatDurationMs(displayPositionMs),
-                        color = NothingMutedText,
+                        color = theme.textColorSecondary,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
                     )
                     Text(
                         text = formatDurationMs(trackState.durationMs),
-                        color = NothingMutedText,
+                        color = theme.textColorSecondary,
                         fontSize = 9.sp,
                         fontFamily = FontFamily.Monospace
                     )
                 }
 
-                // Interactive Scrubber Slider
+                // Interactive Scrubber Slider or Segmented LED
                 val sliderPosition = if (trackState.durationMs > 0L) {
                     (displayPositionMs.toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
                 } else 0f
 
-                Slider(
-                    value = if (isUserScrubbing) scrubFraction else sliderPosition,
-                    onValueChange = { frac ->
-                        isUserScrubbing = true
-                        scrubFraction = frac
-                    },
-                    onValueChangeFinished = {
-                        isUserScrubbing = false
-                        val targetMs = (scrubFraction * trackState.durationMs).toLong()
-                        onSeekTo(targetMs)
-                    },
-                    enabled = trackState.durationMs > 0L && trackState.canSeek && !trackState.isHistorical,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(18.dp),
-                    colors = SliderDefaults.colors(
-                        thumbColor = accentColor,
-                        activeTrackColor = accentColor,
-                        inactiveTrackColor = Color(0xFF262626)
+                if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC) {
+                    com.nothing.island.ai.ui.theme.SegmentedLedProgressBar(
+                        progress = sliderPosition,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp)
+                            .padding(vertical = 4.dp),
+                        activeColor = Color.White
                     )
-                )
+                } else {
+                    Slider(
+                        value = if (isUserScrubbing) scrubFraction else sliderPosition,
+                        onValueChange = { frac ->
+                            isUserScrubbing = true
+                            scrubFraction = frac
+                        },
+                        onValueChangeFinished = {
+                            isUserScrubbing = false
+                            val targetMs = (scrubFraction * trackState.durationMs).toLong()
+                            onSeekTo(targetMs)
+                        },
+                        enabled = trackState.durationMs > 0L && trackState.canSeek && !trackState.isHistorical,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(18.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK) Color(0xFFD71921) else accentColor,
+                            activeTrackColor = if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK) Color(0xFFD71921) else accentColor,
+                            inactiveTrackColor = Color(0xFF262626)
+                        )
+                    )
+                }
             }
 
             // 5. Playback Transport Controls Row (REQ-19: Fast-forward / rewind controls)
@@ -412,12 +476,30 @@ fun MusicExpandedView(
                     Spacer(modifier = Modifier.width(14.dp))
                 }
 
+                val playPauseBg = when {
+                    trackState.isPlaying -> theme.accentColor
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF1C1C1C)
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.HIGH_CONTRAST_INVERTED -> Color(0xFF000000)
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> Color(0xFFE5E5E5)
+                    theme.isGlassmorphic -> Color(0xB3333333)
+                    else -> NothingWhite
+                }
+                val playPauseIconColor = when {
+                    trackState.isPlaying -> NothingWhite
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color.White
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.HIGH_CONTRAST_INVERTED -> Color.White
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> Color(0xFF1E1E1E)
+                    theme.isGlassmorphic -> Color.White
+                    else -> NothingBlack
+                }
+
                 // Previous button
                 Box(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(NothingDarkGray)
+                        .background(buttonBg)
+                        .then(if (buttonBorder != Color.Transparent) Modifier.border(1.dp, buttonBorder, CircleShape) else Modifier)
                         .clickable(enabled = canSkipPrev) {
                             onSkipPrevious()
                         },
@@ -425,7 +507,7 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = "⏮",
-                        color = if (canSkipPrev) NothingWhite else NothingMutedText,
+                        color = if (canSkipPrev) buttonIconColor else NothingMutedText,
                         fontSize = 13.sp
                     )
                 }
@@ -437,7 +519,8 @@ fun MusicExpandedView(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(if (trackState.isPlaying) accentColor else NothingWhite)
+                        .background(playPauseBg)
+                        .then(if (buttonBorder != Color.Transparent) Modifier.border(1.5.dp, buttonBorder, CircleShape) else Modifier)
                         .clickable(enabled = !trackState.isHistorical) {
                             onPlayPause()
                         },
@@ -445,7 +528,7 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = if (trackState.isPlaying) "⏸" else "▶",
-                        color = if (trackState.isPlaying) NothingWhite else NothingBlack,
+                        color = playPauseIconColor,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -458,7 +541,8 @@ fun MusicExpandedView(
                     modifier = Modifier
                         .size(34.dp)
                         .clip(CircleShape)
-                        .background(NothingDarkGray)
+                        .background(buttonBg)
+                        .then(if (buttonBorder != Color.Transparent) Modifier.border(1.dp, buttonBorder, CircleShape) else Modifier)
                         .clickable(enabled = trackState.canSkipNext && !trackState.isHistorical) {
                             onSkipNext()
                         },
@@ -466,7 +550,7 @@ fun MusicExpandedView(
                 ) {
                     Text(
                         text = "⏭",
-                        color = if (trackState.canSkipNext && !trackState.isHistorical) NothingWhite else NothingMutedText,
+                        color = if (trackState.canSkipNext && !trackState.isHistorical) buttonIconColor else NothingMutedText,
                         fontSize = 13.sp
                     )
                 }

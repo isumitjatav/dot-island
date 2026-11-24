@@ -1,5 +1,8 @@
 package com.nothing.island.ai.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,22 +34,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.ui.components.IslandPreview
-import com.nothing.island.ai.ui.components.NothingCard
-import com.nothing.island.ai.ui.components.NothingCardVariant
+import com.nothing.island.ai.ui.components.IslandPreviewMode
 import com.nothing.island.ai.ui.components.NothingSectionHeader
+import com.nothing.island.ai.ui.theme.GlyphArcCompactDecorations
+import com.nothing.island.ai.ui.theme.IslandSignatureTheme
 import com.nothing.island.ai.ui.theme.NothingTokens
+import com.nothing.island.ai.ui.theme.TapeDeckReelsIndicator
 
 /**
- * Data model for Theme Presets discovered in reference screenshots
+ * Data model for Theme Presets
  */
 data class ThemePresetItem(
     val name: String,
@@ -54,24 +62,41 @@ data class ThemePresetItem(
     val isOriginal: Boolean = true
 )
 
-/** Dark swatches get the Nothing-red accent so the theme stays visible. */
+/**
+ * Preserves true hue for dark swatches instead of clamping everything to Nothing Red.
+ * Only pure black/near-zero defaults to Nothing Red for visibility.
+ */
 private fun effectiveAccent(color: Color): Color {
+    if (color == NothingTokens.NothingBlack || color == Color.Transparent) {
+        return NothingTokens.NothingRed
+    }
     val luminance = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
-    return if (luminance < 0.16f) NothingTokens.NothingRed else color
+    if (luminance < 0.18f) {
+        // Boost dark swatches (Midnight, Deep Space, Forest Rain) so they pop against black without losing their hue
+        return Color(
+            red = (color.red * 2.2f + 0.15f).coerceAtMost(1f),
+            green = (color.green * 2.2f + 0.15f).coerceAtMost(1f),
+            blue = (color.blue * 2.2f + 0.25f).coerceAtMost(1f),
+            alpha = 1f
+        )
+    }
+    return color
 }
 
 /** Near-black pill background with a subtle tint of the chosen accent. */
 private fun backgroundFor(accent: Color): Color = Color(
-    red = 0.035f + accent.red * 0.06f,
-    green = 0.035f + accent.green * 0.06f,
-    blue = 0.035f + accent.blue * 0.06f,
+    red = (0.025f + accent.red * 0.05f).coerceAtMost(0.12f),
+    green = (0.025f + accent.green * 0.05f).coerceAtMost(0.12f),
+    blue = (0.025f + accent.blue * 0.05f).coerceAtMost(0.12f),
+    alpha = 1f
 )
 
 /**
  * Nothing OS 3.x Theme Studio Screen
  *
- * Implements 2-column grid gallery of 32+ named colorway presets
- * (Classic Black, Minimal Gray, Neon Cyber, The Matrix, Sunset, etc.)
+ * Implements:
+ * 1. 5 Signature Themes (Nothing Classic, Glyph Arc, Tape Deck, Glassmorphic Frosted, High-Contrast Inverted)
+ * 2. 2-column grid gallery of 32+ named colorway presets
  */
 @Composable
 fun ThemeStudioScreen(
@@ -83,8 +108,11 @@ fun ThemeStudioScreen(
     val prefs by repository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
-    var selectedPreset by remember { mutableStateOf(prefs.presetName) }
+    val selectedPreset = prefs.presetName.ifBlank { "Nothing Classic" }
+    var toastMessage by remember { mutableStateOf<String?>(null) }
+    val activeSignatureTheme = remember(selectedPreset) { IslandSignatureTheme.resolve(selectedPreset) }
 
     val presetList = remember {
         listOf(
@@ -159,7 +187,7 @@ fun ThemeStudioScreen(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "32+ PRESET COLORWAYS",
+                    text = "5 SIGNATURE THEMES + 32 PRESETS",
                     color = NothingTokens.NothingTextTertiary,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
@@ -173,13 +201,175 @@ fun ThemeStudioScreen(
         IslandPreview(
             pillBackgroundColor = Color(prefs.pillBackgroundColorHex),
             accentColor = Color(prefs.accentColorHex),
+            initialMode = IslandPreviewMode.NOTIF_COMPACT,
+            theme = activeSignatureTheme
         )
+
+        // Animated confirmation badge
+        AnimatedVisibility(
+            visible = toastMessage != null,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            toastMessage?.let { msg ->
+                Box(
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF1E1E1E))
+                        .border(1.dp, activeSignatureTheme.accentColor, RoundedCornerShape(8.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = msg,
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        NothingSectionHeader(title = "PRESET COLORWAY GALLERY", isAccent = true)
+        // =====================================================================
+        // SECTION 1: 5 SIGNATURE THEMES
+        // =====================================================================
+        NothingSectionHeader(title = "SIGNATURE THEMES", isAccent = true)
 
-        // 2-Column Grid
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            IslandSignatureTheme.entries.forEach { signatureTheme ->
+                val isSelected = selectedPreset.equals(signatureTheme.displayName, ignoreCase = true)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(NothingTokens.ControlRadius))
+                        .background(
+                            when {
+                                isSelected -> NothingTokens.NothingSurfaceMedium
+                                else -> NothingTokens.NothingSurfaceLow
+                            }
+                        )
+                        .border(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) signatureTheme.accentColor else NothingTokens.NothingBorderSubtle,
+                            shape = RoundedCornerShape(NothingTokens.ControlRadius)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            toastMessage = "APPLIED: ${signatureTheme.displayName.uppercase()}"
+                            scope.launch {
+                                repository.updatePillTheme(
+                                    backgroundHex = signatureTheme.pillBackgroundColorHex,
+                                    accentHex = signatureTheme.accentColorHex,
+                                    presetName = signatureTheme.displayName,
+                                )
+                                delay(2000)
+                                toastMessage = null
+                            }
+                        }
+                        .padding(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Mini dynamic badge representing theme
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(signatureTheme.pillBackgroundColor)
+                                    .border(1.dp, signatureTheme.borderColor, RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                when (signatureTheme) {
+                                    IslandSignatureTheme.NOTHING_CLASSIC -> {
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(signatureTheme.accentColor))
+                                    }
+                                    IslandSignatureTheme.GLYPH_ARC -> {
+                                        GlyphArcCompactDecorations(arcColor = Color.White)
+                                    }
+                                    IslandSignatureTheme.TAPE_DECK -> {
+                                        TapeDeckReelsIndicator(isPlaying = true, sizeDp = 10.dp)
+                                    }
+                                    IslandSignatureTheme.GLASSMORPHIC_FROSTED -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .clip(RoundedCornerShape(4.dp))
+                                                .background(Color(0x38FFFFFF))
+                                                .border(1.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
+                                        )
+                                    }
+                                    IslandSignatureTheme.HIGH_CONTRAST_INVERTED -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(16.dp, 8.dp)
+                                                .clip(RoundedCornerShape(2.dp))
+                                                .background(signatureTheme.accentColor)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = signatureTheme.displayName,
+                                    color = if (isSelected) NothingTokens.NothingTextPrimary else NothingTokens.NothingTextSecondary,
+                                    fontSize = 13.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = signatureTheme.description,
+                                    color = NothingTokens.NothingTextTertiary,
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        if (isSelected) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(signatureTheme.accentColor.copy(alpha = 0.2f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "ACTIVE",
+                                    color = signatureTheme.accentColor,
+                                    fontSize = 9.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // =====================================================================
+        // SECTION 2: 32 COLORWAY PRESET GALLERY
+        // =====================================================================
+        NothingSectionHeader(title = "PRESET COLORWAY GALLERY", isAccent = false)
+
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             presetList.chunked(2).forEach { rowItems ->
                 Row(
@@ -202,18 +392,21 @@ fun ThemeStudioScreen(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null
                                 ) {
-                                    selectedPreset = preset.name
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     val accent = effectiveAccent(preset.primaryColor)
                                     val bg = backgroundFor(accent)
                                     val accentHex = (accent.toArgb().toLong()) and 0xFFFFFFFFL
                                     val bgArgb = (bg.toArgb().toLong()) and 0xFFFFFFFFL
                                     val safeBgHex = if (bgArgb == 0L || (bgArgb and 0xFF000000L) == 0L) 0xFF000000L else bgArgb
+                                    toastMessage = "APPLIED: ${preset.name.uppercase()}"
                                     scope.launch {
                                         repository.updatePillTheme(
                                             backgroundHex = safeBgHex,
                                             accentHex = accentHex,
                                             presetName = preset.name,
                                         )
+                                        delay(2000)
+                                        toastMessage = null
                                     }
                                 }
                                 .padding(12.dp)
@@ -261,3 +454,4 @@ fun ThemeStudioScreen(
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
+

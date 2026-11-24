@@ -106,12 +106,14 @@ fun BatteryExpandedView(
         label = "charging_trail_phase"
     )
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingBlack)
-            .border(1.dp, borderColor, cardShape)
+            .background(theme.pillBackgroundColor)
+            .border(1.dp, if (theme.isGlassmorphic) Color(0x38FFFFFF) else borderColor, cardShape)
             .drawWithContent {
                 drawContent()
                 if (isCharging && !preferences.reducedMotion) {

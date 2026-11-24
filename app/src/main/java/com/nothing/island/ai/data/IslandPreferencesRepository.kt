@@ -452,6 +452,13 @@ class IslandPreferencesRepository internal constructor(
             prefs[PreferencesKeys.ACCENT_COLOR_HEX] = accentHex
             prefs[PreferencesKeys.PRESET_NAME] = presetName
         }
+        // Cascade theme accent across Battery, Charging and Music subsystems
+        try {
+            val updatedBattery = _liveBatteryPreferences.value.copy(accentColorHex = accentHex)
+            updateBatteryPreferences(updatedBattery)
+            val updatedMusic = _liveMusicPreferences.value.copy(accentColorHex = accentHex)
+            updateMusicPreferences(updatedMusic)
+        } catch (_: Exception) {}
     }
 
     suspend fun updateAnimation(prefs: com.nothing.island.ai.ui.AnimationPreferences) {

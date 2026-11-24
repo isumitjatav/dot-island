@@ -42,6 +42,7 @@ import com.nothing.island.ai.ui.components.DotMatrixGlyph
 import com.nothing.island.ai.ui.components.DotMatrixPatterns
 import com.nothing.island.ai.ui.components.IslandCard
 import com.nothing.island.ai.ui.components.IslandPreview
+import com.nothing.island.ai.ui.components.NothingStatusButton
 import com.nothing.island.ai.ui.components.SectionHeader
 import com.nothing.island.ai.ui.components.StatusIndicator
 import com.nothing.island.ai.ui.theme.NothingDivider
@@ -272,36 +273,18 @@ fun HomeScreen(
                     }
                 }
 
-                // Service Toggle Button
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (!hasOverlayPermission) NothingElevatedSurface
-                            else if (isServiceRunning) NothingElevatedSurface
-                            else NothingPrimaryAccent
-                        )
-                        .border(
-                            1.dp,
-                            if (isServiceRunning) NothingPrimaryAccent else Color.Transparent,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable(enabled = hasOverlayPermission) { onToggleService() }
-                        .padding(vertical = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (!hasOverlayPermission) "GRANT OVERLAY PERMISSION FIRST"
-                        else if (isServiceRunning) "STOP NOTHING ISLAND"
-                        else "START NOTHING ISLAND",
-                        color = if (!hasOverlayPermission) NothingMutedText else NothingPrimaryText,
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                }
+                // Service Toggle Button with Animata-style Status Button dynamics
+                NothingStatusButton(
+                    isActive = isServiceRunning,
+                    enabled = hasOverlayPermission,
+                    enabledText = "STOP NOTHING ISLAND",
+                    disabledText = "START NOTHING ISLAND",
+                    enabledSubtext = "FLOATING OVERLAY ACTIVE",
+                    disabledSubtext = "TAP TO RUN ISLAND OVERLAY",
+                    onClick = onToggleService,
+                    accentColor = Color(prefs.accentColorHex),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 

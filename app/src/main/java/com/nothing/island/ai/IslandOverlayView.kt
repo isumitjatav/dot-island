@@ -302,6 +302,9 @@ fun IslandOverlayView(
 ) {
     val isExpanded = state.mode == IslandMode.EXPANDED
     val accentColor = Color(preferences.accentColorHex)
+    val signatureTheme = remember(preferences.presetName) {
+        com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(preferences.presetName)
+    }
     val activeNotification = activeEvent as? IslandEvent.NotificationPosted
     val dashboardListState = rememberLazyListState()
 
@@ -340,209 +343,252 @@ fun IslandOverlayView(
         }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.nothing.island.ai.ui.theme.LocalIslandTheme provides signatureTheme
     ) {
-        if (!isExpanded) {
-            if (isDualPill) {
-                com.nothing.island.ai.ui.components.DualPillContainer(
-                    leftLabel = "MUSIC",
-                    leftGlyph = "♪",
-                    rightLabel = "TIMER",
-                    rightGlyph = "◷",
-                    accentColor = accentColor,
-                    onLeftTap = onExpandMusic,
-                    onRightTap = onCollapse,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-            // Battery pill is gated on the LIVE charging state, so a stale
-            // ChargingConnected event can never keep it on after unplugging.
-            val isBatteryActive = (batteryState.isCharging && activeEvent is IslandEvent.ChargingConnected) ||
-                    (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
-                    (activeEvent is IslandEvent.BatteryWarning)
-
-            val isSystemAlertActive = (activeEvent is IslandEvent.RingerModeChanged ||
-                    activeEvent is IslandEvent.TorchStateChanged ||
-                    activeEvent is IslandEvent.WifiStateChanged ||
-                    activeEvent is IslandEvent.DndStateChanged ||
-                    activeEvent is IslandEvent.BatteryThresholdWarning ||
-                    activeEvent is IslandEvent.DeviceUnlocked)
-
-            val isCallActive = activeEvent is IslandEvent.IncomingCallRinging ||
-                    activeEvent is IslandEvent.CallConnected ||
-                    activeEvent is IslandEvent.CallEnded
-
-            val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
-                    activeEvent is IslandEvent.BluetoothDeviceDisconnected
-
-            if (isCallActive) {
-                // R9: telephony capsule with breathing red accent
-                CallCompactView(
-                    event = activeEvent!!,
-                    onTap = onExpandCall,
-                    onEndCall = onDeclineCall,
-                    showEndButton = callPrefs.doubleIncomingCallActions,
-                    isSpeakerOn = isSpeakerOn,
-                    onToggleSpeaker = onToggleSpeaker,
-                )
-            } else if (isEarbudEvent) {
-                // Bluetooth headset pill with circular battery ring
-                when (val e = activeEvent) {
-                    is IslandEvent.BluetoothDeviceConnected -> EarbudConnectionView(
-                        event = e,
-                        onTap = onToggleExpand,
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            if (!isExpanded) {
+                if (isDualPill) {
+                    com.nothing.island.ai.ui.components.DualPillContainer(
+                        leftLabel = "MUSIC",
+                        leftGlyph = "♪",
+                        rightLabel = "TIMER",
+                        rightGlyph = "◷",
+                        accentColor = accentColor,
+                        onLeftTap = onExpandMusic,
+                        onRightTap = onCollapse,
+                        modifier = Modifier.fillMaxWidth(),
                     )
-                    is IslandEvent.BluetoothDeviceDisconnected -> EarbudDisconnectedView(
-                        event = e,
-                        onTap = onToggleExpand,
-                    )
-                    else -> Unit
-                }
-            } else if (activeEvent is IslandEvent.OrderTrackingUpdated) {
-                com.nothing.island.ai.ui.components.OrderTrackingPill(
-                    event = activeEvent,
-                    onTap = onToggleExpand,
-                )
-            } else if (activeEvent is IslandEvent.DeviceUnlocked &&
-                activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE
-            ) {
-                com.nothing.island.ai.ui.components.FaceUnlockPill(
-                    onTap = onToggleExpand,
-                )
-            } else if (isSystemAlertActive) {
-                // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
-                SystemAlertPill(
-                    event = activeEvent!!,
-                    modifier = Modifier
-                        .width(220.dp)
-                        .height(36.dp)
-                        .clickable { onToggleExpand() }
-                )
-            } else if (activeNotification != null) {
-                // COMPACT NOTIFICATION PREVIEW (Milestone R6 Phase 3)
-                // 200dp symmetrical pill centered across camera punch-hole
-                NotificationCompactView(
-                    event = activeNotification,
-                    onTap = {
-                        Log.d("IslandTouch", "NotificationCompactView tapped -> expand notification-focused view (State B)")
-                        onExpandNotificationFocused()
-                    },
-                    onSwipeDismiss = if (notificationPreferences.swipeToDismissEnabled) {
-                        {
-                            Log.d("IslandTouch", "NotificationCompactView swiped -> dismiss event ${activeNotification.id}")
-                            onDismissEvent(activeNotification.id)
-                        }
-                    } else null
-                )
-            } else if (currentTrack.isPlaying && !isBatteryActive) {
-                // COMPACT MUSIC PLAYER takes priority over idle battery when music plays.
-                // Swipe-left shifts the whole window beside the camera (see controller).
-                MusicCompactView(
-                    trackState = currentTrack,
-                    preferences = musicPreferences,
-                    onTap = {
-                        Log.d("IslandTouch", "MusicCompactView tapped -> expand music player (State C)")
-                        onExpandMusic()
-                    },
-                    onSwipe = { direction ->
-                        Log.d("IslandTouch", "MusicCompactView swiped $direction")
-                        onSwipeActivity(direction)
-                    },
-                    modifier = Modifier.islandGestureDetector(
-                        preferences = gesturePreferences,
-                        executor = gestureExecutor,
-                        isMediaIslandActive = true,
-                        onSwipeActivity = onSwipeActivity
-                    )
-                )
-            } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
-                // COMPACT BATTERY & CHARGING (Milestone R8)
-                // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag
-                BatteryCompactView(
-                    batteryState = batteryState,
-                    preferences = batteryPreferences,
-                    onTap = {
-                        Log.d("IslandTouch", "BatteryCompactView tapped -> expand battery view (State D)")
-                        onExpandBattery()
-                    },
-                    onSwipe = { direction ->
-                        Log.d("IslandTouch", "BatteryCompactView swiped $direction")
-                        onSwipeActivity(direction)
-                    },
-                    modifier = Modifier.islandGestureDetector(
-                        preferences = gesturePreferences,
-                        executor = gestureExecutor,
-                        isMediaIslandActive = false,
-                        onTap = onExpandBattery,
-                        onSwipeActivity = onSwipeActivity
-                    )
-                )
-            } else {
-                // COMPACT PILL MODE: Calibrated capsule dimensions and corner radius in DP
-                // Symmetrically wraps the centered punch-hole camera without any rectangular box distortion
-                val pillShape = RoundedCornerShape(preferences.cornerRadiusDp.dp)
-
-                val downloadState = when (primaryDownload) {
-                    is IslandEvent.NotificationPosted -> primaryDownload.progressState
-                    is PrivacySafeNotificationPresentation -> primaryDownload.progressState
-                    else -> DownloadProgressState.NONE
-                }
-                val downloadProg = when (primaryDownload) {
-                    is IslandEvent.NotificationPosted -> primaryDownload.progress
-                    is PrivacySafeNotificationPresentation -> primaryDownload.progress
-                    else -> 0
-                }
-                val downloadMax = when (primaryDownload) {
-                    is IslandEvent.NotificationPosted -> primaryDownload.maxProgress
-                    is PrivacySafeNotificationPresentation -> primaryDownload.maxProgress
-                    else -> 100
-                }
-
-                val rawPillBgHex = preferences.pillBackgroundColorHex
-                val pillBgColor = if (rawPillBgHex == 0L || (rawPillBgHex and 0xFF000000L) == 0L) {
-                    NothingBlack
                 } else {
-                    Color(rawPillBgHex)
-                }
+                    // NON-DUAL COMPACT PILL LAYER with Signature Theme decorations
+                    val compactWidth = preferences.compactWidthDp.dp
+                    val compactHeight = preferences.compactHeightDp.dp
 
-                Box(
-                    modifier = Modifier
-                        .width(preferences.compactWidthDp.dp)
-                        .height(preferences.compactHeightDp.dp)
-                        .clip(pillShape)
-                        .background(pillBgColor)
-                        .islandProgressBorder(
-                            shape = pillShape,
-                            progressState = downloadState,
-                            progress = downloadProg,
-                            maxProgress = downloadMax,
-                            accentColor = accentColor
-                        )
-                        .islandGestureDetector(
-                            preferences = gesturePreferences,
-                            executor = gestureExecutor,
-                            isMediaIslandActive = false,
-                            onTap = onExpandDashboard,
-                            onSwipeActivity = onSwipeActivity
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    // Optional walking pixel mascot in the idle pill.
-                    if (preferences.mascotEnabled && downloadState == DownloadProgressState.NONE) {
-                        com.nothing.island.ai.ui.components.MascotPillPreview(
-                            sprite = com.nothing.island.ai.ui.components.mascotByName(preferences.mascotSpriteName),
-                            modifier = Modifier.size(
-                                width = preferences.compactWidthDp.dp,
-                                height = preferences.compactHeightDp.dp,
-                            ),
-                        )
+                    Box(
+                        modifier = Modifier.size(width = compactWidth, height = compactHeight),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        // Battery pill is gated on the LIVE charging state, so a stale
+                        // ChargingConnected event can never keep it on after unplugging.
+                        val isBatteryActive = (batteryState.isCharging && activeEvent is IslandEvent.ChargingConnected) ||
+                                (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
+                                (activeEvent is IslandEvent.BatteryWarning)
+
+                        val isSystemAlertActive = (activeEvent is IslandEvent.RingerModeChanged ||
+                                activeEvent is IslandEvent.TorchStateChanged ||
+                                activeEvent is IslandEvent.WifiStateChanged ||
+                                activeEvent is IslandEvent.DndStateChanged ||
+                                activeEvent is IslandEvent.BatteryThresholdWarning ||
+                                activeEvent is IslandEvent.DeviceUnlocked)
+
+                        val isCallActive = activeEvent is IslandEvent.IncomingCallRinging ||
+                                activeEvent is IslandEvent.CallConnected ||
+                                activeEvent is IslandEvent.CallEnded
+
+                        val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
+                                activeEvent is IslandEvent.BluetoothDeviceDisconnected
+
+                        if (isCallActive) {
+                            // R9: telephony capsule with breathing red accent
+                            CallCompactView(
+                                event = activeEvent!!,
+                                onTap = onExpandCall,
+                                onEndCall = onDeclineCall,
+                                showEndButton = callPrefs.doubleIncomingCallActions,
+                                isSpeakerOn = isSpeakerOn,
+                                onToggleSpeaker = onToggleSpeaker,
+                            )
+                        } else if (isEarbudEvent) {
+                            // Bluetooth headset pill with circular battery ring
+                            when (val e = activeEvent) {
+                                is IslandEvent.BluetoothDeviceConnected -> EarbudConnectionView(
+                                    event = e,
+                                    onTap = onToggleExpand,
+                                )
+                                is IslandEvent.BluetoothDeviceDisconnected -> EarbudDisconnectedView(
+                                    event = e,
+                                    onTap = onToggleExpand,
+                                )
+                                else -> Unit
+                            }
+                        } else if (activeEvent is IslandEvent.OrderTrackingUpdated) {
+                            com.nothing.island.ai.ui.components.OrderTrackingPill(
+                                event = activeEvent,
+                                onTap = onToggleExpand,
+                            )
+                        } else if (activeEvent is IslandEvent.DeviceUnlocked &&
+                            activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE
+                        ) {
+                            com.nothing.island.ai.ui.components.FaceUnlockPill(
+                                onTap = onToggleExpand,
+                            )
+                        } else if (isSystemAlertActive) {
+                            // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
+                            SystemAlertPill(
+                                event = activeEvent!!,
+                                modifier = Modifier
+                                    .width(220.dp)
+                                    .height(36.dp)
+                                    .clickable { onToggleExpand() }
+                            )
+                        } else if (activeNotification != null) {
+                            // COMPACT NOTIFICATION PREVIEW (Milestone R6 Phase 3)
+                            // 200dp symmetrical pill centered across camera punch-hole
+                            NotificationCompactView(
+                                event = activeNotification,
+                                onTap = {
+                                    Log.d("IslandTouch", "NotificationCompactView tapped -> expand notification-focused view (State B)")
+                                    onExpandNotificationFocused()
+                                },
+                                onSwipeDismiss = if (notificationPreferences.swipeToDismissEnabled) {
+                                    {
+                                        Log.d("IslandTouch", "NotificationCompactView swiped -> dismiss event ${activeNotification.id}")
+                                        onDismissEvent(activeNotification.id)
+                                    }
+                                } else null
+                            )
+                        } else if (currentTrack.isPlaying && !isBatteryActive) {
+                            // COMPACT MUSIC PLAYER takes priority over idle battery when music plays.
+                            // Swipe-left shifts the whole window beside the camera (see controller).
+                            MusicCompactView(
+                                trackState = currentTrack,
+                                preferences = musicPreferences,
+                                onTap = {
+                                    Log.d("IslandTouch", "MusicCompactView tapped -> expand music player (State C)")
+                                    onExpandMusic()
+                                },
+                                onSwipe = { direction ->
+                                    Log.d("IslandTouch", "MusicCompactView swiped $direction")
+                                    onSwipeActivity(direction)
+                                },
+                                modifier = Modifier.islandGestureDetector(
+                                    preferences = gesturePreferences,
+                                    executor = gestureExecutor,
+                                    isMediaIslandActive = true,
+                                    onSwipeActivity = onSwipeActivity
+                                )
+                            )
+                        } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
+                            // COMPACT BATTERY & CHARGING (Milestone R8)
+                            // 200dp symmetrical capsule with animated bolt, punch-hole clearance, percentage & source tag
+                            BatteryCompactView(
+                                batteryState = batteryState,
+                                preferences = batteryPreferences,
+                                onTap = {
+                                    Log.d("IslandTouch", "BatteryCompactView tapped -> expand battery view (State D)")
+                                    onExpandBattery()
+                                },
+                                onSwipe = { direction ->
+                                    Log.d("IslandTouch", "BatteryCompactView swiped $direction")
+                                    onSwipeActivity(direction)
+                                },
+                                modifier = Modifier.islandGestureDetector(
+                                    preferences = gesturePreferences,
+                                    executor = gestureExecutor,
+                                    isMediaIslandActive = false,
+                                    onTap = onExpandBattery,
+                                    onSwipeActivity = onSwipeActivity
+                                )
+                            )
+                        } else {
+                            // COMPACT PILL MODE: Calibrated capsule dimensions and corner radius in DP
+                            val pillShape = RoundedCornerShape(preferences.cornerRadiusDp.dp)
+
+                            val downloadState = when (primaryDownload) {
+                                is IslandEvent.NotificationPosted -> primaryDownload.progressState
+                                is PrivacySafeNotificationPresentation -> primaryDownload.progressState
+                                else -> DownloadProgressState.NONE
+                            }
+                            val downloadProg = when (primaryDownload) {
+                                is IslandEvent.NotificationPosted -> primaryDownload.progress
+                                is PrivacySafeNotificationPresentation -> primaryDownload.progress
+                                else -> 0
+                            }
+                            val downloadMax = when (primaryDownload) {
+                                is IslandEvent.NotificationPosted -> primaryDownload.maxProgress
+                                is PrivacySafeNotificationPresentation -> primaryDownload.maxProgress
+                                else -> 100
+                            }
+
+                            val rawPillBgHex = preferences.pillBackgroundColorHex
+                            val pillBgColor = when (signatureTheme) {
+                                com.nothing.island.ai.ui.theme.IslandSignatureTheme.HIGH_CONTRAST_INVERTED -> Color(0xFFF2F2F2)
+                                com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLASSMORPHIC_FROSTED -> Color(0xD1222222)
+                                com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> Color(0xFF1E1E1E)
+                                else -> if (rawPillBgHex == 0L || (rawPillBgHex and 0xFF000000L) == 0L) NothingBlack else Color(rawPillBgHex)
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .width(preferences.compactWidthDp.dp)
+                                    .height(preferences.compactHeightDp.dp)
+                                    .clip(pillShape)
+                                    .background(pillBgColor)
+                                    .islandProgressBorder(
+                                        shape = pillShape,
+                                        progressState = downloadState,
+                                        progress = downloadProg,
+                                        maxProgress = downloadMax,
+                                        accentColor = accentColor
+                                    )
+                                    .islandGestureDetector(
+                                        preferences = gesturePreferences,
+                                        executor = gestureExecutor,
+                                        isMediaIslandActive = false,
+                                        onTap = onExpandDashboard,
+                                        onSwipeActivity = onSwipeActivity
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Optional walking pixel mascot in the idle pill.
+                                if (preferences.mascotEnabled && downloadState == DownloadProgressState.NONE) {
+                                    com.nothing.island.ai.ui.components.MascotPillPreview(
+                                        sprite = com.nothing.island.ai.ui.components.mascotByName(preferences.mascotSpriteName),
+                                        modifier = Modifier.size(
+                                            width = preferences.compactWidthDp.dp,
+                                            height = preferences.compactHeightDp.dp,
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+
+                        // Signature Theme Compact Decorations
+                        when (signatureTheme) {
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> {
+                                com.nothing.island.ai.ui.theme.GlyphArcCompactDecorations(arcColor = Color.White)
+                            }
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.TAPE_DECK -> {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    com.nothing.island.ai.ui.theme.TapeDeckReelsIndicator(
+                                        isPlaying = currentTrack.isPlaying,
+                                        sizeDp = 10.dp
+                                    )
+                                    com.nothing.island.ai.ui.theme.TapeDeckWaveform()
+                                }
+                            }
+                            com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLASSMORPHIC_FROSTED -> {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clip(RoundedCornerShape(preferences.cornerRadiusDp.dp))
+                                        .border(1.dp, Color(0x38FFFFFF), RoundedCornerShape(preferences.cornerRadiusDp.dp))
+                                )
+                            }
+                            else -> Unit
+                        }
                     }
-                }
-            }
-            } // end else (non-dual compact)
-        } else {
+                } // end else (non-dual compact)
+            } else {
             // EXPANDED PRESENTATION LAYER
             when (state.expandedViewType) {
                 ExpandedViewType.NOTIFICATION_FOCUSED -> {
@@ -811,11 +857,13 @@ fun IslandOverlayView(
                                 prefsRepo.updateQuickTools(next)
                             }
                         },
+                        accentColor = accentColor,
                         isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
             }
+        }
         }
     }
 }
@@ -866,12 +914,16 @@ fun DashboardCard(
         SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(Date()).uppercase()
     }
 
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
+    val cardBg = theme.pillBackgroundColor
+    val cardBorder = theme.borderColor
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingBlack)
-            .border(width = 1.dp, color = NothingBorder, shape = cardShape)
+            .background(cardBg)
+            .border(width = 1.dp, color = cardBorder, shape = cardShape)
     ) {
         Column(
             modifier = Modifier
@@ -936,7 +988,7 @@ fun DashboardCard(
                     Column {
                         Text(
                             text = currentTimeText,
-                            color = NothingWhite,
+                            color = theme.textColorPrimary,
                             fontSize = 22.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
@@ -944,7 +996,7 @@ fun DashboardCard(
                         )
                         Text(
                             text = currentDateText,
-                            color = NothingMutedText,
+                            color = theme.textColorSecondary,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium

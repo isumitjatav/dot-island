@@ -181,19 +181,13 @@ fun GeometryStudioScreen(
                             fontFamily = FontFamily.Monospace
                         )
                     }
-                    Switch(
+                    com.nothing.island.ai.ui.components.NothingSwitch(
                         checked = prefs.isCameraCutoutEnabled,
                         onCheckedChange = { enabled ->
                             coroutineScope.launch {
                                 repository.updateCameraCutoutEnabled(enabled)
                             }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = NothingTokens.NothingTextPrimary,
-                            checkedTrackColor = NothingTokens.NothingRed,
-                            uncheckedThumbColor = NothingTokens.NothingTextTertiary,
-                            uncheckedTrackColor = NothingTokens.NothingSurfaceMedium
-                        )
+                        }
                     )
                 }
 

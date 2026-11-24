@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
@@ -68,10 +69,14 @@ fun NothingSwitch(
         label = "SwitchTrackColor"
     )
 
-    val thumbOffset by animateDpAsState(
-        targetValue = if (checked) 22.dp else 2.dp,
-        animationSpec = tween(durationMillis = 200),
-        label = "SwitchThumbOffset"
+    // Sakuga VFX fluid knob smear with bouncy spring
+    val knobPosition by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (checked) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow
+        ),
+        label = "SwitchThumbPosition"
     )
 
     val thumbColor by animateColorAsState(
@@ -79,6 +84,10 @@ fun NothingSwitch(
         animationSpec = tween(durationMillis = 200),
         label = "SwitchThumbColor"
     )
+
+    val maxTravel = 20.dp
+    val offsetDp = maxTravel * knobPosition + 2.dp
+    val stretch = 1f + kotlin.math.abs(knobPosition - (if (checked) 1f else 0f)) * 0.32f
 
     Box(
         modifier = modifier
@@ -88,7 +97,7 @@ fun NothingSwitch(
             .background(trackColor)
             .border(
                 width = 1.dp,
-                color = if (checked && enabled) NothingTokens.NothingRedDark else NothingTokens.NothingBorderSubtle,
+                color = if (checked && enabled) activeTrackColor else NothingTokens.NothingBorderSubtle,
                 shape = RoundedCornerShape(NothingTokens.PillRadius)
             )
             .semantics { role = Role.Switch }
@@ -102,11 +111,14 @@ fun NothingSwitch(
             },
         contentAlignment = Alignment.CenterStart
     ) {
-        // Sliding Circular Thumb
+        // Sliding Circular Thumb with fluid elongation
         Box(
             modifier = Modifier
-                .offset(x = thumbOffset)
+                .offset(x = offsetDp)
                 .size(20.dp)
+                .graphicsLayer {
+                    scaleX = stretch.coerceIn(1f, 1.35f)
+                }
                 .clip(CircleShape)
                 .background(thumbColor)
         )

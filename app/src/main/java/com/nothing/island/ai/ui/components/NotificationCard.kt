@@ -368,13 +368,14 @@ fun NotificationCard(
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 50f
+    val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
-            .background(NothingBlack)
-            .border(width = 1.dp, color = NothingBorder, shape = cardShape)
+            .background(theme.pillBackgroundColor)
+            .border(width = 1.dp, color = theme.borderColor, shape = cardShape)
             .then(
                 if (swipeToDismissEnabled && onDismiss != null && notificationKey != null) {
                     Modifier.pointerInput(notificationKey) {
@@ -782,19 +783,37 @@ fun NotificationCard(
                     val hasOpen = (actionEntry?.contentIntent != null || onOpenContent != null)
                     val hasDismiss = onDismiss != null
 
+                    val actionPillBg = when {
+                        theme.isGlassmorphic -> Color(0xB3333333)
+                        theme.isInverted -> Color(0xFFE5E5E5)
+                        theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF1C1C1C)
+                        else -> NothingDarkGray
+                    }
+                    val actionPillBorder = when {
+                        theme.isGlassmorphic -> Color(0x28FFFFFF)
+                        theme.isInverted -> Color(0xFFCCCCCC)
+                        theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF333333)
+                        else -> NothingBorder
+                    }
+                    val actionPillTextColor = when {
+                        theme.isInverted -> Color(0xFF000000)
+                        else -> NothingWhite
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // 1. REPLY Pill with red indicator dot
                         if (hasReply) {
+                            val isPrimary = !hasOpen
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(34.dp)
                                     .clip(RoundedCornerShape(17.dp))
-                                    .background(NothingDarkGray)
-                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
+                                    .background(if (isPrimary && theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonBackground else actionPillBg)
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
                                     .clickable {
                                         replyingActionIndex = if (replyActionIndex >= 0) replyActionIndex else 0
                                         replyStatus = null
@@ -809,7 +828,7 @@ fun NotificationCard(
                                 ) {
                                     Text(
                                         text = "REPLY",
-                                        color = NothingWhite,
+                                        color = if (isPrimary && theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonTextColor else actionPillTextColor,
                                         fontSize = 11.sp,
                                         fontFamily = FontFamily.Monospace,
                                         fontWeight = FontWeight.Bold
@@ -819,27 +838,29 @@ fun NotificationCard(
                                         modifier = Modifier
                                             .size(5.dp)
                                             .clip(CircleShape)
-                                            .background(NothingRed)
+                                            .background(theme.accentColor)
                                     )
                                 }
                             }
                         }
 
-                        // 2. OPEN Pill
+                        // 2. OPEN Pill (Primary action if present)
                         if (hasOpen) {
+                            val openBg = if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonBackground else actionPillBg
+                            val openTextColor = if (theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonTextColor else actionPillTextColor
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(34.dp)
                                     .clip(RoundedCornerShape(17.dp))
-                                    .background(NothingDarkGray)
-                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
+                                    .background(openBg)
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
                                     .clickable { onOpenContent?.invoke(notificationKey) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "OPEN",
-                                    color = NothingWhite,
+                                    color = openTextColor,
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold
@@ -854,14 +875,14 @@ fun NotificationCard(
                                     .weight(1f)
                                     .height(34.dp)
                                     .clip(RoundedCornerShape(17.dp))
-                                    .background(NothingDarkGray)
-                                    .border(1.dp, NothingBorder, RoundedCornerShape(17.dp))
+                                    .background(actionPillBg)
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
                                     .clickable { onDismiss?.invoke(notificationKey) },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "DISMISS",
-                                    color = NothingWhite,
+                                    color = actionPillTextColor,
                                     fontSize = 11.sp,
                                     fontFamily = FontFamily.Monospace,
                                     fontWeight = FontWeight.Bold
