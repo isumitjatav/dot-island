@@ -133,7 +133,7 @@ fun CallStudioScreen(onNavigateBack: () -> Unit, modifier: Modifier = Modifier) 
         ) {
             Column {
                 Text(
-                    "For the call notch to work, set Nothing Island as your default phone app.",
+                    "For the call notch to work, set Dot Island as your default phone app.",
                     color = NothingSecondaryText,
                     fontSize = 11.sp,
                     lineHeight = 15.sp,

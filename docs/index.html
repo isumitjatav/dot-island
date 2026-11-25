@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dot Island — Dynamic Capsule & Reactive Pixel Companions for Android</title>
+  <meta name="description" content="Dot Island brings a precision camera-cutout Dynamic Capsule, Live Activities, 3-state Call UI, and reactive pixel companions to Android. 100% on-device privacy." />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #111111;
+      --surface-elevated: #18181b;
+      --border: #242428;
+      --text: #ffffff;
+      --text-muted: #a1a1aa;
+      --accent: #d71921;
+      --accent-soft: rgba(215, 25, 33, 0.14);
+      --mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(215, 25, 33, 0.12) 0%, transparent 45%),
+        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        var(--bg);
+      background-size: 100% 100%, 24px 24px, 100% 100%;
+      line-height: 1.6;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Top Nav */
+    header {
+      padding: 24px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.95rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(215, 25, 33, 0.8);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    /* Hero */
+    .hero {
+      padding: 72px 0 56px;
+      text-align: center;
+    }
+
+    .hero-icon-wrap {
+      display: inline-flex;
+      padding: 10px;
+      border-radius: 28px;
+      background: #09090b;
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 36px rgba(255, 255, 255, 0.05);
+      margin-bottom: 28px;
+    }
+
+    .hero-icon {
+      width: 108px;
+      height: 108px;
+      display: block;
+      border-radius: 22px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(215, 25, 33, 0.45);
+      background: var(--accent-soft);
+      color: #ffffff;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-family: var(--mono);
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      margin: 0 auto 32px;
+      max-width: 640px;
+      color: var(--text-muted);
+      font-size: clamp(1rem, 2vw, 1.18rem);
+    }
+
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 12px 26px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      touch-action: manipulation;
+      transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #ffffff;
+      border: 1px solid var(--accent);
+      box-shadow: 0 8px 28px rgba(215, 25, 33, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: #e5242c;
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: #ffffff;
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      background: var(--surface-elevated);
+    }
+
+    .hero-meta {
+      margin-top: 18px;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+
+    /* Sections */
+    section {
+      padding: 40px 0;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      margin: 0 0 24px;
+      font-family: var(--mono);
+      font-size: 1.45rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .card-tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+    }
+
+    .card p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--text-muted);
+    }
+
+    /* Install Steps */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .step-num {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.14em;
+      margin-bottom: 8px;
+    }
+
+    .step h3 {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 0.98rem;
+    }
+
+    .step p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 48px;
+      padding: 28px 0 40px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    footer a:hover {
+      color: var(--text);
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <a class="brand" href="index.html">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>DOT ISLAND</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#features">Features</a>
+        <a href="#install">Install</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-icon-wrap">
+        <!-- SVG version of the Dot-Cat Perched on Glowing Capsule icon -->
+        <svg class="hero-icon" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dot Island Dot-Cat launcher icon">
+          <defs>
+            <filter id="capsuleGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="1.8" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+          <rect width="108" height="108" rx="22" fill="#000000" />
+          <!-- Dark charcoal capsule body -->
+          <rect x="28" y="52.5" width="52" height="18" rx="9" fill="#1C1C1E" />
+          <!-- Subtle punch-hole lens -->
+          <circle cx="36.2" cy="61.5" r="3.8" fill="#0D0D10" />
+          <circle cx="36.2" cy="61.5" r="2.2" fill="#18181D" />
+          <!-- Glowing white dot-matrix capsule outline -->
+          <rect x="28" y="52.5" width="52" height="18" rx="9" fill="none" stroke="#FFFFFF" stroke-width="1.45" stroke-linecap="round" stroke-dasharray="0.1 2.55" filter="url(#capsuleGlow)" />
+          <!-- DotCat pixel silhouette perched on top-right shoulder -->
+          <g fill="#FFFFFF">
+            <!-- Ears -->
+            <rect x="51.26" y="33.2" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="33.2" width="1.44" height="1.44" rx="0.28" />
+            <rect x="51.26" y="34.96" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="34.96" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="34.96" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="34.96" width="1.44" height="1.44" rx="0.28" />
+            <!-- Head top -->
+            <rect x="51.26" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="36.72" width="1.44" height="1.44" rx="0.28" />
+            <!-- Face around eyes -->
+            <rect x="51.26" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <!-- Cheeks -->
+            <rect x="51.26" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="40.24" width="1.44" height="1.44" rx="0.28" />
+            <!-- Neck -->
+            <rect x="53.02" y="42.0" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="42.0" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="42.0" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="42.0" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="42.0" width="1.44" height="1.44" rx="0.28" />
+            <!-- Torso + Tail -->
+            <rect x="53.02" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="43.76" width="1.44" height="1.44" rx="0.28" />
+            <rect x="67.10" y="43.76" width="1.44" height="1.44" rx="0.28" />
+
+            <rect x="51.26" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="63.58" y="45.52" width="1.44" height="1.44" rx="0.28" />
+            <rect x="67.10" y="45.52" width="1.44" height="1.44" rx="0.28" />
+
+            <rect x="51.26" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="63.58" y="47.28" width="1.44" height="1.44" rx="0.28" />
+            <rect x="65.34" y="47.28" width="1.44" height="1.44" rx="0.28" />
+
+            <rect x="51.26" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="54.78" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="56.54" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <rect x="63.58" y="49.04" width="1.44" height="1.44" rx="0.28" />
+            <!-- Paws on capsule -->
+            <rect x="51.26" y="50.80" width="1.44" height="1.44" rx="0.28" />
+            <rect x="53.02" y="50.80" width="1.44" height="1.44" rx="0.28" />
+            <rect x="60.06" y="50.80" width="1.44" height="1.44" rx="0.28" />
+            <rect x="61.82" y="50.80" width="1.44" height="1.44" rx="0.28" />
+          </g>
+          <!-- Nothing-Red Pixel Eyes -->
+          <g fill="#D71921">
+            <rect x="54.78" y="38.48" width="1.44" height="1.44" rx="0.28" />
+            <rect x="58.30" y="38.48" width="1.44" height="1.44" rx="0.28" />
+          </g>
+          <!-- Floating Zzz dots -->
+          <g fill="#FFFFFF">
+            <rect x="68.2" y="29.8" width="1.0" height="1.0" rx="0.2" />
+            <rect x="69.5" y="29.8" width="1.0" height="1.0" rx="0.2" />
+            <rect x="70.8" y="29.8" width="1.0" height="1.0" rx="0.2" />
+            <rect x="69.5" y="31.1" width="1.0" height="1.0" rx="0.2" />
+            <rect x="68.2" y="32.4" width="1.0" height="1.0" rx="0.2" />
+            <rect x="69.5" y="32.4" width="1.0" height="1.0" rx="0.2" />
+            <rect x="70.8" y="32.4" width="1.0" height="1.0" rx="0.2" />
+          </g>
+          <g fill="#B8B8C0">
+            <rect x="65.0" y="34.8" width="0.85" height="0.85" rx="0.2" />
+            <rect x="66.1" y="34.8" width="0.85" height="0.85" rx="0.2" />
+            <rect x="67.2" y="34.8" width="0.85" height="0.85" rx="0.2" />
+            <rect x="66.1" y="35.9" width="0.85" height="0.85" rx="0.2" />
+            <rect x="65.0" y="37.0" width="0.85" height="0.85" rx="0.2" />
+            <rect x="66.1" y="37.0" width="0.85" height="0.85" rx="0.2" />
+            <rect x="67.2" y="37.0" width="0.85" height="0.85" rx="0.2" />
+          </g>
+        </svg>
+      </div>
+
+      <div>
+        <span class="badge">ANDROID 10+ • ZERO TELEMETRY • ON-DEVICE</span>
+      </div>
+      <h1>Dot Island</h1>
+      <p class="subtitle">
+        Dynamic Capsule, Live Activities &amp; Reactive Pixel Companions for Android
+      </p>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
+          Download Latest APK
+        </a>
+        <a class="btn btn-secondary" href="https://github.com/sumitsinghjatav64-creator/nothing-island">
+          View Source
+        </a>
+      </div>
+      <div class="hero-meta">
+        SIGNED RELEASE v1.0.0 • ANDROID 10+ (API 29+) • MINIMAL AMOLED ENGINE
+      </div>
+    </section>
+
+    <section id="features">
+      <div class="section-label">CAPABILITIES</div>
+      <h2 class="section-title">Precision Punch-Hole Architecture</h2>
+      <div class="grid">
+        <article class="card">
+          <span class="card-tag">01 • GEOMETRY STUDIO</span>
+          <h3>Universal Camera Cutout Calibration</h3>
+          <p>Detects `DisplayCutout` bounds automatically and gives fine X/Y offset calibration so the capsule wraps cleanly around center or corner punch-holes without clipping status bar icons.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">02 • TELEPHONY</span>
+          <h3>3-State Call UI &amp; Loudspeaker Routing</h3>
+          <p>Smoothly transitions between compact live call pill, incoming answer/decline controls, and connected speakerphone routing built for Android 12+ audio APIs.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">03 • LIVE ACTIVITIES</span>
+          <h3>Live Music &amp; Charging Pills</h3>
+          <p>Interruptible spring-physics capsules for playback controls, real-time audio visualizers, Bluetooth peripheral battery alerts, and fast-charging telemetry.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">04 • MASCOT STUDIO</span>
+          <h3>Interactive Pixel Mascots</h3>
+          <p>Bring your notch to life with <strong>DotCat</strong>, <strong>GlyphOrb</strong>, and <strong>TapeBuddy</strong> — lightweight Compose pixel companions reacting to idle, music, calls, charging, and taps.</p>
+        </article>
+        <article class="card">
+          <span class="card-tag">05 • GAMING COMFORT</span>
+          <h3>Game-Mode Auto-Hide</h3>
+          <p>Automatically hides the floating capsule (`CATEGORY_GAME` or landscape immersive fullscreen) so HUD controls stay unobstructed and restores it the moment you exit.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="install">
+      <div class="section-label">QUICK SETUP</div>
+      <h2 class="section-title">3-Step Installation</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">STEP 01</div>
+          <h3>Download APK</h3>
+          <p>Grab signed <strong>DotIsland-v1.0.0.apk</strong> from the latest GitHub Release using the button above.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 02</div>
+          <h3>Grant Core Permissions</h3>
+          <p>Allow installing unknown apps, then enable <strong>Display over other apps</strong> and <strong>Notification access</strong> inside Dot Island.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">STEP 03</div>
+          <h3>Calibrate Cutout</h3>
+          <p>Open <strong>Studios → Geometry Calibration</strong> to align the capsule around your front camera and tap <strong>Start Dot Island</strong>.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container">
+    <span>DOT ISLAND • ON-DEVICE PUNCH-HOLE OVERLAY</span>
+    <div class="footer-links">
+      <a href="privacy.html">Privacy Policy</a>
+      <a href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">Releases</a>
+      <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">Source</a>
+    </div>
+  </footer>
+</body>
+</html>

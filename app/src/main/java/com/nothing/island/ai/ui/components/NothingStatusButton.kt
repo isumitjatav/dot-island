@@ -67,8 +67,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun NothingStatusButton(
     isActive: Boolean,
-    enabledText: String = "STOP NOTHING ISLAND",
-    disabledText: String = "START NOTHING ISLAND",
+    enabledText: String = "STOP DOT ISLAND",
+    disabledText: String = "START DOT ISLAND",
     enabledSubtext: String = "OVERLAY SERVICE RUNNING",
     disabledSubtext: String = "TAP TO ACTIVATE OVERLAY",
     onClick: () -> Unit,

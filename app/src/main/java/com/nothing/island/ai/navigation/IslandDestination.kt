@@ -13,7 +13,7 @@ sealed class IslandDestination(
     val shortLabel: String
 ) {
     // --- 5 Primary Destinations (Bottom Bar) ---
-    data object Home : IslandDestination("home", "NOTHING ISLAND", "HOME")
+    data object Home : IslandDestination("home", "DOT ISLAND", "HOME")
     data object Notifications : IslandDestination("notifications", "NOTIFICATION STUDIO", "NOTIFS")
     data object Music : IslandDestination("music", "MUSIC STUDIO", "MUSIC")
     data object Battery : IslandDestination("battery", "CHARGING STUDIO", "BATTERY")

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nothing Island</string>
-    <string name="accessibility_service_label">Nothing Island Overlay Anchor</string>
-    <string name="accessibility_service_description">Nothing Island uses Accessibility access solely to display the floating Dynamic Island overlay above the status bar and allow touch interaction directly around the camera punch-hole.\n\nNothing Island operates under a strict Zero-Data Privacy Contract:\n• It CANNOT read screen text, passwords, or personal messages.\n• It CANNOT perform touches or gestures on your behalf.\n• It CANNOT log keystrokes or track your usage.\n• Zero accessibility data is collected, stored, or transmitted.</string>
+    <string name="app_name">Dot Island</string>
+    <string name="accessibility_service_label">Dot Island Overlay Anchor</string>
+    <string name="accessibility_service_description">Dot Island uses Accessibility access solely to display the floating Dynamic Island overlay above the status bar and allow touch interaction directly around the camera punch-hole.\n\nDot Island operates under a strict Zero-Data Privacy Contract:\n• It CANNOT read screen text, passwords, or personal messages.\n• It CANNOT perform touches or gestures on your behalf.\n• It CANNOT log keystrokes or track your usage.\n• Zero accessibility data is collected, stored, or transmitted.</string>
     <string name="accessibility_service_summary">Enables touch interaction around the camera punch-hole.</string>
-    <string name="notification_listener_service_label">Nothing Island Notification Service</string>
-    <string name="notification_listener_service_description">Allows Nothing Island to display incoming alerts and media metadata around the camera punch-hole.</string>
+    <string name="notification_listener_service_label">Dot Island Notification Service</string>
+    <string name="notification_listener_service_description">Allows Dot Island to display incoming alerts and media metadata around the camera punch-hole.</string>
 </resources>

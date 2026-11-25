@@ -100,7 +100,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "NOTHING ISLAND",
+                        text = "DOT ISLAND",
                         color = NothingPrimaryText,
                         fontSize = 18.sp,
                         fontFamily = FontFamily.Monospace,
@@ -277,8 +277,8 @@ fun HomeScreen(
                 NothingStatusButton(
                     isActive = isServiceRunning,
                     enabled = hasOverlayPermission,
-                    enabledText = "STOP NOTHING ISLAND",
-                    disabledText = "START NOTHING ISLAND",
+                    enabledText = "STOP DOT ISLAND",
+                    disabledText = "START DOT ISLAND",
                     enabledSubtext = "FLOATING OVERLAY ACTIVE",
                     disabledSubtext = "TAP TO RUN ISLAND OVERLAY",
                     onClick = onToggleService,

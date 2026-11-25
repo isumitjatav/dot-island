@@ -47,7 +47,7 @@ class AccessibilityScreenshotHandler(
         if (!bridge.isServiceAvailable()) {
             return ScreenshotActionResult.Failure(
                 reason = ScreenshotFailureReason.SERVICE_UNAVAILABLE,
-                message = "Nothing Island Accessibility Service is not enabled or connected."
+                message = "Dot Island Accessibility Service is not enabled or connected."
             )
         }
         val sdk = bridge.sdkInt()

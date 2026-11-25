@@ -386,7 +386,7 @@ fun ChargingStyleStudio(
         // Switches
         StudioSwitchRow(
             title = "Auto-Expand on Cable Plugged",
-            subtitle = "Open Nothing Island card when charger is connected",
+            subtitle = "Open Dot Island card when charger is connected",
             checked = workingPrefs.autoExpandOnPlugged,
             accentColor = activeAccent,
             onCheckedChange = { workingPrefs = workingPrefs.copy(autoExpandOnPlugged = it) }

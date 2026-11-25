@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — Dot Island</title>
+  <meta name="description" content="Dot Island Privacy Policy: 100% on-device processing with zero user data collection, storage, or external transmission." />
+  <meta name="theme-color" content="#000000" />
+  <style>
+    :root {
+      --bg: #000000;
+      --surface: #111111;
+      --border: #242428;
+      --text: #ffffff;
+      --text-muted: #a1a1aa;
+      --accent: #d71921;
+      --mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      line-height: 1.7;
+    }
+
+    a { color: #ffffff; text-decoration: underline; text-underline-offset: 3px; }
+    a:hover { color: var(--accent); }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 36px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-family: var(--mono);
+      font-size: 1.9rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .effective {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-family: var(--mono);
+      font-size: 1rem;
+      color: var(--accent);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    p, li {
+      color: var(--text-muted);
+      font-size: 0.94rem;
+      margin: 0 0 10px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    li:last-child, p:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <a class="brand" href="index.html">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>DOT ISLAND</span>
+      </a>
+      <a href="index.html">Back to Home</a>
+    </div>
+
+    <h1>Privacy Policy</h1>
+    <div class="effective">EFFECTIVE DATE: NOVEMBER 25, 2026 • PACKAGE: com.nothing.island.ai</div>
+
+    <div class="card">
+      <h2>1. Zero-Data On-Device Processing</h2>
+      <p>
+        <strong>Dot Island</strong> runs 100% locally on your Android device. All notification summaries,
+        media playback metadata, active call state indicators, Bluetooth peripheral status, and battery
+        charging telemetry are processed strictly in memory in real time.
+      </p>
+      <p>
+        Dot Island collects, stores, sells, shares, or transmits <strong>zero user data</strong> to external servers,
+        third-party analytics providers, or advertising networks.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>2. Permissions We Request &amp; Why</h2>
+      <ul>
+        <li><strong>Display Over Other Apps (SYSTEM_ALERT_WINDOW):</strong> Renders the floating Dynamic Capsule around your camera cutout over active apps.</li>
+        <li><strong>Notification Access (NotificationListenerService):</strong> Reads active notifications and media session state locally to render compact and expanded pills. Nothing is logged to disk or sent off-device.</li>
+        <li><strong>Accessibility Service (Optional — AccessibilityService):</strong> Used strictly as a display anchor above the status bar and to execute user-configured global actions (such as taking a screenshot). Dot Island never reads screen passwords, never logs keystrokes, and collects zero accessibility data.</li>
+        <li><strong>Bluetooth Connect (Optional):</strong> Reads connected audio device name and battery percentage locally for peripheral connection capsules.</li>
+        <li><strong>Answer Phone Calls &amp; Audio Routing (Optional):</strong> Allows accepting, declining, or toggling speakerphone on active calls directly from the Call UI capsule.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>3. Local Preferences &amp; Retention</h2>
+      <p>
+        Your theme choice, capsule geometry calibration, mascot selection, notification filters, and game-mode settings
+        are saved locally on your device via Android Jetpack DataStore. Uninstalling Dot Island permanently removes
+        all app preferences from your device.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>4. Open Source Transparency &amp; Contact</h2>
+      <p>
+        You can inspect the complete source code or report privacy questions via our GitHub repository at
+        <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">github.com/sumitsinghjatav64-creator/nothing-island</a>.
+      </p>
+    </div>
+  </div>
+</body>
+</html>

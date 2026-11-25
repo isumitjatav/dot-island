@@ -63,7 +63,7 @@ fun GeminiScreen(
         mutableStateListOf(
             ChatMessage(
                 sender = "GEMINI 3.8",
-                text = "Hello! I am the Nothing Island AI companion interface. In Milestone 4.1, this is a clean visual foundation. Gemini API integration will be activated in Milestone 5.",
+                text = "Hello! I am the Dot Island AI companion interface. In Milestone 4.1, this is a clean visual foundation. Gemini API integration will be activated in Milestone 5.",
                 isUser = false,
                 timestamp = "INIT"
             )
@@ -156,7 +156,7 @@ fun GeminiScreen(
                 text = "✦ Island status",
                 modifier = Modifier.weight(1f),
                 onClick = {
-                    messages.add(ChatMessage("USER", "What is the status of Nothing Island?", true))
+                    messages.add(ChatMessage("USER", "What is the status of Dot Island?", true))
                     messages.add(ChatMessage("GEMINI 3.8", "Milestone 4.1 Design System is active. M3 Core Overlay Engine is calibrated for Nothing Phone (4a).", false))
                 }
             )

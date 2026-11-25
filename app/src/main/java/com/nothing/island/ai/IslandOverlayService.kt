@@ -131,7 +131,7 @@ class IslandOverlayService : Service() {
         )
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Nothing Island")
+            .setContentTitle("Dot Island")
             .setContentText("Punch-hole overlay engine active")
             .setSmallIcon(android.R.drawable.sym_def_app_icon)
             .setOngoing(true)
@@ -146,7 +146,7 @@ class IslandOverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Nothing Island Overlay Engine",
+                "Dot Island Overlay Engine",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Maintains persistent camera punch-hole floating overlay"

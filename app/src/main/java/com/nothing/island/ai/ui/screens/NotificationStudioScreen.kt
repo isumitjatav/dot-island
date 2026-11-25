@@ -213,7 +213,7 @@ fun NotificationStudioScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 NothingSwitchRow(
                     title = "Automatically expand for notifications",
-                    description = "Open Nothing Island when a new eligible notification arrives",
+                    description = "Open Dot Island when a new eligible notification arrives",
                     checked = notifPrefs.autoExpandOnNotification,
                     onCheckedChange = { isChecked ->
                         coroutineScope.launch { repository.updateNotificationAutoExpand(isChecked) }
@@ -233,7 +233,7 @@ fun NotificationStudioScreen(
 
                 NothingSwitchRow(
                     title = "Sync Shade Dismissal",
-                    description = "Dismissing an alert on Nothing Island also clears it from the Android shade",
+                    description = "Dismissing an alert on Dot Island also clears it from the Android shade",
                     checked = notifPrefs.syncDismissWithAndroid,
                     onCheckedChange = { isChecked ->
                         coroutineScope.launch { repository.updateSyncDismissWithAndroid(isChecked) }

@@ -95,7 +95,7 @@ fun IslandPreview(
     // Backward compatibility parameters for legacy callers
     isExpanded: Boolean = false,
     onToggleExpanded: (() -> Unit)? = null,
-    title: String = "NOTHING ISLAND",
+    title: String = "DOT ISLAND",
     statusText: String = "SIMULATED PREVIEW",
     theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
 ) {

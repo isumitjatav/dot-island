@@ -932,7 +932,7 @@ fun NotificationCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isSystemActive) "NOTHING ISLAND • NOTIFICATION" else "NOTHING ISLAND • (REMOVED)",
+                    text = if (isSystemActive) "DOT ISLAND • NOTIFICATION" else "DOT ISLAND • (REMOVED)",
                     color = theme.textColorSecondary,
                     fontSize = 10.sp,
                     fontFamily = theme.bodyFont

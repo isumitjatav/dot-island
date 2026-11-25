@@ -396,7 +396,7 @@ fun SettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PreferenceToggleRow(
                     title = "Automatically expand for notifications",
-                    subtitle = "Open Nothing Island when a new eligible notification arrives.",
+                    subtitle = "Open Dot Island when a new eligible notification arrives.",
                     checked = notifPrefs.autoExpandOnNotification,
                     onCheckedChange = { enabled ->
                         coroutineScope.launch {
@@ -407,7 +407,7 @@ fun SettingsScreen(
 
                 PreferenceToggleRow(
                     title = "Sync Dismissals with Android",
-                    subtitle = "Dismissing or clearing alerts in Nothing Island also cancels them from the Android notification shade. When disabled, only local island history is cleared.",
+                    subtitle = "Dismissing or clearing alerts in Dot Island also cancels them from the Android notification shade. When disabled, only local island history is cleared.",
                     checked = notifPrefs.syncDismissWithAndroid,
                     onCheckedChange = { enabled ->
                         coroutineScope.launch {
@@ -440,7 +440,7 @@ fun SettingsScreen(
 
                 PreferenceToggleRow(
                     title = "Automatically expand when plugged in",
-                    subtitle = "Open Nothing Island charging intelligence card when charger is connected.",
+                    subtitle = "Open Dot Island charging intelligence card when charger is connected.",
                     checked = batteryPrefs.autoExpandOnPlugged,
                     onCheckedChange = { enabled ->
                         coroutineScope.launch {
@@ -491,7 +491,7 @@ fun SettingsScreen(
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PreferenceToggleRow(
                     title = "Live Call Island",
-                    subtitle = "Show active calls and incoming ringing in Nothing Island.",
+                    subtitle = "Show active calls and incoming ringing in Dot Island.",
                     checked = callPrefs.systemCallEnabled,
                     onCheckedChange = { enabled ->
                         coroutineScope.launch {
@@ -560,14 +560,14 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         // ABOUT CARD
-        SectionHeader(title = "ABOUT NOTHING ISLAND")
+        SectionHeader(title = "ABOUT DOT ISLAND")
 
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Nothing Island v1.0.0 (M4.1)",
+                    text = "Dot Island v1.0.0 (M4.1)",
                     color = NothingPrimaryText,
                     fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,

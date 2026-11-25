@@ -156,7 +156,7 @@ class QuickToolExecutor(
                 id = id,
                 label = QuickTools.label(id),
                 actionType = QuickToolActionType.IN_APP_NAVIGATION,
-                contentDescription = "Open Nothing Island settings"
+                contentDescription = "Open Dot Island settings"
             )
             else -> QuickToolSpec(
                 id = id,
@@ -213,7 +213,7 @@ class QuickToolExecutor(
                     lastLaunchAtMs = now
                     QuickToolExecutionResult.InAppNavigation(id)
                 } else {
-                    QuickToolExecutionResult.Unavailable(id, "Unable to open Nothing Island settings")
+                    QuickToolExecutionResult.Unavailable(id, "Unable to open Dot Island settings")
                 }
             }
             else -> QuickToolExecutionResult.Unavailable(id, "Unknown quick tool id=$id")

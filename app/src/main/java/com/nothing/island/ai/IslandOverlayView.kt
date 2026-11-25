@@ -1525,7 +1525,7 @@ fun DashboardCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "NOTHING ISLAND • DASHBOARD",
+                    text = "DOT ISLAND • DASHBOARD",
                     color = NothingMutedText,
                     fontSize = 9.5.sp,
                     fontFamily = FontFamily.Monospace
@@ -1972,7 +1972,7 @@ fun NotificationEmptyFocusedCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "NOTHING ISLAND • NOTIFICATION",
+                    text = "DOT ISLAND • NOTIFICATION",
                     color = NothingMutedText,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
