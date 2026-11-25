@@ -1,6 +1,7 @@
 package com.nothing.island.ai.telephony
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.media.AudioDeviceInfo
@@ -30,6 +31,7 @@ object CallController {
             Manifest.permission.ANSWER_PHONE_CALLS,
         ) == PackageManager.PERMISSION_GRANTED
 
+    @SuppressLint("MissingPermission")
     fun answer(context: Context): Boolean {
         if (canControlCalls(context)) {
             val telecom = context.getSystemService(TelecomManager::class.java)
@@ -37,6 +39,8 @@ object CallController {
                 telecom?.acceptRingingCall()
                 Log.d(TAG, "Answered through TelecomManager")
                 return true
+            } catch (se: SecurityException) {
+                Log.w(TAG, "ANSWER_PHONE_CALLS rejected during answer, falling back", se)
             } catch (e: Exception) {
                 Log.w(TAG, "TelecomManager answer failed, falling back", e)
             }
@@ -44,6 +48,7 @@ object CallController {
         return CallActionRegistry.answer()
     }
 
+    @SuppressLint("MissingPermission")
     fun decline(context: Context): Boolean {
         if (canControlCalls(context)) {
             val telecom = context.getSystemService(TelecomManager::class.java)
@@ -51,6 +56,8 @@ object CallController {
                 telecom?.endCall()
                 Log.d(TAG, "Declined through TelecomManager")
                 return true
+            } catch (se: SecurityException) {
+                Log.w(TAG, "ANSWER_PHONE_CALLS rejected during decline, falling back", se)
             } catch (e: Exception) {
                 Log.w(TAG, "TelecomManager decline failed, falling back", e)
             }

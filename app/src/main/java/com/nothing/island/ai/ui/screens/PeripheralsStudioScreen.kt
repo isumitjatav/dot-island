@@ -66,8 +66,6 @@ fun PeripheralsStudioScreen(
         }
     }
 
-    var showBluetoothConnection by remember { mutableStateOf(true) }
-
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -123,9 +121,9 @@ fun PeripheralsStudioScreen(
         NothingCard(variant = NothingCardVariant.STANDARD) {
             NothingSwitchRow(
                 title = "Show Connection",
-                description = "Show connection popup and battery gauge in small notch",
-                checked = showBluetoothConnection,
-                onCheckedChange = { showBluetoothConnection = it },
+                description = "Show headset/earbud connection pill and battery telemetry when BLUETOOTH_CONNECT is granted",
+                checked = prefs.bluetoothCapsuleEnabled,
+                onCheckedChange = { enabled -> updateSystemEvents { it.copy(bluetoothCapsuleEnabled = enabled) } },
                 badgeText = "AUDIO"
             )
         }

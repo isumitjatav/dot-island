@@ -238,6 +238,7 @@ class IslandPreferencesRepository internal constructor(
         val WIFI_CAPSULE_ENABLED = booleanPreferencesKey("wifi_capsule_enabled")
         val ZEN_MODE_CAPSULE_ENABLED = booleanPreferencesKey("zen_mode_capsule_enabled")
         val BATTERY_WARNING_CAPSULE_ENABLED = booleanPreferencesKey("battery_warning_capsule_enabled")
+        val BLUETOOTH_CAPSULE_ENABLED = booleanPreferencesKey("bluetooth_capsule_enabled")
     }
 
     /**
@@ -1133,6 +1134,7 @@ class IslandPreferencesRepository internal constructor(
             wifiCapsuleEnabled = preferences[SystemEventsPreferencesKeys.WIFI_CAPSULE_ENABLED] ?: defaults.wifiCapsuleEnabled,
             zenModeCapsuleEnabled = preferences[SystemEventsPreferencesKeys.ZEN_MODE_CAPSULE_ENABLED] ?: defaults.zenModeCapsuleEnabled,
             batteryWarningCapsuleEnabled = preferences[SystemEventsPreferencesKeys.BATTERY_WARNING_CAPSULE_ENABLED] ?: defaults.batteryWarningCapsuleEnabled,
+            bluetoothCapsuleEnabled = preferences[SystemEventsPreferencesKeys.BLUETOOTH_CAPSULE_ENABLED] ?: defaults.bluetoothCapsuleEnabled,
         )
     }
 
@@ -1153,6 +1155,7 @@ class IslandPreferencesRepository internal constructor(
                 p[SystemEventsPreferencesKeys.WIFI_CAPSULE_ENABLED] = prefs.wifiCapsuleEnabled
                 p[SystemEventsPreferencesKeys.ZEN_MODE_CAPSULE_ENABLED] = prefs.zenModeCapsuleEnabled
                 p[SystemEventsPreferencesKeys.BATTERY_WARNING_CAPSULE_ENABLED] = prefs.batteryWarningCapsuleEnabled
+                p[SystemEventsPreferencesKeys.BLUETOOTH_CAPSULE_ENABLED] = prefs.bluetoothCapsuleEnabled
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist system event preferences to DataStore", e)

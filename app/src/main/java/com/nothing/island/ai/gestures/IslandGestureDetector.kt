@@ -15,6 +15,9 @@ import com.nothing.island.ai.IslandOverlayController
 import com.nothing.island.ai.MainActivity
 import com.nothing.island.ai.hardware.TorchCallbackHandler
 import com.nothing.island.ai.switcher.SwipeDirection
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 
@@ -25,11 +28,16 @@ class IslandGestureActionExecutor(
     private val context: Context,
     private val torchHandler: TorchCallbackHandler? = null,
     private val onToggleExpand: () -> Unit,
-    private val onClearAllNotifications: () -> Unit
+    private val onClearAllNotifications: () -> Unit,
+    private val screenshotHandler: AccessibilityScreenshotHandler = AccessibilityScreenshotHandler(),
+    private val onScreenshotResult: ((ScreenshotActionResult) -> Unit)? = null
 ) {
     companion object {
         private const val TAG = "GestureActionExecutor"
     }
+
+    private val _lastScreenshotResult = MutableStateFlow<ScreenshotActionResult?>(null)
+    val lastScreenshotResult: StateFlow<ScreenshotActionResult?> = _lastScreenshotResult.asStateFlow()
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
@@ -87,9 +95,15 @@ class IslandGestureActionExecutor(
                 }
             }
             GestureAction.SCREENSHOT -> {
-                // Task 10: Do not claim SCREENSHOT is functional unless an actual implementation exists.
-                // Global screenshot without user prompt requires AccessibilityService.performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT).
-                Log.w(TAG, "Screenshot action requested: not implemented in this context (requires AccessibilityService performGlobalAction)")
+                val result = screenshotHandler.triggerScreenshot()
+                _lastScreenshotResult.value = result
+                onScreenshotResult?.invoke(result)
+                when (result) {
+                    is ScreenshotActionResult.Success ->
+                        Log.i(TAG, "Screenshot gesture triggered AccessibilityService.GLOBAL_ACTION_TAKE_SCREENSHOT")
+                    is ScreenshotActionResult.Failure ->
+                        Log.w(TAG, "Screenshot gesture unavailable/failed (${result.reason}): ${result.message}")
+                }
             }
             GestureAction.CLEAR_ALL -> {
                 // Task 9: Ensure CLEAR_ALL only performs user-requested notification clearing

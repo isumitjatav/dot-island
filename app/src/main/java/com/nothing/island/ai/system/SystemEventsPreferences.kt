@@ -14,6 +14,7 @@ data class SystemEventsPreferences(
     val wifiCapsuleEnabled: Boolean = true,
     val zenModeCapsuleEnabled: Boolean = true,
     val batteryWarningCapsuleEnabled: Boolean = true,
+    val bluetoothCapsuleEnabled: Boolean = true,
 ) {
     companion object {
         val DEFAULTS = SystemEventsPreferences()

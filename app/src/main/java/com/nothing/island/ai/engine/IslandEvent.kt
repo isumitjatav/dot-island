@@ -159,7 +159,10 @@ sealed interface IslandEvent {
                 val o = other as BluetoothDeviceConnected
                 deviceName == o.deviceName &&
                         deviceAddress == o.deviceAddress &&
-                        batteryLevelPercentage == o.batteryLevelPercentage
+                        batteryLevelPercentage == o.batteryLevelPercentage &&
+                        leftBatteryPercentage == o.leftBatteryPercentage &&
+                        rightBatteryPercentage == o.rightBatteryPercentage &&
+                        caseBatteryPercentage == o.caseBatteryPercentage
             }
             is BluetoothDeviceDisconnected -> {
                 val o = other as BluetoothDeviceDisconnected
@@ -395,7 +398,10 @@ sealed interface IslandEvent {
         override val timeoutMs: Long = 3000L,
         val deviceName: String,
         val deviceAddress: String,
-        val batteryLevelPercentage: Int? = null
+        val batteryLevelPercentage: Int? = null,
+        val leftBatteryPercentage: Int? = null,
+        val rightBatteryPercentage: Int? = null,
+        val caseBatteryPercentage: Int? = null
     ) : IslandEvent
 
     data class BluetoothDeviceDisconnected(

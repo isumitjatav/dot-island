@@ -69,6 +69,19 @@ class IslandAccessibilityService : AccessibilityService() {
         Log.w(TAG, "IslandAccessibilityService interrupted by system.")
     }
 
+    /**
+     * Performs the Android global screenshot action (`minSdk = 29` >= API 28).
+     * Returns true when handed off to the system screenshot handler, false otherwise.
+     */
+    fun performGlobalScreenshotAction(): Boolean {
+        return try {
+            performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to perform global screenshot action", e)
+            false
+        }
+    }
+
     override fun onUnbind(intent: Intent?): Boolean {
         Log.i(TAG, "IslandAccessibilityService unbinding. Cleaning up overlay window.")
         try {

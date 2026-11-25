@@ -179,10 +179,10 @@ class NotificationFilter(
         val (finalTitle, finalText, finalSubText) = when {
             isPrivateOnLockscreen -> {
                 Log.d(TAG, "PRIVACY MASK: Masking sensitive notification on keyguard for $pkg")
-                Triple(appDisplayName, "New notification", null)
+                Triple(appDisplayName, NotificationPlaceholderFormatter.MASKED_GENERIC_LABEL, null)
             }
             preferences.previewMode == NotificationPreviewMode.APP_ONLY -> {
-                Triple(appDisplayName, "New notification", null)
+                Triple(appDisplayName, NotificationPlaceholderFormatter.MASKED_GENERIC_LABEL, null)
             }
             preferences.previewMode == NotificationPreviewMode.TITLE_ONLY -> {
                 Triple(raw.title.ifBlank { appDisplayName }, "", null)

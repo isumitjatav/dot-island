@@ -49,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,6 +109,9 @@ data class QuickTool(
     val label: String,
     val glyph: String,
     val active: Boolean = false,
+    val actionType: QuickToolActionType = QuickToolExecutor.describeTool(id).actionType,
+    val contentDescription: String = QuickToolExecutor.describeTool(id).contentDescription,
+    val fallbackTag: String? = QuickToolExecutor.describeTool(id).fallbackTag,
     val action: () -> Unit,
 )
 
@@ -133,8 +138,10 @@ fun QuickToolTile(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier.semantics(mergeDescendants = true) {
+            contentDescription = tool.contentDescription
+        },
     ) {
         Box(
             modifier = Modifier
@@ -190,9 +197,21 @@ fun QuickToolTile(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold
             )
+
+            if (tool.actionType == QuickToolActionType.SETTINGS_FALLBACK) {
+                Text(
+                    text = "↗",
+                    color = if (tool.active) Color.Black.copy(alpha = 0.7f) else NothingSecondaryText,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 4.dp, end = 6.dp)
+                )
+            }
         }
         Text(
-            text = tool.label,
+            text = if (tool.fallbackTag != null) "${tool.label} ↗" else tool.label,
             color = NothingSecondaryText,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace,

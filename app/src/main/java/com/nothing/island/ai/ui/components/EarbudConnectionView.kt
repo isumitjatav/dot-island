@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,13 +40,18 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nothing.island.ai.bluetooth.EarbudBatteryParser
 import com.nothing.island.ai.engine.IslandEvent
 import com.nothing.island.ai.ui.theme.NothingDivider
+import com.nothing.island.ai.ui.theme.NothingMutedText
 import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
 import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
@@ -69,13 +75,21 @@ private fun drawEarbuds(
     draw.drawLine(color = color, start = Offset(w * 0.70f, stemTop), end = Offset(w * 0.70f, stemBottom), strokeWidth = stemW, cap = StrokeCap.Round)
 }
 
+internal fun formatEarbudBatteryDetailText(event: IslandEvent.BluetoothDeviceConnected): String? {
+    val parts = buildList {
+        event.leftBatteryPercentage?.takeIf { it in 0..100 }?.let { add("L $it%") }
+        event.rightBatteryPercentage?.takeIf { it in 0..100 }?.let { add("R $it%") }
+        event.caseBatteryPercentage?.takeIf { it in 0..100 }?.let { add("C $it%") }
+    }
+    return if (parts.isNotEmpty()) parts.joinToString(" · ") else null
+}
+
 /**
- * Two-stage springy compact earbud pill (all in compact mode):
- *  1. On appearance the pill springs DOWNWARD from above.
- *  2. It then springs HORIZONTALLY wider to reveal device name + battery ring.
- * When the host removes the view, Compose animates it back up via [onDismiss].
+ * Two-stage springy compact earbud pill:
+ *  1. Springs downward smoothly into view.
+ *  2. Widens to reveal device name, optional L/R/Case telemetry, and battery ring.
  *
- * No giant expanded card — just a wider capsule, exactly as requested.
+ * Unknown battery values are rendered honestly as "--" with a muted track instead of faking 100%.
  */
 @Composable
 fun EarbudConnectionView(
@@ -83,11 +97,18 @@ fun EarbudConnectionView(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val battery = event.batteryLevelPercentage
-    val clamped = (battery ?: 100).coerceIn(0, 100)
+    val snapshot = EarbudBatteryParser.sanitizeSnapshot(
+        primary = event.batteryLevelPercentage,
+        left = event.leftBatteryPercentage,
+        right = event.rightBatteryPercentage,
+        caseLevel = event.caseBatteryPercentage
+    )
+    val representativeBattery = snapshot.representativePercent()
+    val hasBattery = representativeBattery != null
+    val sweepFraction = if (representativeBattery != null) (representativeBattery / 100f).coerceIn(0f, 1f) else 0f
+    val detailLine = formatEarbudBatteryDetailText(event)
+    val safeName = event.deviceName.ifBlank { "Bluetooth Audio" }
 
-    // The pill starts at the camera cutout, then DROPS DOWN into the screen
-    // with a springy bounce while widening — matching the user's sketch.
     var dropped by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         dropped = true
@@ -96,7 +117,7 @@ fun EarbudConnectionView(
     val dropY by animateDpAsState(
         targetValue = if (dropped) 72.dp else 0.dp,
         animationSpec = spring(
-            dampingRatio = 0.38f,      // low damping => visible bounce/overshoot
+            dampingRatio = 0.38f,
             stiffness = Spring.StiffnessMediumLow,
         ),
         label = "earbudDropY",
@@ -111,7 +132,6 @@ fun EarbudConnectionView(
     )
     val pillHeight = 52.dp
 
-    // Gentle breathing on the ring
     val pulse = rememberInfiniteTransition(label = "earbudPulse")
     val ringAlpha by pulse.animateFloat(
         initialValue = 0.75f,
@@ -123,14 +143,27 @@ fun EarbudConnectionView(
         label = "earbudRingAlpha",
     )
 
+    val a11yDescription = buildString {
+        append("$safeName connected")
+        if (representativeBattery != null) {
+            append(", battery $representativeBattery percent")
+        } else {
+            append(", battery level unavailable")
+        }
+        if (detailLine != null) {
+            append(", $detailLine")
+        }
+    }
+
     Box(
         modifier = modifier
-            .offset(y = dropY)
+            .offset { IntOffset(0, dropY.roundToPx()) }
             .width(pillWidth)
             .height(pillHeight)
             .clip(RoundedCornerShape(20.dp))
             .background(NothingPrimaryBackground)
             .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
+            .semantics { contentDescription = a11yDescription }
             .clickable(onClick = onTap)
             .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center,
@@ -140,19 +173,21 @@ fun EarbudConnectionView(
                 drawEarbuds(this, NothingPrimaryText)
             }
             Spacer(Modifier.width(14.dp))
-            androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "CONNECTED",
+                    text = if (detailLine != null) "CONNECTED · $detailLine" else "CONNECTED",
                     color = NothingSecondaryText,
-                    fontSize = 12.sp,
+                    fontSize = 10.5.sp,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 0.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     softWrap = false,
                 )
                 Text(
-                    text = event.deviceName,
+                    text = safeName,
                     color = NothingPrimaryText,
-                    fontSize = 18.sp,
+                    fontSize = 17.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
@@ -174,20 +209,22 @@ fun EarbudConnectionView(
                         size = arcSize,
                         style = Stroke(width = stroke),
                     )
-                    drawArc(
-                        color = (if (clamped <= 15) Color(0xFFE6AA43) else NothingSuccess).copy(alpha = ringAlpha),
-                        startAngle = -90f,
-                        sweepAngle = 360f * (clamped / 100f),
-                        useCenter = false,
-                        topLeft = Offset(inset, inset),
-                        size = arcSize,
-                        style = Stroke(width = stroke, cap = StrokeCap.Round),
-                    )
+                    if (representativeBattery != null) {
+                        drawArc(
+                            color = (if (representativeBattery <= 15) Color(0xFFE6AA43) else NothingSuccess).copy(alpha = ringAlpha),
+                            startAngle = -90f,
+                            sweepAngle = 360f * sweepFraction,
+                            useCenter = false,
+                            topLeft = Offset(inset, inset),
+                            size = arcSize,
+                            style = Stroke(width = stroke, cap = StrokeCap.Round),
+                        )
+                    }
                 }
                 Text(
-                    text = if (battery != null) "$clamped" else "·",
-                    color = NothingPrimaryText,
-                    fontSize = 13.sp,
+                    text = if (representativeBattery != null) "$representativeBattery" else "--",
+                    color = if (representativeBattery != null) NothingPrimaryText else NothingMutedText,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                 )
@@ -203,6 +240,7 @@ fun EarbudDisconnectedView(
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val safeName = event.deviceName.ifBlank { "Bluetooth Audio" }
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val dropY by animateDpAsState(
@@ -212,12 +250,13 @@ fun EarbudDisconnectedView(
     )
     Box(
         modifier = modifier
-            .offset(y = dropY)
+            .offset { IntOffset(0, dropY.roundToPx()) }
             .width(200.dp)
             .height(40.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(NothingPrimaryBackground)
             .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
+            .semantics { contentDescription = "$safeName disconnected" }
             .clickable(onClick = onTap)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
@@ -228,7 +267,7 @@ fun EarbudDisconnectedView(
             }
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "${event.deviceName} disconnected",
+                text = "$safeName disconnected",
                 color = NothingSecondaryText,
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,

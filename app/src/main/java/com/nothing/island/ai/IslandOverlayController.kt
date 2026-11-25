@@ -120,6 +120,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
             is IslandEvent.WifiStateChanged -> prefs.wifiCapsuleEnabled
             is IslandEvent.DndStateChanged -> prefs.zenModeCapsuleEnabled
             is IslandEvent.BatteryThresholdWarning -> prefs.batteryWarningCapsuleEnabled
+            is IslandEvent.BluetoothDeviceConnected,
+            is IslandEvent.BluetoothDeviceDisconnected -> prefs.bluetoothCapsuleEnabled
             else -> true
         }
     }
@@ -401,51 +403,37 @@ class IslandOverlayController private constructor(private val appContext: Contex
         collapse()
     }
 
-    /** Handles a quick-tools button press. */
-    fun handleQuickTool(id: String) {
+    private val _lastScreenshotResult = MutableStateFlow<com.nothing.island.ai.gestures.ScreenshotActionResult?>(null)
+    val lastScreenshotResult: StateFlow<com.nothing.island.ai.gestures.ScreenshotActionResult?> = _lastScreenshotResult.asStateFlow()
+
+    fun reportScreenshotResult(result: com.nothing.island.ai.gestures.ScreenshotActionResult) {
+        _lastScreenshotResult.value = result
+    }
+
+    val weatherProvider: com.nothing.island.ai.weather.WeatherProvider =
+        com.nothing.island.ai.weather.UnavailableWeatherProvider()
+
+    val quickToolExecutor: com.nothing.island.ai.ui.components.QuickToolExecutor by lazy {
+        com.nothing.island.ai.ui.components.QuickToolExecutor(
+            bridge = com.nothing.island.ai.ui.components.AndroidQuickToolPlatformBridge(appContext, torchHandler),
+            onExpandMusic = { expandMusic() },
+            onCollapse = { collapse() }
+        )
+    }
+
+    /** Handles a quick-tools button press via [QuickToolExecutor] with debounce and Settings fallback. */
+    fun handleQuickTool(id: String): com.nothing.island.ai.ui.components.QuickToolExecutionResult {
         Log.d(TAG, "QuickTool: $id")
-        when (id) {
-            "torch" -> torchHandler.toggleTorch()
-            "data" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_DATA_ROAMING_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
+        return quickToolExecutor.execute(id)
+    }
+
+    val bluetoothEarbudTracker: com.nothing.island.ai.bluetooth.BluetoothEarbudTracker by lazy {
+        com.nothing.island.ai.bluetooth.BluetoothEarbudTracker(
+            bridge = com.nothing.island.ai.bluetooth.AndroidBluetoothPlatformBridge(appContext),
+            onEvent = { event ->
+                if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
             }
-            "wifi" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-            "bluetooth" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-            "location" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-            "hotspot" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-            "sound" -> {
-                val intent = android.content.Intent(android.provider.Settings.ACTION_SOUND_SETTINGS)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-            "music" -> expandMusic()
-            "settings" -> {
-                val intent = android.content.Intent(appContext, MainActivity::class.java)
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                runCatching { appContext.startActivity(intent) }
-            }
-        }
-        if (id != "torch") {
-            collapse()
-        }
+        )
     }
 
     val audioOutputTracker = AudioOutputDeviceTracker(appContext)
@@ -662,6 +650,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 // Sprint 2 Batch 1: Hardware callbacks & System events
                 torchHandler.start()
                 networkHandler.start()
+                bluetoothEarbudTracker.start()
                 if (systemEventsReceiver == null) {
                     systemEventsReceiver = SystemEventsReceiver { event ->
                         if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
@@ -786,6 +775,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
+                        val weatherState by weatherProvider.state.collectAsState()
                         val signatureTheme = remember(prefs.presetName) {
                             com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
                         }
@@ -929,6 +919,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs,
                             stateManager = stateManager,
+                            weatherState = weatherState,
+                            onScreenshotResult = { res -> reportScreenshotResult(res) },
                             onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
                         )
                         }
@@ -1042,6 +1034,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 // Sprint 2 Batch 1: Hardware callbacks & System events
                 torchHandler.start()
                 networkHandler.start()
+                bluetoothEarbudTracker.start()
                 if (systemEventsReceiver == null) {
                     systemEventsReceiver = SystemEventsReceiver { event ->
                         if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
@@ -1166,6 +1159,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
+                        val weatherState by weatherProvider.state.collectAsState()
                         val signatureTheme = remember(prefs.presetName) {
                             com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
                         }
@@ -1309,6 +1303,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs,
                             stateManager = stateManager,
+                            weatherState = weatherState,
+                            onScreenshotResult = { res -> reportScreenshotResult(res) },
                             onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
                         )
                         }
@@ -2157,6 +2153,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             audioOutputTracker.stop()
             torchHandler.stop()
             networkHandler.stop()
+            bluetoothEarbudTracker.stop()
             systemEventsReceiver?.let {
                 try {
                     appContext.unregisterReceiver(it)

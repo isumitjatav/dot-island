@@ -42,6 +42,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -157,7 +159,7 @@ object NotificationCardResolver {
             NotificationPreviewMode.APP_ONLY -> NotificationCardState(
                 shouldRender = true,
                 appDisplayName = resolvedAppName,
-                title = "New notification",
+                title = com.nothing.island.ai.notifications.NotificationPlaceholderFormatter.MASKED_GENERIC_LABEL,
                 body = null,
                 subText = null,
                 formattedTime = formattedTime,
@@ -515,12 +517,21 @@ fun NotificationCard(
                 theme.isInverted -> Color(0xFFCCCCCC)
                 else -> Color.Transparent
             }
+            val bodyA11yDescription = com.nothing.island.ai.notifications.NotificationPlaceholderFormatter.accessibleDescription(
+                appDisplayName = state.appDisplayName,
+                title = state.title,
+                body = state.body,
+                isMasked = state.previewMode == NotificationPreviewMode.APP_ONLY
+            )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(bodyBg)
                     .then(if (bodyBorder != Color.Transparent) Modifier.border(1.dp, bodyBorder, RoundedCornerShape(12.dp)) else Modifier)
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = bodyA11yDescription
+                    }
                     .then(
                         if (isBodyClickable) {
                             Modifier.clickable { onOpenContent?.invoke(notificationKey!!) }

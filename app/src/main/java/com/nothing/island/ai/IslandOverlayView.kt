@@ -75,6 +75,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -311,6 +313,8 @@ fun IslandOverlayView(
     activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD,
     gesturePreferences: GesturePreferences = GesturePreferences(),
     stateManager: IslandStateManager = IslandStateManager.getInstance(),
+    weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable(),
+    onScreenshotResult: ((com.nothing.island.ai.gestures.ScreenshotActionResult) -> Unit)? = null,
     onPillBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> }
 ) {
     val isExpanded = state.mode == IslandMode.EXPANDED
@@ -365,12 +369,13 @@ fun IslandOverlayView(
         }
     }
 
-    val gestureExecutor = remember(context, handleSmartCompactTap, onClearHistory) {
+    val gestureExecutor = remember(context, handleSmartCompactTap, onClearHistory, onScreenshotResult) {
         IslandGestureActionExecutor(
             context = context,
             torchHandler = null,
             onToggleExpand = handleSmartCompactTap,
-            onClearAllNotifications = onClearHistory
+            onClearAllNotifications = onClearHistory,
+            onScreenshotResult = onScreenshotResult
         )
     }
 
@@ -991,6 +996,7 @@ fun IslandOverlayView(
                         projectedHistory = projectedHistory,
                         activeNotification = activeNotification,
                         activeUndo = activeUndo,
+                        weatherState = weatherState,
                         onSelectHistoricalNotification = onSelectHistoricalNotification,
                         onDismissHistoryEntry = onDismissHistoryEntry,
                         onUndoDismiss = onUndoDismiss,
@@ -1072,10 +1078,14 @@ fun IslandOverlayView(
 
                     com.nothing.island.ai.ui.components.QuickToolsDrawer(
                         tools = qt.ALL.filter { id -> id in enabledQuickTools }.map { id ->
+                            val spec = com.nothing.island.ai.ui.components.QuickToolExecutor.describeTool(id)
                             com.nothing.island.ai.ui.components.QuickTool(
                                 id = id,
-                                label = qt.label(id),
+                                label = spec.label,
                                 glyph = qt.glyph(id),
+                                actionType = spec.actionType,
+                                contentDescription = spec.contentDescription,
+                                fallbackTag = spec.fallbackTag,
                                 action = { onQuickTool(id) },
                             )
                         },
@@ -1133,7 +1143,8 @@ fun DashboardCard(
     onSwipe: (SwipeDirection) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier,
-    isCameraCutoutEnabled: Boolean = false
+    isCameraCutoutEnabled: Boolean = false,
+    weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable()
 ) {
     val cardShape = if (isCameraCutoutEnabled) com.nothing.island.ai.ui.components.notchedCardShape() else RoundedCornerShape(26.dp)
     var isConfirmingClear by remember { mutableStateOf(false) }
@@ -1246,17 +1257,26 @@ fun DashboardCard(
                         )
                     }
 
-                    // Neutral Weather Placeholder (Weather integration deferred to Phase 3.7)
+                    // Formalized Weather State Chip (explicit Unavailable/Loading/Permission/Error/Available)
+                    val weatherChipLabel = com.nothing.island.ai.weather.WeatherStateFormatter.formatChipLabel(weatherState)
+                    val weatherA11y = com.nothing.island.ai.weather.WeatherStateFormatter.formatContentDescription(weatherState)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(NothingDarkGray)
+                            .semantics {
+                                contentDescription = weatherA11y
+                            }
                             .padding(horizontal = 8.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = "WEATHER UNAVAILABLE",
-                            color = NothingMutedText,
+                            text = weatherChipLabel,
+                            color = when (weatherState) {
+                                is com.nothing.island.ai.weather.WeatherState.Available -> theme.textColorPrimary
+                                is com.nothing.island.ai.weather.WeatherState.Error -> NothingRed
+                                else -> NothingMutedText
+                            },
                             fontSize = 8.5.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium

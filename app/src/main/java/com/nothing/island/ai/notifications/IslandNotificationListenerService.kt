@@ -115,8 +115,8 @@ class IslandNotificationListenerService : NotificationListenerService() {
     @Volatile
     private var activeCallKey: String? = null
 
-    /** Keys we cancelled ourselves via Hide System Notification; their removal callbacks are ignored. */
-    private val selfCancelledKeys = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
+    /** Policy & dedupe guard for suppressing redundant Android heads-up notifications without loops. */
+    internal val systemSuppressor = SystemNotificationSuppressor()
 
     // Set of notification keys present at connection time (historical)
     private val historicalNotificationKeys = ConcurrentHashMap.newKeySet<String>()
@@ -424,16 +424,37 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     val accepted = controller.eventEngine.emit(event)
                     Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
 
-                    // "Hide System (Double) Notification": cancel the redundant
-                    // Android heads-up so the same alert does not appear twice.
-                    if (accepted && prefs.hideSystemNotification && sbn.isClearable && !sbn.isOngoing) {
+                    // "Hide System (Double) Notification": evaluate explicit suppression rules
+                    // (excludes calls, media, non-clearable, ongoing, group summaries, and loops).
+                    val isGroupSummary = (notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
+                    val hasMediaStyle = notification.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true ||
+                        notification.category == Notification.CATEGORY_TRANSPORT
+                    val suppressionDecision = systemSuppressor.evaluate(
+                        candidate = SuppressionCandidate(
+                            key = key,
+                            postTime = postTime,
+                            category = notification.category,
+                            isClearable = sbn.isClearable,
+                            isOngoing = sbn.isOngoing ||
+                                (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 ||
+                                (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0,
+                            isGroupSummary = isGroupSummary,
+                            hasMediaStyle = hasMediaStyle,
+                            acceptedByIsland = accepted
+                        ),
+                        preferences = prefs
+                    )
+                    if (suppressionDecision == SuppressionDecision.CANCEL) {
                         try {
-                            selfCancelledKeys.add(key)
+                            systemSuppressor.recordSelfCancellation(key = key, postTime = postTime)
                             cancelNotification(key)
                             Log.i(TAG, "Hide System Notification: heads-up cancelled key=$key")
                         } catch (e: Exception) {
+                            systemSuppressor.consumeSelfCancelledRemoval(key)
                             Log.w(TAG, "Failed to cancel redundant notification key=$key", e)
                         }
+                    } else if (prefs.hideSystemNotification) {
+                        Log.d(TAG, "Hide System Notification skipped ($suppressionDecision) for key=$key")
                     }
                 }
             } catch (e: Exception) {
@@ -450,7 +471,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
             val key = sbn.key ?: return@launch
             val postTime = sbn.postTime
 
-            if (selfCancelledKeys.remove(key)) {
+            if (systemSuppressor.consumeSelfCancelledRemoval(key)) {
                 Log.d(TAG, "Ignoring self-inflicted removal callback for key=$key (Hide System Notification)")
                 return@launch
             }

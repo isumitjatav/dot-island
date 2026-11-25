@@ -1,4 +1,6 @@
-# Nothing Island — Feature Gap Analysis & Technical Feasibility
+# [HISTORICAL BASELINE — NOV 6, 2026] Nothing Island — Feature Gap Analysis & Technical Feasibility
+
+> **HISTORICAL NOTICE:** This gap analysis captures the Milestone **R8** baseline (November 6, 2026). Several gaps analyzed below (telephony call controls, Bluetooth peripheral tracking, quick tools drawer, global screenshot gesture, notification history & suppression) were subsequently implemented on later milestones; consult `docs/HANDOVER_2026-11-22.md` and `docs/RELEASE_BUILD_CHECKLIST.md` for current capabilities and platform restrictions.
 **Target Platform:** Nothing Phone (4a), Android 17 / API 37  
 **Current Baseline:** Checkpoint R8 Accepted (235 Passing Unit Tests, Physical Device Verified)  
 **Reference Standards:** Dynamic Notch (v6.60), Dynamic Island Pro (v1.9.2)  

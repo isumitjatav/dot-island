@@ -1,4 +1,6 @@
-# NOTHING ISLAND — ANTIGRAVITY PROJECT HANDOVER
+# [HISTORICAL — SUPERSEDED] NOTHING ISLAND — ANTIGRAVITY PROJECT HANDOVER
+
+> **HISTORICAL NOTICE:** This document captures an early Milestone **R3.1** snapshot (November 5, 2026) and is **stale**. It predates Git initialization, DataStore persistence, Notification/Media/Telephony/Bluetooth engines, Android instrumentation tests, and R8 release hardening. Refer to [HANDOVER_2026-11-22.md](./HANDOVER_2026-11-22.md) and [RELEASE_BUILD_CHECKLIST.md](./RELEASE_BUILD_CHECKLIST.md) for current platform status.
 
 **Document Version:** 1.0.0  
 **Handover Date:** November 5, 2026  
