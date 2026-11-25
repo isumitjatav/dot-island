@@ -322,6 +322,17 @@ fun SettingsScreen(
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 PreferenceToggleRow(
+                    title = "Hide During Games",
+                    subtitle = "Automatically hides the island during gaming or landscape fullscreen to avoid covering controls.",
+                    checked = prefs.autoHideInGames,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateAutoHideInGames(enabled)
+                        }
+                    }
+                )
+
+                PreferenceToggleRow(
                     title = "Camera Cutout Notch",
                     subtitle = "Wrap expanded cards around the front camera lens (reference style). When disabled, cards use classic smooth rounded corners.",
                     checked = prefs.isCameraCutoutEnabled,

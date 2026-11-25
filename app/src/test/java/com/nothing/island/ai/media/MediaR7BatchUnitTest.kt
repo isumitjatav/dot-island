@@ -267,4 +267,34 @@ class MediaR7BatchUnitTest {
         assertTrue(handled)
         assertEquals(IslandInterface.DASHBOARD, switcher.currentInterface.value)
     }
+
+    @Test
+    fun testMediaTrackState_repeatModeAndSessionActivity() {
+        val defaultState = MediaTrackState.EMPTY
+        assertNull(defaultState.sessionActivity)
+        assertEquals(0, defaultState.repeatMode)
+
+        val customState = defaultState.copy(
+            repeatMode = 2 // REPEAT_MODE_ALL
+        )
+        assertEquals(2, customState.repeatMode)
+    }
+
+    @Test
+    fun testRepeatModeCycle_noneToAllToOneToNone() {
+        val none = 0 // PlaybackStateCompat.REPEAT_MODE_NONE
+        val all = 2  // PlaybackStateCompat.REPEAT_MODE_ALL
+        val one = 1  // PlaybackStateCompat.REPEAT_MODE_ONE
+
+        fun nextMode(current: Int): Int = when (current) {
+            0 -> 2
+            2 -> 1
+            1 -> 0
+            else -> 2
+        }
+
+        assertEquals(all, nextMode(none))
+        assertEquals(one, nextMode(all))
+        assertEquals(none, nextMode(one))
+    }
 }

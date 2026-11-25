@@ -345,7 +345,8 @@ sealed interface IslandEvent {
         override val timeoutMs: Long = 0L, // Persistent while ringing
         val callId: String,
         val callerDisplayName: String,
-        val isVideoCall: Boolean = false
+        val isVideoCall: Boolean = false,
+        val contactPhoto: android.graphics.Bitmap? = null
     ) : IslandEvent
 
     data class CallConnected(
@@ -358,7 +359,8 @@ sealed interface IslandEvent {
         val callId: String,
         val callerDisplayName: String,
         val durationSeconds: Long = 0L,
-        val isDialing: Boolean = false
+        val isDialing: Boolean = false,
+        val contactPhoto: android.graphics.Bitmap? = null
     ) : IslandEvent
 
     data class CallEnded(

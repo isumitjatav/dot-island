@@ -48,7 +48,21 @@ class IslandAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Zero event processing required. Pure passive anchor.
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            val pkg = event.packageName?.toString()
+            if (!pkg.isNullOrBlank()) {
+                val controller = IslandOverlayController.getInstance(this)
+                controller.onForegroundPackageChanged(pkg)
+            }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        try {
+            val controller = IslandOverlayController.getInstance(this)
+            controller.onConfigurationChanged(newConfig)
+        } catch (_: Exception) {}
     }
 
     override fun onInterrupt() {

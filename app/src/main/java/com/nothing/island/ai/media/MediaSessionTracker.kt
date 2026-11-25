@@ -10,6 +10,9 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.os.Handler
 import android.os.Looper
+import android.support.v4.media.session.MediaControllerCompat
+import android.support.v4.media.session.MediaSessionCompat
+import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.IslandEvent
@@ -73,7 +76,15 @@ class MediaSessionTracker(
     val currentTrack: StateFlow<MediaTrackState> = _currentTrack.asStateFlow()
 
     private var activeController: MediaController? = null
+    private var activeControllerCompat: MediaControllerCompat? = null
     private var lastKnownValidTrack: MediaTrackState? = null
+
+    private val controllerCompatCallback = object : MediaControllerCompat.Callback() {
+        override fun onRepeatModeChanged(repeatMode: Int) {
+            Log.d(TAG, "ControllerCompat callback: onRepeatModeChanged: $repeatMode")
+            updateFromActiveController()
+        }
+    }
 
     private val preferencesRepository: IslandPreferencesRepository by lazy {
         IslandPreferencesRepository.getInstance(context.applicationContext)
@@ -171,7 +182,18 @@ class MediaSessionTracker(
 
         if (bestController != activeController) {
             activeController?.unregisterCallback(controllerCallback)
+            activeControllerCompat?.unregisterCallback(controllerCompatCallback)
             activeController = bestController
+            activeControllerCompat = try {
+                MediaSessionCompat.Token.fromToken(bestController.sessionToken)?.let { token ->
+                    MediaControllerCompat(context, token).also {
+                        it.registerCallback(controllerCompatCallback, mainHandler)
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to create MediaControllerCompat for ${bestController.packageName}", e)
+                null
+            }
             activeController?.registerCallback(controllerCallback, mainHandler)
             Log.d(TAG, "Selected new active MediaController: ${bestController.packageName}")
         }
@@ -205,6 +227,8 @@ class MediaSessionTracker(
 
         val metadata = controller.metadata
         val playbackState = controller.playbackState
+        val sessionActivity = controller.sessionActivity ?: activeControllerCompat?.sessionActivity
+        val repeatMode = activeControllerCompat?.repeatMode ?: PlaybackStateCompat.REPEAT_MODE_NONE
 
         val rawTitle = metadata?.getString(MediaMetadata.METADATA_KEY_TITLE)
             ?: metadata?.getString(MediaMetadata.METADATA_KEY_DISPLAY_TITLE)
@@ -282,7 +306,9 @@ class MediaSessionTracker(
             canSkipNext = canSkipNext,
             canSkipPrevious = canSkipPrev,
             audioOutputName = audioOutput,
-            isHistorical = false
+            isHistorical = false,
+            sessionActivity = sessionActivity,
+            repeatMode = repeatMode
         )
 
         val previous = _currentTrack.value
@@ -316,7 +342,9 @@ class MediaSessionTracker(
      */
     private fun handleSessionDestroyed() {
         activeController?.unregisterCallback(controllerCallback)
+        activeControllerCompat?.unregisterCallback(controllerCompatCallback)
         activeController = null
+        activeControllerCompat = null
         setStandbyState()
     }
 
@@ -454,10 +482,22 @@ class MediaSessionTracker(
         }
     }
 
+    fun setRepeatMode(mode: Int) {
+        try {
+            activeControllerCompat?.transportControls?.setRepeatMode(mode)
+            Log.d(TAG, "Transport action: setRepeatMode $mode")
+            _currentTrack.value = _currentTrack.value.copy(repeatMode = mode)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to execute setRepeatMode", e)
+        }
+    }
+
     fun release() {
         try {
             activeController?.unregisterCallback(controllerCallback)
+            activeControllerCompat?.unregisterCallback(controllerCompatCallback)
             activeController = null
+            activeControllerCompat = null
             if (isRegistered && mediaSessionManager != null) {
                 mediaSessionManager.removeOnActiveSessionsChangedListener(sessionsChangedListener)
                 isRegistered = false

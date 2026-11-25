@@ -15,6 +15,7 @@ object CallActionRegistry {
         val key: String,
         val answer: PendingIntent?,
         val decline: PendingIntent?,
+        val hangUp: PendingIntent? = null,
     )
 
     @Volatile
@@ -34,6 +35,8 @@ object CallActionRegistry {
     fun answer(): Boolean = send(current?.answer, "answer")
 
     fun decline(): Boolean = send(current?.decline, "decline")
+
+    fun hangUp(): Boolean = send(current?.hangUp ?: current?.decline, "hangUp")
 
     private fun send(intent: PendingIntent?, label: String): Boolean {
         if (intent == null) {

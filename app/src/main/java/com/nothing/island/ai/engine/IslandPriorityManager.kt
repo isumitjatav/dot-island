@@ -80,6 +80,10 @@ class IslandPriorityManager(
                     return@withLock
                 }
                 else -> {
+                    // Track fresh notification window in IslandStateManager
+                    if (event is IslandEvent.NotificationPosted) {
+                        IslandStateManager.getInstance().onNotificationArrived(event.timestamp)
+                    }
                     // Cache persistent ongoing events into background fallbacks
                     cacheBackgroundEventIfPersistent(event)
                 }

@@ -32,12 +32,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CallEnd
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -165,10 +172,53 @@ fun CallStudioScreen(onNavigateBack: () -> Unit, modifier: Modifier = Modifier) 
 
         NothingSectionHeader(title = "LIVE CALL PREVIEW", isAccent = true)
         Spacer(Modifier.height(8.dp))
-        LiveCallPreview(showEndButton = prefs.doubleIncomingCallActions && prefs.systemCallEnabled)
+
+        var previewState by remember { mutableStateOf(CallPreviewState.EXPANDED_INCOMING) }
+
+        // 3-State Preview Mode Selector Pills
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                CallPreviewState.EXPANDED_INCOMING to "Incoming",
+                CallPreviewState.EXPANDED_CONNECTED to "Connected",
+                CallPreviewState.COMPACT_ONGOING to "Compact"
+            ).forEach { (stateOption, label) ->
+                val isSelected = previewState == stateOption
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isSelected) NothingPrimaryText else NothingTokens.NothingSurfaceMedium)
+                        .clickable { previewState = stateOption }
+                        .padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (isSelected) Color.Black else NothingPrimaryText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(12.dp))
+        LiveCallPreview(
+            previewState = previewState,
+            onToggleExpand = {
+                previewState = when (previewState) {
+                    CallPreviewState.COMPACT_ONGOING -> CallPreviewState.EXPANDED_CONNECTED
+                    else -> CallPreviewState.COMPACT_ONGOING
+                }
+            }
+        )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = "Long press to expand or collapse. Tap to open the call screen.",
+            text = "Long Press to expand or collapse. Tap to open call screen.",
             color = NothingTokens.NothingTextTertiary,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
@@ -207,20 +257,33 @@ fun CallStudioScreen(onNavigateBack: () -> Unit, modifier: Modifier = Modifier) 
     }
 }
 
-/** Animated reference-style call pill preview. */
+enum class CallPreviewState {
+    EXPANDED_INCOMING,
+    EXPANDED_CONNECTED,
+    COMPACT_ONGOING
+}
+
+/** Animated reference-style 3-state call preview. */
 @Composable
-private fun LiveCallPreview(showEndButton: Boolean) {
+private fun LiveCallPreview(
+    previewState: CallPreviewState,
+    onToggleExpand: () -> Unit
+) {
     val pulse = rememberInfiniteTransition(label = "callPreviewPulse")
-    val glow by pulse.animateFloat(
-        initialValue = 0.15f, targetValue = 0.4f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "glow",
-    )
     val tick by pulse.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(1000, easing = FastOutSlowInEasing), RepeatMode.Restart),
+        initialValue = 1f, targetValue = 9f,
+        animationSpec = infiniteRepeatable(tween(8000, easing = androidx.compose.animation.core.LinearEasing), RepeatMode.Restart),
         label = "tick",
     )
+    val waveHeights = listOf(
+        pulse.animateFloat(4f, 13f, infiniteRepeatable(tween(420, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w1"),
+        pulse.animateFloat(11f, 5f, infiniteRepeatable(tween(360, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w2"),
+        pulse.animateFloat(6f, 15f, infiniteRepeatable(tween(480, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w3"),
+        pulse.animateFloat(12f, 6f, infiniteRepeatable(tween(390, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w4"),
+        pulse.animateFloat(5f, 11f, infiniteRepeatable(tween(440, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w5"),
+    )
+
+    var isSpeakerActive by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -228,65 +291,193 @@ private fun LiveCallPreview(showEndButton: Boolean) {
             .clip(RoundedCornerShape(22.dp))
             .background(NothingTokens.NothingSurfaceLowest)
             .border(1.dp, NothingTokens.NothingBorderSubtle, RoundedCornerShape(22.dp))
-            .padding(vertical = 26.dp, horizontal = 14.dp),
+            .padding(vertical = 24.dp, horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Box(modifier = Modifier) {
-            Box(
-                modifier = Modifier
-                    .width(280.dp)
-                    .height(56.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color(0xFF0A0A0A))
-                    .border(1.dp, NothingSuccess.copy(alpha = glow), RoundedCornerShape(28.dp)),
-                contentAlignment = Alignment.CenterStart,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 14.dp, end = 12.dp)) {
-                    // Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(
-                                Brush.linearGradient(listOf(Color(0xFF7B4BFF), Color(0xFFFF5FA2)))
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) { Text("DW", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
+        when (previewState) {
+            CallPreviewState.COMPACT_ONGOING -> {
+                // Symmetrical ~200dp x 36dp stadium pill matching reference
+                Box(
+                    modifier = Modifier
+                        .width(200.dp)
+                        .height(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF000000))
+                        .border(1.dp, Color(0xFF262626), CircleShape)
+                        .clickable(onClick = onToggleExpand)
+                        .padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Call,
+                                contentDescription = "Active Call",
+                                tint = Color(0xFF00C853),
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "00:0${tick.toInt().coerceIn(1, 9)}",
+                                color = Color(0xFF00C853),
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
-                    Spacer(Modifier.width(10.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("00:0${(tick * 9).toInt().coerceIn(0, 9)}", color = NothingSuccess, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
-                        Text("Daisy Williams", color = NothingPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            modifier = Modifier.height(16.dp)
+                        ) {
+                            waveHeights.forEach { h ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(2.5.dp)
+                                        .height(h.value.dp)
+                                        .clip(RoundedCornerShape(1.25.dp))
+                                        .background(Color(0xFF00C853))
+                                )
+                            }
+                        }
                     }
-
-                    // Speaker circle
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF2A2A2A))
-                            .border(1.dp, NothingTokens.NothingBorderSubtle, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) { Text("◖", color = NothingSecondaryText, fontSize = 16.sp) }
                 }
             }
 
-            // Animated red end button
-            AnimatedVisibility(
-                visible = showEndButton,
-                enter = slideInHorizontally { -it } + fadeIn(animationSpec = tween(260, easing = FastOutSlowInEasing)),
-                exit = slideOutHorizontally { -it } + fadeOut(animationSpec = tween(200)),
-                modifier = Modifier.align(Alignment.CenterStart),
-            ) {
+            CallPreviewState.EXPANDED_INCOMING -> {
+                // 344dp x 78dp capsule matching reference
                 Box(
                     modifier = Modifier
-                        .offset(x = (-8).dp)
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(NothingPrimaryAccent)
-                        .border(3.dp, NothingTokens.NothingSurfaceLowest, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) { Text("✕", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
+                        .width(344.dp)
+                        .height(78.dp)
+                        .clip(RoundedCornerShape(39.dp))
+                        .background(Color(0xFF000000))
+                        .border(1.dp, Color(0xFF262626), RoundedCornerShape(39.dp))
+                        .clickable(onClick = onToggleExpand)
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(Color(0xFF7B4BFF), Color(0xFFFF5FA2)))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("DW", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("Incoming Call", color = Color(0xFF8E8E93), fontSize = 12.sp)
+                            Spacer(Modifier.height(2.dp))
+                            Text("Daisy Williams", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFF3B30)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.CallEnd, contentDescription = "Decline", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF34C759)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.Call, contentDescription = "Answer", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            CallPreviewState.EXPANDED_CONNECTED -> {
+                // 344dp x 78dp capsule matching reference
+                Box(
+                    modifier = Modifier
+                        .width(344.dp)
+                        .height(78.dp)
+                        .clip(RoundedCornerShape(39.dp))
+                        .background(Color(0xFF000000))
+                        .border(1.dp, Color(0xFF262626), RoundedCornerShape(39.dp))
+                        .clickable(onClick = onToggleExpand)
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(Brush.linearGradient(listOf(Color(0xFF7B4BFF), Color(0xFFFF5FA2)))),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("DW", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text("00:0${tick.toInt().coerceIn(1, 9)}", color = Color(0xFF00C853), fontSize = 13.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.SemiBold)
+                            Spacer(Modifier.height(2.dp))
+                            Text("Daisy Williams", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSpeakerActive) Color.White else Color(0xFF3A3A3C))
+                                    .clickable { isSpeakerActive = !isSpeakerActive },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.VolumeUp, contentDescription = "Speaker", tint = if (isSpeakerActive) Color.Black else Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFF3B30)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Rounded.CallEnd, contentDescription = "Hang Up", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
     }

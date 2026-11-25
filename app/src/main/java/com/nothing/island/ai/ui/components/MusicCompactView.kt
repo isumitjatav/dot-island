@@ -1,5 +1,6 @@
 package com.nothing.island.ai.ui.components
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,10 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,9 +65,40 @@ fun MusicCompactView(
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 35f
 
-    val progressFraction = if (trackState.durationMs > 0L) {
-        (trackState.computeCurrentPosition().toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    var liveProgress by remember(trackState.currentPositionMs, trackState.durationMs, trackState.isPlaying) {
+        val initialPos = if (trackState.durationMs > 0L) {
+            trackState.currentPositionMs.coerceIn(0L, trackState.durationMs)
+        } else 0L
+        mutableFloatStateOf(
+            if (trackState.durationMs > 0L) (initialPos.toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+        )
+    }
+
+    LaunchedEffect(trackState.isPlaying, trackState.currentPositionMs, trackState.durationMs, trackState.playbackSpeed) {
+        if (trackState.isPlaying && trackState.durationMs > 0L) {
+            val basePositionMs = trackState.currentPositionMs
+            val durationMs = trackState.durationMs
+            val playbackSpeed = if (trackState.playbackSpeed > 0f) trackState.playbackSpeed else 1.0f
+            val startRealtime = SystemClock.elapsedRealtime()
+
+            while (true) {
+                withFrameNanos { _ ->
+                    val elapsedMs = ((SystemClock.elapsedRealtime() - startRealtime) * playbackSpeed).toLong()
+                    val livePositionMs = (basePositionMs + elapsedMs).coerceIn(0L, durationMs)
+                    val fraction = if (durationMs > 0L) {
+                        (livePositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+                    liveProgress = fraction
+                }
+            }
+        } else {
+            liveProgress = if (trackState.durationMs > 0L) {
+                (trackState.currentPositionMs.toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
+            } else {
+                0f
+            }
+        }
+    }
 
     val pillBorderColor = when {
         theme.isGlassmorphic -> Color(0x45FFFFFF)
@@ -108,7 +142,7 @@ fun MusicCompactView(
         // Live track progress border clockwise around compact pill when music is playing
         if (trackState.isPlaying) {
             com.nothing.island.ai.ui.theme.CompactMusicProgressBorder(
-                progressFraction = progressFraction,
+                progressFraction = liveProgress,
                 accentColor = theme.compactProgressColor,
                 cornerRadiusDp = 18.dp,
                 modifier = Modifier.matchParentSize()

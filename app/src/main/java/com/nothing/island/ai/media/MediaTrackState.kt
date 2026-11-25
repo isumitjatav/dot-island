@@ -1,5 +1,6 @@
 package com.nothing.island.ai.media
 
+import android.app.PendingIntent
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.Color
 
@@ -26,7 +27,9 @@ data class MediaTrackState(
     val canSkipNext: Boolean = true,
     val canSkipPrevious: Boolean = true,
     val audioOutputName: String = "Phone Speaker",
-    val isHistorical: Boolean = false
+    val isHistorical: Boolean = false,
+    val sessionActivity: PendingIntent? = null,
+    val repeatMode: Int = 0 // 0 = REPEAT_MODE_NONE, 1 = REPEAT_MODE_ONE, 2 = REPEAT_MODE_ALL
 ) {
     companion object {
         val EMPTY = MediaTrackState(

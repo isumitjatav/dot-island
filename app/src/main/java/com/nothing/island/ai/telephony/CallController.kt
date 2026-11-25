@@ -9,6 +9,9 @@ import android.os.Build
 import android.telecom.TelecomManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * R9 call controls. Prefers TelecomManager (the reliable, documented API) and
@@ -17,6 +20,9 @@ import androidx.core.content.ContextCompat
  */
 object CallController {
     private const val TAG = "CallController"
+
+    private val _isSpeakerOn = MutableStateFlow(false)
+    val isSpeakerOn: StateFlow<Boolean> = _isSpeakerOn.asStateFlow()
 
     fun canControlCalls(context: Context): Boolean =
         ContextCompat.checkSelfPermission(
@@ -49,17 +55,19 @@ object CallController {
                 Log.w(TAG, "TelecomManager decline failed, falling back", e)
             }
         }
-        return CallActionRegistry.decline()
+        return CallActionRegistry.hangUp()
     }
 
     fun isSpeakerOn(context: Context): Boolean {
         val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return false
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            am.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER || am.isSpeakerphoneOn
+        val active = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            am.communicationDevice?.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
         } else {
             @Suppress("DEPRECATION")
             am.isSpeakerphoneOn
         }
+        _isSpeakerOn.value = active
+        return active
     }
 
     fun toggleSpeaker(context: Context): Boolean {
@@ -68,12 +76,14 @@ object CallController {
         val turningOn = !currentlyOn
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                am.mode = AudioManager.MODE_IN_COMMUNICATION
                 if (turningOn) {
                     val speaker = am.availableCommunicationDevices.firstOrNull {
                         it.type == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
                     }
                     if (speaker != null) {
-                        am.setCommunicationDevice(speaker)
+                        val success = am.setCommunicationDevice(speaker)
+                        Log.d(TAG, "setCommunicationDevice(speaker) result: $success")
                     } else {
                         @Suppress("DEPRECATION")
                         am.isSpeakerphoneOn = true
@@ -85,12 +95,16 @@ object CallController {
                 }
             } else {
                 @Suppress("DEPRECATION")
+                am.mode = AudioManager.MODE_IN_COMMUNICATION
+                @Suppress("DEPRECATION")
                 am.isSpeakerphoneOn = turningOn
             }
+            _isSpeakerOn.value = turningOn
             Log.d(TAG, "Speaker toggled: now $turningOn")
             return turningOn
         } catch (e: Exception) {
             Log.w(TAG, "Failed to toggle speaker", e)
+            _isSpeakerOn.value = currentlyOn
             return currentlyOn
         }
     }

@@ -142,137 +142,153 @@ fun Modifier.islandGestureDetector(
     isMediaIslandActive: Boolean = false,
     onTap: (() -> Unit)? = null,
     onVolumeDrag: ((Float) -> Unit)? = null,
-    onSwipeActivity: ((SwipeDirection) -> Unit)? = null
+    onSwipeActivity: ((SwipeDirection) -> Unit)? = null,
+    onPressChange: ((Boolean) -> Unit)? = null
 ): Modifier = pointerInput(preferences, isMediaIslandActive) {
     val touchSlop = viewConfiguration.touchSlop
     val longPressTimeoutMs = preferences.longPressDurationMs // default 500L
 
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
+        onPressChange?.invoke(true)
         val startPosition = down.position
         var totalDragX = 0f
         var totalDragY = 0f
         var isLongPressEngaged = false
         var isMovedBeyondSlop = false
 
-        // Phase 1: Wait up to longPressTimeoutMs for Tap vs Move vs Hold
-        val tapOrMoveResult = withTimeoutOrNull(longPressTimeoutMs) {
-            while (true) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+        try {
+            // Phase 1: Wait up to longPressTimeoutMs for Tap vs Move vs Hold
+            val tapOrMoveResult = withTimeoutOrNull(longPressTimeoutMs) {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-                if (change.positionChanged()) {
-                    val delta = change.position - startPosition
-                    if (delta.getDistance() > touchSlop) {
-                        isMovedBeyondSlop = true
-                        totalDragX = delta.x
-                        totalDragY = delta.y
-                        return@withTimeoutOrNull "MOVED"
-                    }
-                }
-
-                if (!change.pressed) {
-                    // Finger lifted before 500ms and within touchSlop -> Single Tap!
-                    change.consume()
-                    if (onTap != null) {
-                        onTap.invoke()
-                    } else {
-                        executor.execute(preferences.singleTapAction)
-                    }
-                    return@withTimeoutOrNull "TAPPED"
-                }
-            }
-            "TERMINATED"
-        }
-
-        if (tapOrMoveResult == "TAPPED") {
-            return@awaitEachGesture
-        }
-
-        if (tapOrMoveResult == null) {
-            // Held for 500ms without moving beyond touch slop -> Long Press!
-            isLongPressEngaged = true
-            if (!isMediaIslandActive) {
-                executor.execute(preferences.longPressAction)
-            }
-        }
-
-        // Phase 2: If long press engaged on active media island, handle horizontal volume drag (REQ-20)
-        if (isLongPressEngaged && isMediaIslandActive) {
-            while (true) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-
-                if (change.positionChanged()) {
-                    val dragAmountX = change.position.x - change.previousPosition.x
-                    change.consume()
-                    executor.adjustVolumeDelta(dragAmountX, 300f)
-                    onVolumeDrag?.invoke(dragAmountX)
-                }
-
-                if (!change.pressed) {
-                    change.consume()
-                    break
-                }
-            }
-            return@awaitEachGesture
-        }
-
-        // Phase 3: If long press engaged on idle pill, consume all events until release so no swipe fires
-        if (isLongPressEngaged && !isMediaIslandActive) {
-            while (true) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                if (!change.pressed) {
-                    change.consume()
-                    break
-                }
-            }
-            return@awaitEachGesture
-        }
-
-        // Phase 4: User moved beyond touch slop before 500ms -> Directional Swipe
-        if (isMovedBeyondSlop) {
-            while (true) {
-                val event = awaitPointerEvent()
-                val change = event.changes.firstOrNull { it.id == down.id } ?: break
-
-                if (change.positionChanged()) {
-                    totalDragX = change.position.x - startPosition.x
-                    totalDragY = change.position.y - startPosition.y
-                }
-
-                if (!change.pressed) {
-                    change.consume()
-                    val swipeThreshold = 16f
-                    if (abs(totalDragX) > abs(totalDragY)) {
-                        if (totalDragX > swipeThreshold) {
-                            if (onSwipeActivity != null) {
-                                onSwipeActivity(SwipeDirection.RIGHT)
-                            } else {
-                                executor.execute(preferences.swipeRightAction)
-                            }
-                        } else if (totalDragX < -swipeThreshold) {
-                            if (onSwipeActivity != null) {
-                                onSwipeActivity(SwipeDirection.LEFT)
-                            } else {
-                                executor.execute(preferences.swipeLeftAction)
-                            }
-                        }
-                    } else {
-                        if (totalDragY > swipeThreshold) {
-                            // Swipe down always opens the quick tools drawer; fall back
-                            // to the configured action if no callback is provided.
-                            if (onSwipeActivity != null) {
-                                onSwipeActivity(SwipeDirection.DOWN)
-                            } else {
-                                executor.execute(preferences.swipeDownAction)
-                            }
+                    if (change.positionChanged()) {
+                        val delta = change.position - startPosition
+                        if (delta.getDistance() > touchSlop) {
+                            isMovedBeyondSlop = true
+                            totalDragX = delta.x
+                            totalDragY = delta.y
+                            return@withTimeoutOrNull "MOVED"
                         }
                     }
-                    break
+
+                    if (!change.pressed) {
+                        // Finger lifted before 500ms and within touchSlop -> Single Tap!
+                        change.consume()
+                        onPressChange?.invoke(false)
+                        if (onTap != null) {
+                            onTap.invoke()
+                        } else {
+                            executor.execute(preferences.singleTapAction)
+                        }
+                        return@withTimeoutOrNull "TAPPED"
+                    }
+                }
+                "TERMINATED"
+            }
+
+            if (tapOrMoveResult == "TAPPED") {
+                return@awaitEachGesture
+            }
+
+            if (tapOrMoveResult == null) {
+                // Held for 500ms without moving beyond touch slop -> Long Press!
+                isLongPressEngaged = true
+                if (!isMediaIslandActive) {
+                    executor.execute(preferences.longPressAction)
                 }
             }
+
+            // Phase 2: If long press engaged on active media island, handle horizontal volume drag (REQ-20)
+            if (isLongPressEngaged && isMediaIslandActive) {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                    if (change.positionChanged()) {
+                        val dragAmountX = change.position.x - change.previousPosition.x
+                        change.consume()
+                        executor.adjustVolumeDelta(dragAmountX, 300f)
+                        onVolumeDrag?.invoke(dragAmountX)
+                    }
+
+                    if (!change.pressed) {
+                        change.consume()
+                        onPressChange?.invoke(false)
+                        break
+                    }
+                }
+                return@awaitEachGesture
+            }
+
+            // Phase 3: If long press engaged on idle pill, consume all events until release so no swipe fires
+            if (isLongPressEngaged && !isMediaIslandActive) {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                    if (!change.pressed) {
+                        change.consume()
+                        onPressChange?.invoke(false)
+                        break
+                    }
+                }
+                return@awaitEachGesture
+            }
+
+            // Phase 4: User moved beyond touch slop before 500ms -> Directional Swipe
+            if (isMovedBeyondSlop) {
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                    if (change.positionChanged()) {
+                        totalDragX = change.position.x - startPosition.x
+                        totalDragY = change.position.y - startPosition.y
+                    }
+
+                    if (!change.pressed) {
+                        change.consume()
+                        onPressChange?.invoke(false)
+                        val swipeThreshold = 16f
+                        if (abs(totalDragX) > abs(totalDragY)) {
+                            if (totalDragX > swipeThreshold) {
+                                if (onSwipeActivity != null) {
+                                    onSwipeActivity(SwipeDirection.RIGHT)
+                                } else {
+                                    executor.execute(preferences.swipeRightAction)
+                                }
+                            } else if (totalDragX < -swipeThreshold) {
+                                if (onSwipeActivity != null) {
+                                    onSwipeActivity(SwipeDirection.LEFT)
+                                } else {
+                                    executor.execute(preferences.swipeLeftAction)
+                                }
+                            }
+                        } else {
+                            if (totalDragY > swipeThreshold) {
+                                // Swipe down opens quick tools drawer
+                                if (onSwipeActivity != null) {
+                                    onSwipeActivity(SwipeDirection.DOWN)
+                                } else {
+                                    executor.execute(preferences.swipeDownAction)
+                                }
+                            } else if (totalDragY < -swipeThreshold) {
+                                // Swipe up collapses overlay to compact pill
+                                if (onSwipeActivity != null) {
+                                    onSwipeActivity(SwipeDirection.UP)
+                                } else {
+                                    executor.execute(GestureAction.EXPAND_COLLAPSE)
+                                }
+                            }
+                        }
+                        break
+                    }
+                }
+            }
+        } finally {
+            onPressChange?.invoke(false)
         }
     }
 }

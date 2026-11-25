@@ -64,7 +64,8 @@ data class IslandPreferences(
     val mascotEnabled: Boolean = false,
     val mascotSpriteName: String = "CAT",
     val pillBackgroundColorHex: Long = 0xFF000000L,
-    val isCameraCutoutEnabled: Boolean = false
+    val isCameraCutoutEnabled: Boolean = false,
+    val autoHideInGames: Boolean = true
 )
 
 /** Context extension for single-instance Preferences DataStore */
@@ -99,7 +100,18 @@ class IslandPreferencesRepository internal constructor(
             presetName = "Nothing Minimal",
             accentColorHex = 0xFFD71920L,
             pillBackgroundColorHex = 0xFF000000L,
-            isCameraCutoutEnabled = false
+            isCameraCutoutEnabled = false,
+            autoHideInGames = true
+        )
+
+        // Legacy 32 presets gallery names to fall back safely to Nothing Classic
+        val LEGACY_32_PRESETS = setOf(
+            "Classic Black", "Minimal Gray", "Midnight", "Amethyst", "Sunset", "Neon Cyber",
+            "Royal Gold", "Ocean Breeze", "Crimson Fire", "Deep Space", "Forest Rain",
+            "Purple Haze", "Cherry Blossom", "Golden Hour", "The Matrix", "Cyber Pink",
+            "Mint Fresh", "Silver Lining", "Carbon Fiber", "Electric Blue", "Sweet Candy",
+            "Northern Lights", "Pure White", "Vampire Red", "Emerald City", "Cosmic Void",
+            "Rose Gold", "Ice Cold", "Lemon Twist", "Twilight", "Hot Lava", "Sea Foam"
         )
 
         @Volatile
@@ -148,6 +160,7 @@ class IslandPreferencesRepository internal constructor(
         val CALL_OTHER_APPS = booleanPreferencesKey("call_other_apps")
         val CALL_AUTO_EXPAND = booleanPreferencesKey("call_auto_expand")
         val CAMERA_CUTOUT_ENABLED = booleanPreferencesKey("camera_cutout_enabled")
+        val AUTO_HIDE_IN_GAMES = booleanPreferencesKey("auto_hide_in_games")
     }
 
     object NotificationPreferencesKeys {
@@ -420,6 +433,13 @@ class IslandPreferencesRepository internal constructor(
         val rawPillBg = preferences[PreferencesKeys.PILL_BACKGROUND_COLOR_HEX] ?: HARDWARE_DEFAULTS.pillBackgroundColorHex
         val safePillBg = if (rawPillBg == 0L || (rawPillBg and 0xFF000000L) == 0L) 0xFF000000L else rawPillBg
 
+        val rawPreset = preferences[PreferencesKeys.PRESET_NAME] ?: HARDWARE_DEFAULTS.presetName
+        val safePreset = if (LEGACY_32_PRESETS.contains(rawPreset)) {
+            "Nothing Classic"
+        } else {
+            rawPreset
+        }
+
         return IslandPreferences(
             compactWidthDp = preferences[PreferencesKeys.COMPACT_WIDTH_DP] ?: HARDWARE_DEFAULTS.compactWidthDp,
             compactHeightDp = preferences[PreferencesKeys.COMPACT_HEIGHT_DP] ?: HARDWARE_DEFAULTS.compactHeightDp,
@@ -432,13 +452,25 @@ class IslandPreferencesRepository internal constructor(
             isPulsing = preferences[PreferencesKeys.IS_PULSING] ?: HARDWARE_DEFAULTS.isPulsing,
             hapticFeedbackEnabled = preferences[PreferencesKeys.HAPTIC_FEEDBACK_ENABLED] ?: HARDWARE_DEFAULTS.hapticFeedbackEnabled,
             reducedMotionEnabled = preferences[PreferencesKeys.REDUCED_MOTION_ENABLED] ?: HARDWARE_DEFAULTS.reducedMotionEnabled,
-            presetName = preferences[PreferencesKeys.PRESET_NAME] ?: HARDWARE_DEFAULTS.presetName,
+            presetName = safePreset,
             accentColorHex = preferences[PreferencesKeys.ACCENT_COLOR_HEX] ?: HARDWARE_DEFAULTS.accentColorHex,
             mascotEnabled = preferences[PreferencesKeys.MASCOT_ENABLED] ?: HARDWARE_DEFAULTS.mascotEnabled,
             mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName,
             pillBackgroundColorHex = safePillBg,
-            isCameraCutoutEnabled = preferences[PreferencesKeys.CAMERA_CUTOUT_ENABLED] ?: HARDWARE_DEFAULTS.isCameraCutoutEnabled
+            isCameraCutoutEnabled = preferences[PreferencesKeys.CAMERA_CUTOUT_ENABLED] ?: HARDWARE_DEFAULTS.isCameraCutoutEnabled,
+            autoHideInGames = preferences[PreferencesKeys.AUTO_HIDE_IN_GAMES] ?: HARDWARE_DEFAULTS.autoHideInGames
         )
+    }
+
+    suspend fun updateAutoHideInGames(enabled: Boolean) {
+        _livePreferences.value = _livePreferences.value.copy(autoHideInGames = enabled)
+        try {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.AUTO_HIDE_IN_GAMES] = enabled
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to persist autoHideInGames preference", e)
+        }
     }
 
     suspend fun updatePillTheme(backgroundHex: Long, accentHex: Long, presetName: String) {

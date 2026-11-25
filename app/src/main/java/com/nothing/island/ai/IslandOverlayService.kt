@@ -198,5 +198,10 @@ class IslandOverlayService : Service() {
         super.onDestroy()
     }
 
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        controller?.onConfigurationChanged(newConfig)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 }

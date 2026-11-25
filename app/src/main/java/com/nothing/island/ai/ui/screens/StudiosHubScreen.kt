@@ -61,8 +61,8 @@ fun StudiosHubScreen(
         StudioCardItem(
             destination = IslandDestination.ThemeStudio,
             title = "THEME STUDIO",
-            subtitle = "32+ Named Colorways, Surface Contrast & Custom Hex",
-            badgeText = "32 PRESETS",
+            subtitle = "5 Signature Themes: Classic, Glyph Arc, Tape Deck & More",
+            badgeText = "5 THEMES",
             glyphSymbol = "🎨",
             accentColor = NothingTokens.NothingRed
         ),

@@ -195,14 +195,42 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     keywords.any { label.contains(it) }
                 }?.actionIntent
 
+                val callPhoto: android.graphics.Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    sbn.notification.extras?.getParcelable(Notification.EXTRA_LARGE_ICON, android.graphics.Bitmap::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    sbn.notification.extras?.getParcelable(Notification.EXTRA_LARGE_ICON)
+                }
+
+                val callStyleAnswer: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    sbn.notification.extras?.getParcelable(Notification.EXTRA_ANSWER_INTENT) ?: actionFor("answer", "accept")
+                } else {
+                    actionFor("answer", "accept")
+                }
+
+                val callStyleDecline: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    sbn.notification.extras?.getParcelable(Notification.EXTRA_DECLINE_INTENT)
+                        ?: actionFor("decline", "reject")
+                } else {
+                    actionFor("decline", "reject")
+                }
+
+                val callStyleHangUp: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    sbn.notification.extras?.getParcelable(Notification.EXTRA_HANG_UP_INTENT)
+                        ?: actionFor("hang", "end", "disconnect", "cancel")
+                } else {
+                    actionFor("hang", "end", "disconnect", "cancel")
+                }
+
                 when (callInfo.phase) {
                     CallPhase.INCOMING -> {
                         activeCallKey = key
                         CallActionRegistry.register(
                             CallActionRegistry.CallActions(
                                 key = key,
-                                answer = actionFor("answer", "accept"),
-                                decline = actionFor("decline", "reject", "hang", "end"),
+                                answer = callStyleAnswer,
+                                decline = callStyleDecline,
+                                hangUp = callStyleHangUp,
                             )
                         )
                         controller.apply {
@@ -212,10 +240,17 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                     callId = key,
                                     callerDisplayName = callInfo.callerDisplayName,
                                     isVideoCall = callInfo.isVideoCall,
+                                    contactPhoto = callPhoto,
                                 )
                             )
-                            if (callPrefs.autoExpandCall) {
-                                repository.expandCall()
+                            // Auto-expand incoming call capsule at top of screen
+                            repository.expandCall()
+                        }
+                        // Suppress duplicate system heads-up call popup so it doesn't cover dynamic island
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            runCatching {
+                                snoozeNotification(sbn.key, 5_000L)
+                                Log.d(TAG, "Snoozed system incoming call heads-up notification for 5s: ${sbn.key}")
                             }
                         }
                         Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
@@ -227,7 +262,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                             CallActionRegistry.CallActions(
                                 key = key,
                                 answer = null,
-                                decline = actionFor("decline", "reject", "hang", "end"),
+                                decline = callStyleDecline,
                             )
                         )
                         controller.stopCallTicker()
@@ -238,6 +273,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                 callerDisplayName = callInfo.callerDisplayName,
                                 durationSeconds = 0L,
                                 isDialing = true,
+                                contactPhoto = callPhoto,
                             )
                         )
                         if (callPrefs.autoExpandCall) {
@@ -252,7 +288,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                             CallActionRegistry.CallActions(
                                 key = key,
                                 answer = null,
-                                decline = actionFor("decline", "reject", "hang", "end"),
+                                decline = callStyleDecline,
                             )
                         )
                         val active = controller.priorityManager?.activeEvent as? IslandEvent.CallConnected
@@ -266,6 +302,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
                                     callerDisplayName = callInfo.callerDisplayName,
                                     durationSeconds = 0L,
                                     isDialing = false,
+                                    contactPhoto = callPhoto,
                                 )
                             )
                             if (callPrefs.autoExpandCall) {

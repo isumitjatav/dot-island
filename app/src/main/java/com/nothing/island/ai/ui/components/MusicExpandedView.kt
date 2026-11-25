@@ -1,5 +1,9 @@
 package com.nothing.island.ai.ui.components
 
+import android.content.Context
+import android.content.Intent
+import android.support.v4.media.session.PlaybackStateCompat
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -22,6 +26,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Repeat
+import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -43,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +78,44 @@ fun formatDurationMs(ms: Long): String {
 }
 
 /**
+ * Safely launches the active media app via its sessionActivity PendingIntent,
+ * falling back to getLaunchIntentForPackage.
+ */
+private fun launchActiveMediaApp(
+    context: Context,
+    trackState: MediaTrackState,
+    onCollapse: () -> Unit
+) {
+    runCatching {
+        var launched = false
+        val sessionActivity = trackState.sessionActivity
+        if (sessionActivity != null) {
+            try {
+                val options = android.app.ActivityOptions.makeBasic().toBundle()
+                sessionActivity.send(context, 0, null, null, null, null, options)
+                launched = true
+            } catch (e: Exception) {
+                Log.w("MusicExpandedView", "PendingIntent send failed, falling back to launch intent", e)
+            }
+        }
+        if (!launched && trackState.packageName.isNotBlank()) {
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(trackState.packageName)?.apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            if (launchIntent != null) {
+                context.startActivity(launchIntent)
+                launched = true
+            }
+        }
+        if (launched) {
+            onCollapse()
+        }
+    }.onFailure { e ->
+        Log.e("MusicExpandedView", "Failed to launch media app", e)
+    }
+}
+
+/**
  * State C: Music Expanded Player
  *
  * Full-featured interactive music player presentation within Nothing Island's 350dp x 210dp window.
@@ -86,10 +131,12 @@ fun MusicExpandedView(
     onSeekTo: (Long) -> Unit,
     onCollapse: () -> Unit,
     onSwipe: (SwipeDirection) -> Unit = {},
+    onToggleRepeat: (Int) -> Unit = {},
     topClearanceDp: androidx.compose.ui.unit.Dp = 48.dp,
     modifier: Modifier = Modifier,
     isCameraCutoutEnabled: Boolean = false
 ) {
+    val context = LocalContext.current
     val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
     val accentColor = preferences.resolveAccent(trackState.dominantColor)
 
@@ -203,8 +250,8 @@ fun MusicExpandedView(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Top Punch-hole clearance spacer
-            val effectiveTopClearance = if (isCameraCutoutEnabled) 18.dp else 24.dp
+            // 1. Top Punch-hole clearance spacer (36dp camera punch hole + 6dp safety margin)
+            val effectiveTopClearance = 42.dp
             Spacer(modifier = Modifier.height(effectiveTopClearance))
 
             // 2. Header Row: Source app, Audio device output, and Collapse chip
@@ -316,6 +363,12 @@ fun MusicExpandedView(
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFFE5E5E5))
                             .border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(8.dp))
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                launchActiveMediaApp(context, trackState, onCollapse)
+                            }
                             .padding(4.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -331,23 +384,39 @@ fun MusicExpandedView(
                         )
                     }
                 } else {
-                    MusicArtworkView(
-                        bitmap = trackState.artworkBitmap,
-                        fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
-                        shape = preferences.artworkShape,
-                        isPlaying = trackState.isPlaying,
-                        rotationEnabled = preferences.albumRotationEnabled,
-                        sizeDp = 48.dp,
-                        accentColor = accentColor,
-                        glowIntensity = preferences.glowIntensity
-                    )
+                    Box(
+                        modifier = Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            launchActiveMediaApp(context, trackState, onCollapse)
+                        }
+                    ) {
+                        MusicArtworkView(
+                            bitmap = trackState.artworkBitmap,
+                            fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
+                            shape = preferences.artworkShape,
+                            isPlaying = trackState.isPlaying,
+                            rotationEnabled = preferences.albumRotationEnabled,
+                            sizeDp = 48.dp,
+                            accentColor = accentColor,
+                            glowIntensity = preferences.glowIntensity
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
 
                 // Track title & Artist
                 Column(
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            launchActiveMediaApp(context, trackState, onCollapse)
+                        },
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
@@ -498,7 +567,7 @@ fun MusicExpandedView(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
                 }
 
                 val playPauseBg = when {
@@ -537,7 +606,7 @@ fun MusicExpandedView(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Play / Pause button
                 Box(
@@ -559,7 +628,7 @@ fun MusicExpandedView(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Next button
                 Box(
@@ -582,7 +651,7 @@ fun MusicExpandedView(
 
                 // 10s Fast-Forward Button (REQ-19: Only shown when session supports seeking with known duration)
                 if (showFastForwardControls) {
-                    Spacer(modifier = Modifier.width(14.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
 
                     Box(
                         modifier = Modifier
@@ -603,6 +672,59 @@ fun MusicExpandedView(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                Spacer(modifier = Modifier.width(10.dp))
+
+                // Loop / Repeat Button
+                val isRepeatActive = trackState.repeatMode == PlaybackStateCompat.REPEAT_MODE_ALL ||
+                        trackState.repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE
+
+                val repeatBg = when {
+                    isRepeatActive -> theme.accentColor.copy(alpha = 0.18f)
+                    theme.isGlassmorphic -> Color(0xB3333333)
+                    theme.isInverted -> Color(0xFFE4E4E4)
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF1C1C1C)
+                    else -> NothingDarkGray
+                }
+                val repeatBorder = when {
+                    isRepeatActive -> theme.accentColor.copy(alpha = 0.5f)
+                    theme.isGlassmorphic -> Color(0x28FFFFFF)
+                    theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.GLYPH_ARC -> Color(0xFF333333)
+                    else -> Color.Transparent
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(repeatBg)
+                        .then(if (repeatBorder != Color.Transparent) Modifier.border(1.dp, repeatBorder, CircleShape) else Modifier)
+                        .clickable(enabled = !trackState.isHistorical) {
+                            val nextRepeatMode = when (trackState.repeatMode) {
+                                PlaybackStateCompat.REPEAT_MODE_NONE -> PlaybackStateCompat.REPEAT_MODE_ALL
+                                PlaybackStateCompat.REPEAT_MODE_ALL -> PlaybackStateCompat.REPEAT_MODE_ONE
+                                PlaybackStateCompat.REPEAT_MODE_ONE -> PlaybackStateCompat.REPEAT_MODE_NONE
+                                else -> PlaybackStateCompat.REPEAT_MODE_ALL
+                            }
+                            onToggleRepeat(nextRepeatMode)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (trackState.repeatMode == PlaybackStateCompat.REPEAT_MODE_ONE) {
+                            Icons.Rounded.RepeatOne
+                        } else {
+                            Icons.Rounded.Repeat
+                        },
+                        contentDescription = when (trackState.repeatMode) {
+                            PlaybackStateCompat.REPEAT_MODE_ONE -> "Repeat One"
+                            PlaybackStateCompat.REPEAT_MODE_ALL -> "Repeat All"
+                            else -> "Repeat Off"
+                        },
+                        tint = if (isRepeatActive) theme.accentColor else theme.textColorSecondary.copy(alpha = 0.45f),
+                        modifier = Modifier.size(17.dp)
+                    )
                 }
             }
         }

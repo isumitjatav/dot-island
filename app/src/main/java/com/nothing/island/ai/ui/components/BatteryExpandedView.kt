@@ -199,8 +199,8 @@ fun BatteryExpandedView(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Top Punch-Hole Clearance Spacer
-            val effectiveTopClearance = if (isCameraCutoutEnabled) 18.dp else 24.dp
+            // 1. Top Punch-Hole Clearance Spacer (36dp camera punch hole + 6dp safety margin)
+            val effectiveTopClearance = 42.dp
             Spacer(modifier = Modifier.height(effectiveTopClearance))
 
             // 2. Header Row: Title, Status Badge, and Collapse Chip

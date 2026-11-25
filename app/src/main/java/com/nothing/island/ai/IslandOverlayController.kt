@@ -4,10 +4,12 @@ import android.accessibilityservice.AccessibilityService
 import android.app.KeyguardManager
 import android.app.Notification
 import android.content.BroadcastReceiver
+import android.content.ComponentCallbacks2
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
@@ -16,6 +18,7 @@ import android.os.SystemClock
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
+import android.view.View
 import android.view.WindowManager
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +59,7 @@ import com.nothing.island.ai.gestures.RingerState
 import com.nothing.island.ai.receiver.SystemEventsReceiver
 import com.nothing.island.ai.telephony.CallController
 import com.nothing.island.ai.gestures.GesturePreferences
+import com.nothing.island.ai.gamemode.GameModeDetector
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -127,6 +131,98 @@ class IslandOverlayController private constructor(private val appContext: Contex
     private var composeView: ComposeView? = null
     private var lifecycleOwner: OverlayLifecycleOwner? = null
     private var layoutParams: WindowManager.LayoutParams? = null
+
+    val pillBoundsRect = android.graphics.Rect()
+
+    fun updatePillBounds(left: Int, top: Int, right: Int, bottom: Int) {
+        if (pillBoundsRect.left != left || pillBoundsRect.top != top ||
+            pillBoundsRect.right != right || pillBoundsRect.bottom != bottom) {
+            pillBoundsRect.set(left, top, right, bottom)
+            composeView?.let { v ->
+                if (v.isAttachedToWindow) {
+                    try {
+                        v.viewTreeObserver.dispatchOnGlobalLayout()
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    private var insetsListenerProxy: Any? = null
+    private var removeInsetsListenerMethod: java.lang.reflect.Method? = null
+
+    private fun setupTouchPassthrough(view: View) {
+        view.setOnTouchListener { _, ev ->
+            val isExpanded = repository.state.value.mode == IslandMode.EXPANDED
+            if (isExpanded) {
+                if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+                    val x = ev.x.toInt()
+                    val y = ev.y.toInt()
+                    if (!pillBoundsRect.contains(x, y)) {
+                        Log.d("IslandTouch", "Touch outside pill bounds ($x, $y) while expanded -> collapsing")
+                        collapse()
+                        return@setOnTouchListener true
+                    }
+                } else if (ev.actionMasked == MotionEvent.ACTION_OUTSIDE) {
+                    Log.d("IslandTouch", "ACTION_OUTSIDE detected while expanded -> collapsing")
+                    collapse()
+                    return@setOnTouchListener true
+                }
+                false
+            } else {
+                false
+            }
+        }
+
+        try {
+            val listenerClass = Class.forName("android.view.ViewTreeObserver\$OnComputeInternalInsetsListener")
+            val insetsInfoClass = Class.forName("android.view.ViewTreeObserver\$InternalInsetsInfo")
+            val setTouchableInsetsMethod = insetsInfoClass.getMethod("setTouchableInsets", Int::class.javaPrimitiveType)
+            val touchableRegionField = insetsInfoClass.getField("touchableRegion")
+            val TOUCHABLE_INSETS_REGION = 3
+            val TOUCHABLE_INSETS_FRAME = 0
+
+            val vtoClass = android.view.ViewTreeObserver::class.java
+            val addListenerMethod = vtoClass.getMethod("addOnComputeInternalInsetsListener", listenerClass)
+            removeInsetsListenerMethod = vtoClass.getMethod("removeOnComputeInternalInsetsListener", listenerClass)
+
+            val invocationHandler = java.lang.reflect.InvocationHandler { _, method, args ->
+                if (method.name == "onComputeInternalInsets" && args != null && args.isNotEmpty()) {
+                    val insetsInfo = args[0]
+                    try {
+                        val isExpanded = repository.state.value.mode == IslandMode.EXPANDED
+                        if (isExpanded) {
+                            setTouchableInsetsMethod.invoke(insetsInfo, TOUCHABLE_INSETS_FRAME)
+                        } else {
+                            setTouchableInsetsMethod.invoke(insetsInfo, TOUCHABLE_INSETS_REGION)
+                            val region = touchableRegionField.get(insetsInfo) as? android.graphics.Region
+                            if (region != null) {
+                                if (pillBoundsRect.isEmpty) {
+                                    region.setEmpty()
+                                } else {
+                                    region.set(pillBoundsRect)
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Error in onComputeInternalInsets", e)
+                    }
+                }
+                null
+            }
+
+            val proxy = java.lang.reflect.Proxy.newProxyInstance(
+                listenerClass.classLoader,
+                arrayOf(listenerClass),
+                invocationHandler
+            )
+            insetsListenerProxy = proxy
+            addListenerMethod.invoke(view.viewTreeObserver, proxy)
+            Log.d(TAG, "OnComputeInternalInsetsListener installed successfully")
+        } catch (e: Throwable) {
+            Log.w(TAG, "OnComputeInternalInsetsListener reflection setup: ${e.message}")
+        }
+    }
 
     val geometry = CutoutDetector.detectCutout(appContext)
     val preferencesRepository = IslandPreferencesRepository.getInstance(appContext)
@@ -356,6 +452,33 @@ class IslandOverlayController private constructor(private val appContext: Contex
     val mediaTracker: MediaSessionTracker = MediaSessionTracker.getInstance(appContext, eventEngine, audioOutputTracker)
     val batteryMonitor: BatteryMonitor = BatteryMonitor.getInstance(appContext, eventEngine, preferencesRepository)
     val activitySwitcher = IslandActivitySwitcher()
+    val stateManager: IslandStateManager = IslandStateManager.getInstance()
+    val gameModeDetector = GameModeDetector(appContext)
+
+    var currentForegroundPackage: String? = null
+        private set
+
+    var currentOrientation: Int = appContext.resources.configuration.orientation
+        private set
+
+    var isHiddenByGameMode: Boolean = false
+        private set
+
+    private val componentCallbacks = object : ComponentCallbacks2 {
+        override fun onConfigurationChanged(newConfig: Configuration) {
+            this@IslandOverlayController.onConfigurationChanged(newConfig)
+        }
+        override fun onLowMemory() {}
+        override fun onTrimMemory(level: Int) {}
+    }
+
+    init {
+        try {
+            appContext.registerComponentCallbacks(componentCallbacks)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to register component callbacks on appContext", e)
+        }
+    }
 
     val torchHandler = TorchCallbackHandler(appContext) { event ->
         if (shouldEmitSystemEvent(event)) eventEngine.emit(event)
@@ -367,6 +490,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
     private var autoExpandJob: Job? = null
     private var batteryAutoExpandJob: Job? = null
+    private var previousOverlayMode: IslandMode? = null
 
     /**
      * R7.1: presentation identity of the notification that most recently triggered an
@@ -469,11 +593,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 isAccessibilityMode = true
 
                 val currentPrefs = preferencesRepository.livePreferences.value
-                val compactWidthPx = CutoutDetector.dpToPx(currentPrefs.compactWidthDp, service)
+                val screenWidthPx = service.resources.displayMetrics.widthPixels
                 // True capsule height (108px @ 36dp) — no 22dp touch bridge needed at Layer 24000
                 val compactHeightPx = CutoutDetector.dpToPx(currentPrefs.compactHeightDp, service)
                 val topMarginPx = CutoutDetector.dpToPx(currentPrefs.topMarginDp, service)
-                val horizontalOffsetPx = CutoutDetector.dpToPx(currentPrefs.horizontalOffsetDp, service)
 
                 // Reference flags: FLAG_NOT_FOCUSABLE (8) | FLAG_NOT_TOUCH_MODAL (32) | FLAG_LAYOUT_NO_LIMITS (512) = 552
                 val flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -481,14 +604,14 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
                 val params = WindowManager.LayoutParams(
-                    compactWidthPx,
+                    screenWidthPx,
                     compactHeightPx,
                     WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
                     flags,
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                    x = horizontalOffsetPx
+                    x = 0
                     y = topMarginPx
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -576,6 +699,43 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         .collect { isPulsing ->
                             repository.setPulse(isPulsing)
                         }
+                }
+
+                // Game mode auto-hide preference observer
+                scope.launch {
+                    preferencesRepository.livePreferences
+                        .map { it.autoHideInGames }
+                        .distinctUntilChanged()
+                        .collect {
+                            evaluateGameMode()
+                        }
+                }
+
+                // Foreground app polling fallback (complements AccessibilityService)
+                scope.launch {
+                    val usm = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+                    while (isActive) {
+                        delay(2000L)
+                        try {
+                            if (preferencesRepository.livePreferences.value.autoHideInGames && usm != null) {
+                                val time = System.currentTimeMillis()
+                                val events = usm.queryEvents(time - 5000L, time)
+                                var lastPkg: String? = null
+                                if (events != null) {
+                                    val event = android.app.usage.UsageEvents.Event()
+                                    while (events.hasNextEvent()) {
+                                        events.getNextEvent(event)
+                                        if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                                            lastPkg = event.packageName
+                                        }
+                                    }
+                                }
+                                if (lastPkg != null && lastPkg != currentForegroundPackage) {
+                                    onForegroundPackageChanged(lastPkg)
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
                 }
 
                 // Immediately dismiss active notification presentation if preview mode is switched to HIDDEN
@@ -756,6 +916,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onSeekTo = { pos ->
                                 seekMediaTo(pos)
                             },
+                            onToggleRepeat = { mode ->
+                                setMediaRepeatMode(mode)
+                            },
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
@@ -764,12 +927,15 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> handleActivitySwipe(direction)
                                 }
                             },
-                            gesturePreferences = gesturePrefs
+                            gesturePreferences = gesturePrefs,
+                            stateManager = stateManager,
+                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
                         )
                         }
                     }
                 }
 
+                setupTouchPassthrough(view)
                 owner.attach()
                 wm.addView(view, params)
 
@@ -778,6 +944,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 this.layoutParams = params
                 this.isAttached = true
                 isOverlayActive = true
+
+                if (isHiddenByGameMode) {
+                    view.visibility = View.GONE
+                    params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                    try { wm.updateViewLayout(view, params) } catch (_: Exception) {}
+                }
 
                 Log.i(TAG, "Nothing Island Accessibility Overlay attached successfully at Layer 24000 (y=$topMarginPx px, 124dp x 36dp).")
             } catch (e: Exception) {
@@ -805,13 +977,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 isAccessibilityMode = false
 
                 val currentPrefs = preferencesRepository.livePreferences.value
-                val compactWidthPx = CutoutDetector.dpToPx(currentPrefs.compactWidthDp, context)
+                val screenWidthPx = context.resources.displayMetrics.widthPixels
                 val compactHeightPx = CutoutDetector.dpToPx(CutoutDetector.DEFAULT_COMPACT_TOUCH_HEIGHT_DP, context)
                 val topMarginPx = CutoutDetector.dpToPx(currentPrefs.topMarginDp, context)
-                val horizontalOffsetPx = CutoutDetector.dpToPx(currentPrefs.horizontalOffsetDp, context)
 
                 val params = WindowManager.LayoutParams(
-                    compactWidthPx,
+                    screenWidthPx,
                     compactHeightPx,
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                     WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
@@ -820,7 +991,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                     PixelFormat.TRANSLUCENT
                 ).apply {
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                    x = horizontalOffsetPx
+                    x = 0
                     y = topMarginPx
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -908,6 +1079,43 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         .collect { isPulsing ->
                             repository.setPulse(isPulsing)
                         }
+                }
+
+                // Game mode auto-hide preference observer
+                scope.launch {
+                    preferencesRepository.livePreferences
+                        .map { it.autoHideInGames }
+                        .distinctUntilChanged()
+                        .collect {
+                            evaluateGameMode()
+                        }
+                }
+
+                // Foreground app polling fallback (complements AccessibilityService)
+                scope.launch {
+                    val usm = appContext.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+                    while (isActive) {
+                        delay(2000L)
+                        try {
+                            if (preferencesRepository.livePreferences.value.autoHideInGames && usm != null) {
+                                val time = System.currentTimeMillis()
+                                val events = usm.queryEvents(time - 5000L, time)
+                                var lastPkg: String? = null
+                                if (events != null) {
+                                    val event = android.app.usage.UsageEvents.Event()
+                                    while (events.hasNextEvent()) {
+                                        events.getNextEvent(event)
+                                        if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                                            lastPkg = event.packageName
+                                        }
+                                    }
+                                }
+                                if (lastPkg != null && lastPkg != currentForegroundPackage) {
+                                    onForegroundPackageChanged(lastPkg)
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
                 }
 
                 // Immediately dismiss active notification presentation if preview mode is switched to HIDDEN
@@ -1088,6 +1296,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onSeekTo = { pos ->
                                 seekMediaTo(pos)
                             },
+                            onToggleRepeat = { mode ->
+                                setMediaRepeatMode(mode)
+                            },
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
@@ -1096,12 +1307,15 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     com.nothing.island.ai.switcher.SwipeDirection.RIGHT -> handleActivitySwipe(direction)
                                 }
                             },
-                            gesturePreferences = gesturePrefs
+                            gesturePreferences = gesturePrefs,
+                            stateManager = stateManager,
+                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
                         )
                         }
                     }
                 }
 
+                setupTouchPassthrough(view)
                 owner.attach()
                 wm.addView(view, params)
 
@@ -1110,6 +1324,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 this.layoutParams = params
                 this.isAttached = true
                 isOverlayActive = true
+
+                if (isHiddenByGameMode) {
+                    view.visibility = View.GONE
+                    params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                    try { wm.updateViewLayout(view, params) } catch (_: Exception) {}
+                }
 
                 Log.i(TAG, "Nothing Island Application Overlay attached successfully at Layer 21000.")
             } catch (e: Exception) {
@@ -1132,7 +1352,45 @@ class IslandOverlayController private constructor(private val appContext: Contex
     fun toggleExpand() {
         mainHandler.post {
             autoExpandJob?.cancel()
-            repository.toggleMode()
+            val masterState = repository.state.value
+            if (masterState.mode == IslandMode.EXPANDED) {
+                collapse()
+            } else {
+                handleCompactPillTap()
+            }
+        }
+    }
+
+    /**
+     * Smart time-decayed tap priority handler for the compact pill.
+     * Evaluates 90-second unacknowledged notification window and active media.
+     */
+    fun handleCompactPillTap() {
+        mainHandler.post {
+            autoExpandJob?.cancel()
+            val masterState = repository.state.value
+            val currentTrack = mediaTracker.currentTrack.value
+            val isCallActive = masterState.activeEvent is IslandEvent.IncomingCallRinging ||
+                    masterState.activeEvent is IslandEvent.CallConnected ||
+                    masterState.activeEvent is IslandEvent.CallEnded
+            val destination = stateManager.resolveTapDestination(
+                isCallActive = isCallActive,
+                isMediaPlaying = currentTrack.isPlaying
+            )
+            when (destination) {
+                ExpandedViewType.CALL -> {
+                    repository.expandCall()
+                }
+                ExpandedViewType.NOTIFICATION_FOCUSED -> {
+                    expandNotificationFocused()
+                }
+                ExpandedViewType.MUSIC -> {
+                    expandMusic()
+                }
+                else -> {
+                    expandDashboard()
+                }
+            }
         }
     }
 
@@ -1153,6 +1411,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
     fun expandNotificationFocused() {
         mainHandler.post {
             autoExpandJob?.cancel()
+            stateManager.onNotificationViewExpanded()
             activitySwitcher.navigateTo(IslandInterface.NOTIFICATION_FOCUSED)
             repository.expandNotificationFocused()
         }
@@ -1165,6 +1424,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
     private fun expandNotificationFocusedAuto() {
         mainHandler.post {
             autoExpandJob?.cancel()
+            stateManager.onNotificationViewExpanded()
             activitySwitcher.navigateTo(IslandInterface.NOTIFICATION_FOCUSED)
             repository.expandNotificationFocused(auto = true)
         }
@@ -1194,6 +1454,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
                     prevEvent === currEvent && prevId == currId
                 }
                 .collect { (event, presentationId) ->
+                    if (event is IslandEvent.NotificationPosted) {
+                        stateManager.onNotificationArrived(event.timestamp)
+                    }
                     val prefs = preferencesRepository.liveNotificationPreferences.value
                     val current = repository.state.value
 
@@ -1352,6 +1615,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
         batteryAutoExpandJob?.cancel()
         setInputFocusMode(false)
         mainHandler.post {
+            if (repository.state.value.expandedViewType == ExpandedViewType.NOTIFICATION_FOCUSED) {
+                stateManager.onNotificationViewCollapsed()
+            }
             repository.collapse()
         }
     }
@@ -1367,6 +1633,9 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val ctx = activeContext ?: appContext
 
         val mode = state.mode
+        val isModeTransitionFromExpandedToCollapsed = previousOverlayMode == IslandMode.EXPANDED && mode == IslandMode.COLLAPSED
+        previousOverlayMode = mode
+
         val hasActiveNotification = state.activeEvent is IslandEvent.NotificationPosted
         val track = mediaTracker.currentTrack.value
         val isMediaPlaying = track.isPlaying || state.activeEvent is IslandEvent.MediaPlaybackChanged
@@ -1383,15 +1652,17 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
         val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS
+        val isCallExpanded = mode == IslandMode.EXPANDED &&
+                state.expandedViewType == com.nothing.island.ai.ExpandedViewType.CALL
         val widthDp = if (mode == IslandMode.EXPANDED) {
-            prefs.expandedWidthDp
+            if (isCallExpanded) 344f else prefs.expandedWidthDp
         } else {
             if (state.isDualPill) {
                 220f // Two satellite pills + center camera clearance
             } else if (isEarbudActive) {
                 320f // Full-width capsule for the earbud pill's horizontal spring expansion
             } else if (isCallActive) {
-                140f // Sleek trimmed call pill (104dp capsule + 26dp end button + 6dp spacing), non-overlapping
+                200f // Sleek unified ~200dp call pill (centered on 36dp cutout)
             } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
                 200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
             } else {
@@ -1399,8 +1670,11 @@ class IslandOverlayController private constructor(private val appContext: Contex
             }
         }
 
+        val callExpandedHeightDp = if (prefs.isCameraCutoutEnabled) 120f else 78f
         val heightDp = if (isQuickToolsExpanded) {
             360f // Room for tiles, shortcuts, contacts and the bottom control row
+        } else if (isCallExpanded) {
+            callExpandedHeightDp
         } else if (mode == IslandMode.EXPANDED) {
             prefs.expandedHeightDp
         } else if (isEarbudActive) {
@@ -1413,39 +1687,43 @@ class IslandOverlayController private constructor(private val appContext: Contex
             }
         }
 
-        val targetWidthPx = CutoutDetector.dpToPx(widthDp, ctx)
-        val targetHeightPx = CutoutDetector.dpToPx(heightDp, ctx)
-        // When the compact music pill is swiped left, shift the physical window
-        // so the whole capsule moves beside the camera instead of being clipped.
-        val musicLeftShiftPx = if (mode != IslandMode.EXPANDED && state.isMusicPillLeft && isMediaPlaying) {
-            CutoutDetector.dpToPx(60f, ctx)
-        } else 0
-        val targetXPx = CutoutDetector.dpToPx(prefs.horizontalOffsetDp, ctx) - musicLeftShiftPx
-        val targetYPx = if (mode == IslandMode.EXPANDED) {
-            CutoutDetector.dpToPx(prefs.expandedTopMarginDp, ctx)
+        // Fixed symmetric width: LayoutParams.width is strictly screenWidthPx with x = 0 and TOP | CENTER_HORIZONTAL
+        // so WindowManager never resizes width mid-animation, eliminating all horizontal skewing/jumping.
+        val screenWidthPx = ctx.resources.displayMetrics.widthPixels
+        val targetWidthPx = screenWidthPx
+        val targetXPx = 0
+
+        val headroomDp = if (mode == IslandMode.EXPANDED) 24f else 0f
+        val targetHeightPx = if (mode == IslandMode.EXPANDED) {
+            ctx.resources.displayMetrics.heightPixels
         } else {
-            CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
+            CutoutDetector.dpToPx(heightDp + headroomDp, ctx)
         }
+
+        // Strict Alignment.TopCenter anchor: always anchor window to topMarginDp so there is zero vertical jumping/gap.
+        val targetYPx = CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
 
         val baseFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 if (isAccessibilityMode) WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS else WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
-        // Only the tiny 124x36 idle capsule stays tappable (for expand). Any
-        // enlarged collapsed window (earbud 320dp, dual-pill 220dp) is made
-        // touch-transparent so it can never swallow taps in apps underneath
-        // (e.g. Paytm). Expanded cards keep their own touch handling.
-        val isEnlargedCollapsed = mode != IslandMode.EXPANDED &&
-            (state.isDualPill || isEarbudActive ||
-                (state.activeEvent is IslandEvent.OrderTrackingUpdated) ||
-                (state.activeEvent is IslandEvent.DeviceUnlocked))
         val targetFlags = when {
+            isHiddenByGameMode -> baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             mode == IslandMode.EXPANDED -> baseFlags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
-            isEnlargedCollapsed -> baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             else -> baseFlags
         }
 
+        if (isHiddenByGameMode && view.visibility != View.GONE) {
+            view.visibility = View.GONE
+        } else if (!isHiddenByGameMode && view.visibility != View.VISIBLE) {
+            view.visibility = View.VISIBLE
+        }
+
         var changed = false
+        if (params.gravity != (Gravity.TOP or Gravity.CENTER_HORIZONTAL)) {
+            params.gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            changed = true
+        }
         if (params.flags != targetFlags) {
             params.flags = targetFlags
             changed = true
@@ -1482,6 +1760,79 @@ class IslandOverlayController private constructor(private val appContext: Contex
      */
     fun updateWindowLayout(mode: IslandMode, prefs: IslandPreferences) {
         updateWindowLayout(repository.state.value.copy(mode = mode), prefs)
+    }
+
+    // =========================================================================
+    // GAME MODE AUTO-HIDE & FOREGROUND DETECTION
+    // =========================================================================
+
+    /**
+     * Called whenever a foreground package change is detected.
+     */
+    fun onForegroundPackageChanged(packageName: String) {
+        if (currentForegroundPackage == packageName) return
+        currentForegroundPackage = packageName
+        evaluateGameMode()
+    }
+
+    /**
+     * Called whenever screen orientation changes (portrait/landscape).
+     */
+    fun onConfigurationChanged(newConfig: Configuration) {
+        if (currentOrientation == newConfig.orientation) return
+        currentOrientation = newConfig.orientation
+        evaluateGameMode()
+    }
+
+    /**
+     * Evaluates game mode state and updates overlay visibility accordingly.
+     */
+    fun evaluateGameMode() {
+        mainHandler.post {
+            val autoHide = preferencesRepository.livePreferences.value.autoHideInGames
+            val shouldHide = gameModeDetector.shouldHideOverlay(
+                autoHideInGames = autoHide,
+                foregroundPackage = currentForegroundPackage,
+                orientation = currentOrientation
+            )
+            setGameModeHidden(shouldHide)
+        }
+    }
+
+    /**
+     * Hides or restores the overlay window for game mode.
+     * When hidden, the root view is set to View.GONE and FLAG_NOT_TOUCHABLE is applied
+     * so it never covers game HUD controls or registers accidental touches.
+     */
+    fun setGameModeHidden(hidden: Boolean) {
+        mainHandler.post {
+            if (isHiddenByGameMode == hidden) return@post
+            isHiddenByGameMode = hidden
+            val view = composeView ?: return@post
+            val params = layoutParams ?: return@post
+            val wm = activeWindowManager ?: return@post
+
+            if (hidden) {
+                view.visibility = View.GONE
+                params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                try {
+                    wm.updateViewLayout(view, params)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to update layout params for game hide", e)
+                }
+                Log.i(TAG, "Overlay hidden for game mode (pkg=$currentForegroundPackage, orient=$currentOrientation)")
+            } else {
+                view.visibility = View.VISIBLE
+                params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                try {
+                    wm.updateViewLayout(view, params)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to update layout params for game restore", e)
+                }
+                updateWindowLayout(repository.state.value, preferencesRepository.livePreferences.value)
+                Log.i(TAG, "Overlay restored from game mode (pkg=$currentForegroundPackage, orient=$currentOrientation)")
+            }
+        }
     }
 
     /**
@@ -1521,6 +1872,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      */
     fun dismissNotification(notificationId: String) {
         Log.d(TAG, "dismissNotification: id=$notificationId")
+        stateManager.acknowledgeLatestNotification()
         IslandNotificationListenerService.cancelSystemNotification(notificationId)
         controllerScope?.launch {
             eventEngine.emit(IslandEvent.UserDismissCurrent(id = "dismiss_$notificationId", source = "NotificationCard"))
@@ -1532,6 +1884,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      * Safely executes an action button attached to a notification.
      */
     fun executeNotificationAction(notificationId: String, actionIndex: Int) {
+        stateManager.acknowledgeLatestNotification()
         val fired = NotificationActionBridge.executeAction(notificationId, actionIndex)
         Log.d(TAG, "executeNotificationAction: id=$notificationId, index=$actionIndex, fired=$fired")
     }
@@ -1540,6 +1893,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      * Executes an inline reply to a notification via RemoteInput.
      */
     fun sendNotificationReply(key: String, actionIndex: Int, replyText: String): ReplyResult {
+        stateManager.acknowledgeLatestNotification()
         val result = NotificationActionBridge.sendReply(appContext, key, actionIndex, replyText)
         Log.d(TAG, "sendNotificationReply: key=$key, index=$actionIndex, result=$result")
         return result
@@ -1620,6 +1974,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      */
     fun dismissHistoryEntry(key: String) {
         Log.d(TAG, "dismissHistoryEntry: key=$key")
+        stateManager.acknowledgeLatestNotification()
         val dismissed = historyRepository.dismissEntry(key) ?: return
 
         // Optional Android Dismissal Synchronization
@@ -1655,6 +2010,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      * If syncDismissWithAndroid is ON, also cancels active system notifications.
      */
     fun clearLocalHistory() {
+        stateManager.acknowledgeLatestNotification()
         val shouldSync = preferencesRepository.liveNotificationPreferences.value.syncDismissWithAndroid
         if (shouldSync) {
             val activeKeys = historyRepository.history.value.filter { it.isSystemActive }.map { it.key }
@@ -1690,6 +2046,10 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
     fun seekMediaTo(positionMs: Long) {
         mediaTracker.seekTo(positionMs)
+    }
+
+    fun setMediaRepeatMode(mode: Int) {
+        mediaTracker.setRepeatMode(mode)
     }
 
     fun startMediaTracking(componentName: ComponentName) {
@@ -1813,6 +2173,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
             eventEngine.reset()
             repository.resetToIdle()
             lifecycleOwner?.detach()
+            if (insetsListenerProxy != null && composeView != null) {
+                try {
+                    removeInsetsListenerMethod?.invoke(composeView?.viewTreeObserver, insetsListenerProxy)
+                } catch (_: Exception) {}
+                insetsListenerProxy = null
+            }
             composeView?.let { view ->
                 activeWindowManager?.removeViewImmediate(view)
             }

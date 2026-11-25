@@ -403,8 +403,8 @@ fun NotificationCard(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // 1. Top Punch-hole clearance spacer
-            val effectiveTopClearance = if (isCameraCutoutEnabled) 18.dp else 24.dp
+            // 1. Top Punch-hole clearance spacer (36dp camera punch hole + 6dp safety margin)
+            val effectiveTopClearance = 42.dp
             Spacer(modifier = Modifier.height(effectiveTopClearance))
 
             // 2. Header Row

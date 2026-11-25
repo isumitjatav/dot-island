@@ -81,6 +81,7 @@ class IslandPreferencesUnitTest {
         assertEquals("Default preset must be Nothing Minimal", "Nothing Minimal", defaults.presetName)
         assertEquals("Default accent color must be Nothing Red", 0xFFD71920L, defaults.accentColorHex)
         assertFalse("Default camera cutout notch must be disabled", defaults.isCameraCutoutEnabled)
+        assertTrue("Default autoHideInGames must be enabled", defaults.autoHideInGames)
     }
 
     // -------------------------------------------------------------
@@ -98,6 +99,17 @@ class IslandPreferencesUnitTest {
         assertEquals(18.0f, initialPrefs.cornerRadiusDp, 0.001f)
         assertTrue(initialPrefs.isPulsing)
         assertFalse(initialPrefs.isCameraCutoutEnabled)
+        assertTrue(initialPrefs.autoHideInGames)
+    }
+
+    @Test
+    fun test_autoHideInGamesToggle() = testScope.runTest {
+        assertTrue(repository.livePreferences.value.autoHideInGames)
+        repository.updateAutoHideInGames(false)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(repository.livePreferences.value.autoHideInGames)
+        val flowValue = repository.preferencesFlow.first()
+        assertFalse(flowValue.autoHideInGames)
     }
 
     @Test
@@ -225,6 +237,20 @@ class IslandPreferencesUnitTest {
         assertEquals(38f, persisted.compactHeightDp, 0.001f)
         assertEquals(19f, persisted.cornerRadiusDp, 0.001f)
         assertEquals(0xFFFF2A32L, persisted.accentColorHex)
+    }
+
+    @Test
+    fun testLegacyPresetFallback_fallsBackToNothingClassic() = testScope.runTest {
+        repository.applyPreset(
+            presetName = "Ocean Breeze",
+            widthDp = 142f,
+            heightDp = 38f,
+            cornerRadiusDp = 19f,
+            accentColorHex = 0xFF0077B6L
+        )
+        advanceUntilIdle()
+        val persisted = repository.preferencesFlow.first()
+        assertEquals("Nothing Classic", persisted.presetName)
     }
 
     // -------------------------------------------------------------

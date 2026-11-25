@@ -69,7 +69,9 @@ enum class IslandSignatureTheme(
     val fontFeatureSettings: String? = null,
     val compactProgressColor: Color = Color(0xFFD71921),
     val isGlassmorphic: Boolean = false,
-    val isInverted: Boolean = false
+    val isInverted: Boolean = false,
+    val springDampingRatio: Float = 0.72f,
+    val springStiffness: Float = 420f
 ) {
     NOTHING_CLASSIC(
         id = "nothing_classic",
@@ -89,7 +91,9 @@ enum class IslandSignatureTheme(
         bodyFont = FontFamily.Monospace,
         displayFontWeight = FontWeight.Normal,
         bodyFontWeight = FontWeight.Normal,
-        compactProgressColor = Color(0xFFD71921)
+        compactProgressColor = Color(0xFFD71921),
+        springDampingRatio = 0.72f,
+        springStiffness = 420f
     ),
 
     GLYPH_ARC(
@@ -111,7 +115,9 @@ enum class IslandSignatureTheme(
         displayFontWeight = FontWeight.Normal,
         bodyFontWeight = FontWeight.Normal,
         fontFeatureSettings = "tnum",
-        compactProgressColor = Color(0xFFFFFFFF)
+        compactProgressColor = Color(0xFFFFFFFF),
+        springDampingRatio = 0.75f,
+        springStiffness = 380f
     ),
 
     TAPE_DECK(
@@ -132,7 +138,9 @@ enum class IslandSignatureTheme(
         bodyFont = FontFamily.Monospace,
         displayFontWeight = FontWeight.Bold,
         bodyFontWeight = FontWeight.Normal,
-        compactProgressColor = Color(0xFFD71921)
+        compactProgressColor = Color(0xFFD71921),
+        springDampingRatio = 0.82f,
+        springStiffness = 340f
     ),
 
     GLASSMORPHIC_FROSTED(
@@ -154,7 +162,9 @@ enum class IslandSignatureTheme(
         displayFontWeight = FontWeight.Medium,
         bodyFontWeight = FontWeight.Normal,
         compactProgressColor = Color(0xFFFFFFFF),
-        isGlassmorphic = true
+        isGlassmorphic = true,
+        springDampingRatio = 0.68f,
+        springStiffness = 300f
     ),
 
     HIGH_CONTRAST_INVERTED(
@@ -176,7 +186,9 @@ enum class IslandSignatureTheme(
         displayFontWeight = FontWeight.Normal,
         bodyFontWeight = FontWeight.Bold,
         compactProgressColor = Color(0xFFD71921),
-        isInverted = true
+        isInverted = true,
+        springDampingRatio = 0.92f,
+        springStiffness = 580f
     );
 
     companion object {
@@ -490,5 +502,75 @@ fun CompactMusicProgressBorder(
                 )
             }
         }
+    }
+}
+
+/**
+ * Nothing Classic signature pulsing red dot (#D71921) with alpha 0.45f..1.0f (1200ms).
+ */
+@Composable
+fun PulsingClassicRedDot(
+    modifier: Modifier = Modifier,
+    sizeDp: Dp = 6.dp
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "classic_red_dot")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.45f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dot_alpha"
+    )
+    Box(
+        modifier = modifier
+            .size(sizeDp)
+            .clip(CircleShape)
+            .background(Color(0xFFD71921).copy(alpha = alpha.coerceIn(0f, 1f)))
+    )
+}
+
+/**
+ * Glassmorphic Frosted specular edge shimmer (3000ms period).
+ */
+@Composable
+fun SpecularGlassShimmer(
+    cornerRadiusDp: Dp,
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "glass_shimmer")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shimmer_phase"
+    )
+
+    Canvas(modifier = modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        if (w <= 0f || h <= 0f || w.isNaN() || h.isNaN()) return@Canvas
+
+        val shimmerStart = Offset(w * phase, 0f)
+        val shimmerEnd = Offset(w * phase + w * 0.4f, h)
+
+        val brush = Brush.linearGradient(
+            colors = listOf(
+                Color.Transparent,
+                Color(0x25FFFFFF),
+                Color.Transparent
+            ),
+            start = shimmerStart,
+            end = shimmerEnd
+        )
+
+        drawRoundRect(
+            brush = brush,
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(cornerRadiusDp.toPx(), cornerRadiusDp.toPx())
+        )
     }
 }
