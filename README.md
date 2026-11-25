@@ -30,13 +30,13 @@
 - **Language & UI:** Kotlin, Jetpack Compose (BOM `2024.12.01`), Material 3, pure AMOLED dot-matrix styling (`#000000` / `#111111` / `#FFFFFF` / `#D71921`), `minSdk 29` (Android 10+), `targetSdk 36`
 - **Overlay Windowing:** `IslandOverlayService` (`WindowManager` centered top-cutout overlay with outside-bounds touch passthrough) + optional `IslandAccessibilityService` overlay anchor and `GLOBAL_ACTION_TAKE_SCREENSHOT` gesture support
 - **System Integrations:** `IslandNotificationListenerService` for notification filtering, shade sync, and `MediaSession` tracking; Jetpack DataStore for local preferences
-- **Automated Verification:** **347** JVM unit tests (`testDebugUnitTest`) + **11** on-device instrumentation tests (`connectedDebugAndroidTest`)
+- **Automated Verification:** **355** JVM unit tests (`testDebugUnitTest`) + **11** on-device instrumentation tests (`connectedDebugAndroidTest`)
 
 ---
 
 ## 3-Step Installation & Setup
 
-1. **Download APK:** Grab the signed `DotIsland-v1.0.0.apk` from the [Latest Release](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest).
+1. **Download APK:** Grab the signed `DotIsland-v1.0.2.apk` from the [Latest Release](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest).
 2. **Grant Core Permissions:** Allow installation from unknown sources on your Android device, then open **Dot Island** and enable **Display over other apps** and **Notification access** *(optional: enable Accessibility in System Settings for the global screenshot gesture)*.
 3. **Calibrate & Start:** Open **Studios → Geometry Calibration** to align the capsule around your camera punch-hole, choose your theme or mascot, and tap **Start Dot Island**.
 

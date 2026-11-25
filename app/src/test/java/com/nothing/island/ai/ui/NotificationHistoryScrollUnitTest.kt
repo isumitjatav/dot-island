@@ -181,4 +181,87 @@ class NotificationHistoryScrollUnitTest {
         assertEquals("alert_1", oldestEntry.key)
         assertEquals("Alert #1", oldestEntry.rawTitle)
     }
+
+    @Test
+    fun testExpandedFocusedNotificationFallsBackToLatestHistoryWhenActiveBannerExpired() {
+        historyRepository.recordNotification(
+            key = "key_old",
+            packageName = "com.example.chat",
+            appDisplayName = "Chat",
+            title = "Older Sender",
+            text = "First message",
+            sourcePostTime = 1000L,
+            ingestSequence = 1L
+        )
+        historyRepository.recordNotification(
+            key = "key_latest",
+            packageName = "com.example.chat",
+            appDisplayName = "Chat",
+            title = "Latest Sender",
+            text = "Most recent message",
+            sourcePostTime = 2000L,
+            ingestSequence = 2L
+        )
+
+        val projected = historyRepository.history.value.mapNotNull {
+            it.toPrivacySafePresentation(isKeyguardLocked = false, preferences = NotificationPreferences.DEFAULTS)
+        }
+
+        // After the 4.5s active banner expires, both selectedNotificationKey and activeNotificationId are null:
+        // focused view should still surface the newest entry instead of showing an empty card.
+        val fallback = com.nothing.island.ai.resolveFocusedNotificationPresentation(
+            selectedNotificationKey = null,
+            activeNotificationId = null,
+            projectedHistory = projected
+        )
+        assertEquals("key_latest", fallback?.key)
+
+        // Explicit selection wins over fallback
+        val selected = com.nothing.island.ai.resolveFocusedNotificationPresentation(
+            selectedNotificationKey = "key_old",
+            activeNotificationId = "key_latest",
+            projectedHistory = projected
+        )
+        assertEquals("key_old", selected?.key)
+
+        // Active banner ID wins when no historical item was tapped
+        val active = com.nothing.island.ai.resolveFocusedNotificationPresentation(
+            selectedNotificationKey = null,
+            activeNotificationId = "key_old",
+            projectedHistory = projected
+        )
+        assertEquals("key_old", active?.key)
+
+        // Empty history yields null
+        assertEquals(
+            null,
+            com.nothing.island.ai.resolveFocusedNotificationPresentation(null, null, emptyList())
+        )
+    }
+
+    @Test
+    fun testPostedNotificationPopulatesExpandedDashboardRecentAlerts() {
+        historyRepository.recordNotification(
+            key = "0|com.nothing.test|42|tag|1000",
+            packageName = "com.nothing.test",
+            appDisplayName = "Dot Island Test",
+            title = "Dot Island Test",
+            text = "Live notification history verified",
+            sourcePostTime = 5000L,
+            ingestSequence = 1L
+        )
+
+        stateRepository.expandDashboard()
+        val state = stateRepository.state.value
+        assertEquals(com.nothing.island.ai.IslandMode.EXPANDED, state.mode)
+        assertEquals(com.nothing.island.ai.ExpandedViewType.DASHBOARD, state.expandedViewType)
+
+        val projected = historyRepository.history.value.mapNotNull {
+            it.toPrivacySafePresentation(isKeyguardLocked = false, preferences = NotificationPreferences.DEFAULTS)
+        }
+        assertEquals(1, projected.size)
+        assertEquals("0|com.nothing.test|42|tag|1000", projected[0].key)
+        assertEquals("Dot Island Test", projected[0].title)
+        assertEquals("Live notification history verified", projected[0].body)
+    }
 }

@@ -21,8 +21,8 @@ fun resolveConfigValue(gradlePropKey: String, envKey: String): String? {
     return System.getenv(envKey)?.takeIf { it.isNotBlank() }
 }
 
-val configuredVersionCode = resolveConfigValue("nothing.versionCode", "NOTHING_VERSION_CODE")?.toIntOrNull() ?: 2
-val configuredVersionName = resolveConfigValue("nothing.versionName", "NOTHING_VERSION_NAME") ?: "1.0.1"
+val configuredVersionCode = resolveConfigValue("nothing.versionCode", "NOTHING_VERSION_CODE")?.toIntOrNull() ?: 3
+val configuredVersionName = resolveConfigValue("nothing.versionName", "NOTHING_VERSION_NAME") ?: "1.0.2"
 
 val releaseStoreFilePath = resolveConfigValue("nothing.release.storeFile", "KEYSTORE_PATH")
 val releaseStorePassword = resolveConfigValue("nothing.release.storePassword", "KEYSTORE_PASSWORD")

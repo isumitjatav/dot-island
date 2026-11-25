@@ -64,6 +64,7 @@ class IslandOverlayService : Service() {
         createNotificationChannel()
         controller = IslandOverlayController.getInstance(this)
         registerScreenStateReceiver()
+        com.nothing.island.ai.notifications.IslandNotificationListenerService.requestRebindIfNecessary(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -81,6 +82,7 @@ class IslandOverlayService : Service() {
             }
             ACTION_START -> {
                 startAsForeground()
+                com.nothing.island.ai.notifications.IslandNotificationListenerService.requestRebindIfNecessary(this)
                 if (IslandAccessibilityService.isRunning || OverlayPermissionManager.isAccessibilityServiceEnabled(this)) {
                     Log.i(TAG, "Accessibility service is active as sole overlay owner. IslandOverlayService will not mount a competing window.")
                     isRunning = true
@@ -90,6 +92,9 @@ class IslandOverlayService : Service() {
                 } else {
                     Log.w(TAG, "SYSTEM_ALERT_WINDOW permission missing. Cannot mount overlay view.")
                 }
+            }
+            else -> {
+                startAsForeground()
             }
         }
 

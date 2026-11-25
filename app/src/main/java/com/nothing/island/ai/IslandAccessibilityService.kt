@@ -39,6 +39,7 @@ class IslandAccessibilityService : AccessibilityService() {
         instance = this
 
         try {
+            com.nothing.island.ai.notifications.IslandNotificationListenerService.requestRebindIfNecessary(this)
             val controller = IslandOverlayController.getInstance(this)
             controller.attachAccessibilityOverlay(this)
             Log.i(TAG, "Accessibility overlay attached successfully at Layer 24000.")

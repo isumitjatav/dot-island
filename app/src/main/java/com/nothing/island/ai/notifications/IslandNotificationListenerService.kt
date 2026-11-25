@@ -61,14 +61,30 @@ class IslandNotificationListenerService : NotificationListenerService() {
          * under memory pressure while user permission remains granted.
          */
         fun requestRebindIfNecessary(context: Context) {
-            if (!isConnected && Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                try {
-                    requestRebind(ComponentName(context, IslandNotificationListenerService::class.java))
-                    Log.i(TAG, "Requested rebind for IslandNotificationListenerService")
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to request rebind", e)
-                }
+            if (isConnected) return
+            if (!com.nothing.island.ai.OverlayPermissionManager.hasNotificationListenerPermission(context)) {
+                return
             }
+            try {
+                requestRebind(ComponentName(context, IslandNotificationListenerService::class.java))
+                Log.i(TAG, "Requested rebind for IslandNotificationListenerService")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Failed to request rebind", t)
+            }
+        }
+
+        internal fun extractNotificationText(extras: android.os.Bundle?): String {
+            if (extras == null) return ""
+            return extractNotificationText(
+                primaryText = extras.getCharSequence(Notification.EXTRA_TEXT),
+                bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+            )
+        }
+
+        internal fun extractNotificationText(primaryText: CharSequence?, bigText: CharSequence?): String {
+            val primary = primaryText?.toString()?.trim().orEmpty()
+            if (primary.isNotEmpty()) return primary
+            return bigText?.toString()?.trim().orEmpty()
         }
 
         /**
@@ -351,81 +367,27 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     return@launch
                 }
 
-                // 4. Register actions into ActionBridge -> returns monotonic generation
-                val actionItems = sbn.notification.actions?.mapNotNull { action ->
-                    val title = action.title?.toString()
-                    if (title != null) {
-                        val remoteInputs = action.remoteInputs
-                        NotificationActionItem(
-                            title = title,
-                            actionIntent = action.actionIntent,
-                            isContextual = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) action.isContextual else false,
-                            isReply = !remoteInputs.isNullOrEmpty(),
-                            remoteInputs = remoteInputs
-                        )
-                    } else null
-                } ?: emptyList()
-
-                val actionGeneration = NotificationActionBridge.register(
+                // 4-5. Register actions & commit to history repository
+                val actionGeneration = commitNotificationToHistory(
+                    sbn = sbn,
                     key = key,
-                    packageName = sbn.packageName,
-                    contentIntent = sbn.notification.contentIntent,
-                    actions = actionItems,
-                    token = postTime
-                )
-
-                // 5. Commit to history repository
-                val notification = sbn.notification
-                val extras = notification.extras
-                val rawTitle = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim() ?: ""
-                val rawText = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim() ?: ""
-                val rawSubText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()
-
-                val appName = try {
-                    val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
-                    packageManager.getApplicationLabel(appInfo).toString()
-                } catch (_: Exception) {
-                    sbn.packageName.substringAfterLast('.').ifBlank { "APP" }
-                }
-
-                val committed = historyRepo.recordNotification(
-                    key = key,
-                    packageName = sbn.packageName,
-                    appDisplayName = appName,
-                    title = rawTitle,
-                    text = rawText,
-                    subText = rawSubText,
-                    category = notification.category,
-                    postTime = System.currentTimeMillis(),
-                    sourcePostTime = postTime,
+                    recordedAtMs = System.currentTimeMillis(),
+                    sourcePostTimeMs = postTime,
                     ingestSequence = seq,
-                    isOngoing = sbn.isOngoing,
-                    isClearable = sbn.isClearable,
-                    visibility = notification.visibility,
-                    previewMode = prefs.previewMode,
-                    actionGeneration = actionGeneration,
-                    progress = event.progress,
-                    maxProgress = event.maxProgress,
-                    isIndeterminate = event.isIndeterminate,
-                    hasProgress = event.hasProgress,
-                    progressState = event.progressState
-                )
-
-                if (!committed) {
-                    // Commit failed (e.g. race rejection or stale callback): rollback actions
-                    Log.w(TAG, "History commit rejected for key=$key. Rolling back action generation $actionGeneration")
-                    NotificationActionBridge.unregisterIfGenerationMatches(key, actionGeneration)
-                    return@launch
-                }
+                    historyRepo = historyRepo,
+                    prefs = prefs,
+                    event = event
+                ) ?: return@launch
 
                 // 6. Emit presentation event ONLY after successful commit (and only if not historical)
-                if (event != null && !isHistorical) {
+                if (!isHistorical) {
                     // Island always presents the alert (slide-down popup).
                     val accepted = controller.eventEngine.emit(event)
                     Log.i(TAG, "Notification accepted=$accepted & emitted: id=${event.id}, pkg=${event.packageName}")
 
                     // "Hide System (Double) Notification": evaluate explicit suppression rules
                     // (excludes calls, media, non-clearable, ongoing, group summaries, and loops).
+                    val notification = sbn.notification
                     val isGroupSummary = (notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
                     val hasMediaStyle = notification.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true ||
                         notification.category == Notification.CATEGORY_TRANSPORT
@@ -548,62 +510,15 @@ class IslandNotificationListenerService : NotificationListenerService() {
                         continue
                     }
 
-                    val actionItems = sbn.notification.actions?.mapNotNull { action ->
-                        val title = action.title?.toString()
-                        if (title != null) {
-                            val remoteInputs = action.remoteInputs
-                            NotificationActionItem(
-                                title = title,
-                                actionIntent = action.actionIntent,
-                                isContextual = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) action.isContextual else false,
-                                isReply = !remoteInputs.isNullOrEmpty(),
-                                remoteInputs = remoteInputs
-                            )
-                        } else null
-                    } ?: emptyList()
-
-                    val gen = NotificationActionBridge.register(
+                    commitNotificationToHistory(
+                        sbn = sbn,
                         key = sbn.key,
-                        packageName = sbn.packageName,
-                        contentIntent = sbn.notification.contentIntent,
-                        actions = actionItems,
-                        token = sbn.postTime
-                    )
-
-                    val notification = sbn.notification
-                    val extras = notification.extras
-                    val rawTitle = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim() ?: ""
-                    val rawText = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim() ?: ""
-                    val rawSubText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()
-
-                    val appName = try {
-                        val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
-                        packageManager.getApplicationLabel(appInfo).toString()
-                    } catch (_: Exception) {
-                        sbn.packageName.substringAfterLast('.').ifBlank { "APP" }
-                    }
-
-                    historyRepo.recordNotification(
-                        key = sbn.key,
-                        packageName = sbn.packageName,
-                        appDisplayName = appName,
-                        title = rawTitle,
-                        text = rawText,
-                        subText = rawSubText,
-                        category = notification.category,
-                        postTime = sbn.postTime,
-                        sourcePostTime = sbn.postTime,
+                        recordedAtMs = sbn.postTime,
+                        sourcePostTimeMs = sbn.postTime,
                         ingestSequence = ingressSequence.incrementAndGet(),
-                        isOngoing = sbn.isOngoing,
-                        isClearable = sbn.isClearable,
-                        visibility = notification.visibility,
-                        previewMode = prefs.previewMode,
-                        actionGeneration = gen,
-                        progress = event.progress,
-                        maxProgress = event.maxProgress,
-                        isIndeterminate = event.isIndeterminate,
-                        hasProgress = event.hasProgress,
-                        progressState = event.progressState
+                        historyRepo = historyRepo,
+                        prefs = prefs,
+                        event = event
                     )
                 }
             }
@@ -611,6 +526,82 @@ class IslandNotificationListenerService : NotificationListenerService() {
         } catch (e: Exception) {
             Log.w(TAG, "Failed to query active notifications during silent reconciliation", e)
         }
+    }
+
+    private fun commitNotificationToHistory(
+        sbn: StatusBarNotification,
+        key: String,
+        recordedAtMs: Long,
+        sourcePostTimeMs: Long,
+        ingestSequence: Long,
+        historyRepo: NotificationHistoryRepository,
+        prefs: NotificationPreferences,
+        event: com.nothing.island.ai.engine.IslandEvent.NotificationPosted
+    ): Long? {
+        val actionItems = sbn.notification.actions?.mapNotNull { action ->
+            val title = action.title?.toString()
+            if (title != null) {
+                val remoteInputs = action.remoteInputs
+                NotificationActionItem(
+                    title = title,
+                    actionIntent = action.actionIntent,
+                    isContextual = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) action.isContextual else false,
+                    isReply = !remoteInputs.isNullOrEmpty(),
+                    remoteInputs = remoteInputs
+                )
+            } else null
+        } ?: emptyList()
+
+        val actionGeneration = NotificationActionBridge.register(
+            key = key,
+            packageName = sbn.packageName,
+            contentIntent = sbn.notification.contentIntent,
+            actions = actionItems,
+            token = sourcePostTimeMs
+        )
+
+        val notification = sbn.notification
+        val extras = notification.extras
+        val rawTitle = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim().orEmpty()
+        val rawText = extractNotificationText(extras)
+        val rawSubText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()?.trim()
+
+        val appName = try {
+            val appInfo = packageManager.getApplicationInfo(sbn.packageName, 0)
+            packageManager.getApplicationLabel(appInfo).toString()
+        } catch (_: Exception) {
+            sbn.packageName.substringAfterLast('.').ifBlank { "APP" }
+        }
+
+        val committed = historyRepo.recordNotification(
+            key = key,
+            packageName = sbn.packageName,
+            appDisplayName = appName,
+            title = rawTitle,
+            text = rawText,
+            subText = rawSubText,
+            category = notification.category,
+            postTime = recordedAtMs,
+            sourcePostTime = sourcePostTimeMs,
+            ingestSequence = ingestSequence,
+            isOngoing = sbn.isOngoing,
+            isClearable = sbn.isClearable,
+            visibility = notification.visibility,
+            previewMode = prefs.previewMode,
+            actionGeneration = actionGeneration,
+            progress = event.progress,
+            maxProgress = event.maxProgress,
+            isIndeterminate = event.isIndeterminate,
+            hasProgress = event.hasProgress,
+            progressState = event.progressState
+        )
+
+        if (!committed) {
+            Log.w(TAG, "History commit rejected for key=$key. Rolling back action generation $actionGeneration")
+            NotificationActionBridge.unregisterIfGenerationMatches(key, actionGeneration)
+            return null
+        }
+        return actionGeneration
     }
 
     internal fun cleanupListenerState() {

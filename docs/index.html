@@ -402,13 +402,13 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      padding: 10px 14px 18px;
+      padding: 24px 14px 18px;
     }
 
     /* Status bar & camera cutout */
     .status-bar {
       position: relative;
-      height: 28px;
+      height: 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -421,27 +421,27 @@
 
     .camera-lens {
       position: absolute;
-      top: 13px;
+      top: 32px;
       left: 50%;
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: radial-gradient(circle at 38% 35%, #232738 0%, #09090c 60%, #000000 100%);
-      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08);
       transform: translateX(-50%);
       transition: left 360ms var(--ease-spring), width 360ms var(--ease-spring), border-radius 360ms var(--ease-spring), transform 360ms var(--ease-spring);
-      z-index: 6;
+      z-index: 12;
       pointer-events: none;
     }
 
     .phone-screen[data-cutout="left"] .camera-lens {
-      left: 34px;
+      left: 28px;
       transform: translateX(0);
     }
 
     .phone-screen[data-cutout="wide"] .camera-lens {
       left: 50%;
-      width: 44px;
+      width: 42px;
       border-radius: 10px;
       transform: translateX(-50%);
     }
@@ -449,31 +449,81 @@
     /* Live Morphing Dot Island Capsule */
     .island-anchor {
       position: absolute;
-      top: 8px;
+      top: 24px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 8;
       display: flex;
       justify-content: center;
-      width: 280px;
+      width: 274px;
       pointer-events: none;
       transition: left 360ms var(--ease-spring), transform 360ms var(--ease-spring);
     }
 
     .phone-screen[data-cutout="left"] .island-anchor {
-      left: 16px;
+      left: 10px;
       transform: translateX(0);
       justify-content: flex-start;
+    }
+
+    .capsule-shell {
+      position: relative;
+      pointer-events: none;
+      display: inline-flex;
+      justify-content: center;
+    }
+
+    .cat-perch {
+      position: absolute;
+      top: -21px;
+      right: 12px;
+      z-index: 10;
+      pointer-events: auto;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      transition: opacity 180ms ease, transform 240ms var(--ease-spring);
+    }
+
+    .capsule-shell[data-show-cat="false"] .cat-perch {
+      opacity: 0;
+      transform: translateY(6px) scale(0.8);
+      pointer-events: none;
+    }
+
+    .cat-tail {
+      transform-origin: 8px 8px;
+      animation: catTailWag 2.6s ease-in-out infinite;
+    }
+
+    @keyframes catTailWag {
+      0%, 100% { transform: rotate(0deg); }
+      50% { transform: rotate(8deg); }
+    }
+
+    .cat-zzz {
+      animation: floatZzz 2.4s ease-in-out infinite;
+    }
+
+    @keyframes floatZzz {
+      0%, 100% { opacity: 0.45; transform: translateY(0); }
+      50% { opacity: 0.95; transform: translateY(-2px); }
     }
 
     .capsule {
       pointer-events: auto;
       position: relative;
       background: #000000;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 18px rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      box-shadow:
+        0 14px 36px rgba(0, 0, 0, 0.92),
+        0 0 0 1px rgba(255, 255, 255, 0.04) inset;
       color: #ffffff;
       overflow: hidden;
+      cursor: pointer;
       transition:
         width 420ms var(--ease-spring),
         height 420ms var(--ease-spring),
@@ -482,56 +532,57 @@
         border-color 220ms ease;
     }
 
-    /* Capsule states */
+    /* Compact 124x36 ratio capsule */
     .capsule[data-mode="dotcat"] {
-      width: 176px;
-      height: 36px;
-      border-radius: 18px;
-      padding: 0 12px;
+      width: 112px;
+      height: 32px;
+      border-radius: 16px;
+      padding: 0 10px;
+      border-color: rgba(255, 255, 255, 0.24);
     }
 
-    .capsule[data-mode="music"] {
+    .phone-screen[data-cutout="wide"] .capsule[data-mode="dotcat"] {
+      width: 124px;
+    }
+
+    /* Expanded 350x210 aspect U-notch cards (with 42dp top clearance) */
+    .capsule[data-mode="alerts"],
+    .capsule[data-mode="music"],
+    .capsule[data-mode="charging"],
+    .capsule[data-mode="earbuds"] {
       width: 274px;
-      height: 112px;
-      border-radius: 26px;
-      padding: 34px 14px 12px;
-      border-color: rgba(215, 25, 33, 0.45);
+      height: 174px;
+      border-radius: 24px;
+      padding: 36px 12px 10px;
+      border-color: #262626;
+      cursor: default;
     }
 
     .capsule[data-mode="call"] {
-      width: 276px;
-      height: 98px;
-      border-radius: 30px;
-      padding: 32px 12px 10px;
+      width: 274px;
+      height: 112px;
+      border-radius: 28px;
+      padding: 34px 12px 10px;
+      border-color: #262626;
+      cursor: default;
     }
 
     .capsule[data-mode="call"][data-call-state="compact"] {
-      width: 196px;
-      height: 36px;
-      border-radius: 18px;
-      padding: 0 12px;
-    }
-
-    .capsule[data-mode="earbuds"] {
-      width: 272px;
-      height: 92px;
-      border-radius: 24px;
-      padding: 32px 14px 10px;
-    }
-
-    .capsule[data-mode="charging"] {
-      width: 238px;
-      height: 36px;
-      border-radius: 18px;
-      padding: 0 14px;
-      border-color: rgba(0, 200, 83, 0.45);
+      width: 178px;
+      height: 32px;
+      border-radius: 16px;
+      padding: 0 10px;
+      border-color: rgba(0, 200, 83, 0.4);
+      cursor: pointer;
     }
 
     .cap-panel {
       display: none;
       width: 100%;
       height: 100%;
-      animation: capIn 240ms var(--ease-spring) both;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: capIn 220ms var(--ease-spring) both;
     }
 
     .cap-panel.active {
@@ -539,22 +590,22 @@
     }
 
     @keyframes capIn {
-      from { opacity: 0; transform: scale(0.94); }
+      from { opacity: 0; transform: scale(0.95); }
       to { opacity: 1; transform: scale(1); }
     }
 
-    /* Inside DotCat compact */
-    .dotcat-row {
+    /* Compact DotCat Capsule interior (dotted ring pulse) */
+    .dotcat-compact {
+      flex-direction: row;
       align-items: center;
       justify-content: space-between;
-      font-family: var(--mono);
-      font-size: 0.66rem;
     }
 
-    .dotcat-msg {
-      color: var(--muted);
-      letter-spacing: 0.06em;
-      transition: color 180ms ease;
+    .pill-dot-hint {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.25);
     }
 
     .eye-blink {
@@ -573,38 +624,226 @@
 
     @keyframes catHop {
       0% { transform: translateY(0); }
-      40% { transform: translateY(-4px) scale(1.08); }
+      40% { transform: translateY(-6px) scale(1.06); }
       100% { transform: translateY(0); }
     }
 
-    /* Inside Music */
-    .music-panel {
+    /* Shared Expanded Card Header & Micro-Footer */
+    .card-hdr {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      gap: 6px;
+    }
+
+    .card-hdr-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .card-hdr-title {
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: #ffffff;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .chip-dark {
+      font-family: var(--mono);
+      font-size: 0.54rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 7px;
+      border-radius: 7px;
+      background: #1c1c1e;
+      color: #ffffff;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background-color 140ms ease, transform 140ms var(--ease-spring);
+    }
+
+    .chip-dark:hover { background: #2a2a2e; }
+    .chip-dark:active { transform: scale(0.94); }
+
+    .chip-muted {
+      font-family: var(--mono);
+      font-size: 0.52rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: #141414;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .chip-red {
+      font-family: var(--mono);
+      font-size: 0.52rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: rgba(215, 25, 33, 0.18);
+      color: #ff4f57;
+      border: 1px solid rgba(215, 25, 33, 0.35);
+      white-space: nowrap;
+    }
+
+    .card-surface {
+      background: #141414;
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    .card-ftr {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.5rem;
+      letter-spacing: 0.08em;
+      color: #7c7c85;
+    }
+
+    /* Dashboard / Recent Alerts */
+    .dash-clock {
+      font-family: var(--mono);
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      line-height: 1;
+    }
+
+    .dash-date {
+      font-family: var(--mono);
+      font-size: 0.52rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .alerts-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 5px;
+    }
+
+    .alert-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      background: #1c1c1e;
+      border-radius: 8px;
+      padding: 5px 7px;
+      cursor: pointer;
+      transition: background-color 140ms ease;
+    }
+
+    .alert-row:hover { background: #26262a; }
+
+    .alert-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 5px;
+      background: #2c2c30;
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 0.5rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .alert-meta { flex: 1; min-width: 0; text-align: left; }
+
+    .alert-title {
+      font-family: var(--mono);
+      font-size: 0.58rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alert-body {
+      font-family: var(--mono);
+      font-size: 0.52rem;
+      color: rgba(255, 255, 255, 0.72);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .alert-x {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: #121214;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 0.56rem;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .focus-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      margin-top: 6px;
+    }
+
+    .focus-btn {
+      padding: 5px 4px;
+      border-radius: 999px;
+      font-family: var(--mono);
+      font-size: 0.54rem;
+      font-weight: 700;
+      text-align: center;
+      border: 1px solid #303036;
+      background: #161618;
+      color: #ffffff;
+    }
+
+    .focus-btn.primary {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+    }
+
+    /* Inside MusicExpandedView */
+    .music-body {
+      display: flex;
+      align-items: center;
+      gap: 9px;
     }
 
     .album-art {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, #d71921, #2c0709);
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #d71921, #34080a);
+      border: 1px solid rgba(255, 255, 255, 0.14);
       display: grid;
       place-items: center;
       font-family: var(--mono);
       font-weight: 700;
-      font-size: 0.8rem;
+      font-size: 0.72rem;
       flex-shrink: 0;
     }
 
-    .music-meta {
-      flex: 1;
-      min-width: 0;
-    }
+    .music-meta { flex: 1; min-width: 0; }
 
     .music-title {
       font-family: var(--mono);
-      font-size: 0.74rem;
+      font-size: 0.68rem;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
@@ -612,7 +851,7 @@
     }
 
     .music-artist {
-      font-size: 0.66rem;
+      font-size: 0.56rem;
       color: var(--muted);
       white-space: nowrap;
       overflow: hidden;
@@ -623,16 +862,16 @@
       display: flex;
       align-items: flex-end;
       gap: 2px;
-      height: 18px;
-      margin-top: 4px;
+      height: 16px;
+      flex-shrink: 0;
     }
 
     .eq-bar {
-      width: 3px;
+      width: 2.5px;
       border-radius: 2px;
       background: var(--accent);
-      height: 6px;
-      animation: eqDance 0.9s var(--ease-spring) infinite alternate;
+      height: 5px;
+      animation: eqDance 0.85s var(--ease-spring) infinite alternate;
     }
 
     .eq-bar:nth-child(2) { animation-delay: 0.18s; }
@@ -642,36 +881,79 @@
 
     .paused .eq-bar {
       animation-play-state: paused;
-      height: 4px !important;
+      height: 3px !important;
       opacity: 0.45;
     }
 
     @keyframes eqDance {
       0% { height: 4px; }
-      100% { height: 17px; }
+      100% { height: 15px; }
     }
 
-    .mini-play-btn {
-      width: 34px;
-      height: 34px;
+    .scrubber-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .scrubber-times {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.5rem;
+      color: var(--muted);
+    }
+
+    .scrubber-track {
+      height: 3px;
+      border-radius: 999px;
+      background: #262626;
+      overflow: hidden;
+    }
+
+    .scrubber-fill {
+      width: 44%;
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+    }
+
+    .music-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+    }
+
+    .ctrl-round {
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
-      background: #ffffff;
-      color: #000000;
+      background: #1c1c1e;
+      color: #ffffff;
       display: grid;
       place-items: center;
-      flex-shrink: 0;
-      font-size: 0.76rem;
-      font-weight: 700;
+      font-size: 0.62rem;
       transition: transform 140ms var(--ease-spring);
     }
 
-    .mini-play-btn:active { transform: scale(0.9); }
+    .ctrl-play {
+      width: 28px;
+      height: 28px;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 0.64rem;
+    }
+
+    .ctrl-round:active { transform: scale(0.9); }
 
     /* Call UI */
-    .call-panel {
+    .call-row {
+      display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      width: 100%;
     }
 
     .caller-avatar {
@@ -683,15 +965,15 @@
       place-items: center;
       font-family: var(--mono);
       font-weight: 700;
-      font-size: 0.78rem;
+      font-size: 0.74rem;
       flex-shrink: 0;
     }
 
     .call-info { flex: 1; min-width: 0; }
     .call-sub {
       font-family: var(--mono);
-      font-size: 0.64rem;
-      color: var(--green);
+      font-size: 0.58rem;
+      color: var(--muted);
       letter-spacing: 0.04em;
     }
     .call-name {
@@ -705,13 +987,13 @@
 
     .call-actions {
       display: flex;
-      gap: 6px;
+      gap: 7px;
       flex-shrink: 0;
     }
 
     .call-circle {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       border-radius: 50%;
       display: grid;
       place-items: center;
@@ -725,46 +1007,102 @@
     .c-dark { background: #3a3a3c; color: #ffffff; }
     .c-white { background: #ffffff; color: #000000; }
 
-    /* Earbuds Panel */
-    .earbuds-panel {
+    .call-compact-strip {
+      display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 10px;
+      width: 100%;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--green);
     }
 
+    .call-wave {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      height: 14px;
+    }
+
+    .call-wave span {
+      width: 2px;
+      border-radius: 2px;
+      background: var(--green);
+      animation: eqDance 0.65s var(--ease-spring) infinite alternate;
+    }
+    .call-wave span:nth-child(2) { animation-delay: 0.14s; }
+    .call-wave span:nth-child(3) { animation-delay: 0.28s; }
+    .call-wave span:nth-child(4) { animation-delay: 0.1s; }
+
+    /* Earbuds & Charging Telemetry */
     .ring-group {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       flex-shrink: 0;
     }
 
     .mini-ring {
-      width: 36px;
-      height: 36px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
-      background: conic-gradient(var(--green) 0deg 315deg, #2a2a2e 315deg);
+      background: conic-gradient(var(--green) 0deg 340deg, #2a2a2e 340deg);
       display: grid;
       place-items: center;
       font-family: var(--mono);
-      font-size: 0.6rem;
+      font-size: 0.56rem;
       font-weight: 700;
     }
 
     .mini-ring span {
-      width: 28px;
-      height: 28px;
+      width: 30px;
+      height: 30px;
       border-radius: 50%;
-      background: #000000;
+      background: #141414;
       display: grid;
       place-items: center;
     }
 
-    /* Charging Panel */
-    .charging-panel {
-      align-items: center;
-      justify-content: space-between;
+    .chg-ring {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: conic-gradient(from 190deg, rgba(255,255,255,0.75) 0deg 335deg, #2a2a2e 335deg);
+      display: grid;
+      place-items: center;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .chg-ring::after {
+      content: "";
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #141414;
+    }
+
+    .chg-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: #141414;
+      border-radius: 10px;
+      padding: 6px 8px;
+      text-align: center;
       font-family: var(--mono);
-      font-size: 0.7rem;
+    }
+
+    .chg-m-k {
+      font-size: 0.46rem;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .chg-m-v {
+      font-size: 0.58rem;
+      font-weight: 700;
+      margin-top: 1px;
     }
 
     /* Mock screen inside phone */
@@ -1151,7 +1489,7 @@
         <a href="privacy.html">Privacy</a>
       </nav>
       <a class="nav-pill nav-dl" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
-        Get v1.0.1
+        Get v1.0.2
       </a>
     </div>
   </header>
@@ -1160,7 +1498,7 @@
     <section class="hero">
       <div>
         <div class="eyebrow">
-          <span><strong>v1.0.1</strong> • ANDROID 10+ • ZERO TELEMETRY</span>
+          <span><strong>v1.0.2</strong> • ANDROID 10+ • ZERO TELEMETRY</span>
         </div>
         <h1>Dot Island</h1>
         <p class="hero-sub">
@@ -1181,10 +1519,11 @@
 
         <!-- Live Capsule Mode Switcher -->
         <div class="control-block">
-          <div class="control-label">LIVE CAPSULE PREVIEW — TAP TO MORPH</div>
+          <div class="control-label">LIVE CAPSULE PREVIEW — TAP PILL OR SWITCH MODES</div>
           <div class="sliding-tabs" id="modeTabs" role="tablist" aria-label="Dot Island live modes">
             <span class="tabs-thumb" aria-hidden="true"></span>
             <button class="tab-btn" role="tab" aria-selected="true" data-mode="dotcat">DotCat</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-mode="alerts">Recent Alerts</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-mode="music">Now Playing</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-mode="call">Incoming Call</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-mode="earbuds">Earbuds</button>
@@ -1223,77 +1562,169 @@
             <div class="camera-lens" aria-hidden="true"></div>
 
             <div class="island-anchor">
-              <div class="capsule" id="islandCapsule" data-mode="dotcat" data-call-state="ringing">
-                <!-- 1. DotCat Companion -->
-                <div class="cap-panel dotcat-row active" data-panel="dotcat" id="dotcatPanel" title="Tap DotCat to purr">
-                  <svg id="dotcatSvg" width="24" height="22" viewBox="0 0 11 10" xmlns="http://www.w3.org/2000/svg" aria-label="DotCat pixel mascot">
+              <div class="capsule-shell" id="capsuleShell" data-show-cat="true">
+                <!-- Authentic DotCat perched on top-right shoulder of the compact pill -->
+                <div class="cat-perch" id="dotcatPerch" title="Tap DotCat to hop">
+                  <svg id="dotcatSvg" width="28" height="24" viewBox="0 0 13 11" xmlns="http://www.w3.org/2000/svg" aria-label="DotCat pixel mascot">
                     <g fill="#FFFFFF">
-                      <rect x="1" y="0" width="1" height="1"/><rect x="7" y="0" width="1" height="1"/>
-                      <rect x="1" y="1" width="2" height="1"/><rect x="6" y="1" width="2" height="1"/>
-                      <rect x="1" y="2" width="7" height="1"/>
-                      <rect x="1" y="3" width="2" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="2" height="1"/>
-                      <rect x="1" y="4" width="7" height="1"/>
-                      <rect x="2" y="5" width="5" height="1"/>
-                      <rect x="2" y="6" width="6" height="1"/><rect x="10" y="6" width="1" height="1"/>
-                      <rect x="1" y="7" width="8" height="1"/><rect x="10" y="7" width="1" height="1"/>
-                      <rect x="1" y="8" width="9" height="1"/>
-                      <rect x="1" y="9" width="2" height="1"/><rect x="6" y="9" width="2" height="1"/>
+                      <rect x="1" y="1" width="1" height="1"/><rect x="7" y="1" width="1" height="1"/>
+                      <rect x="1" y="2" width="2" height="1"/><rect x="6" y="2" width="2" height="1"/>
+                      <rect x="1" y="3" width="7" height="1"/>
+                      <rect x="1" y="4" width="2" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="6" y="4" width="2" height="1"/>
+                      <rect x="1" y="5" width="7" height="1"/>
+                      <rect x="2" y="6" width="5" height="1"/>
+                      <rect x="2" y="7" width="6" height="1"/>
+                      <rect x="1" y="8" width="7" height="1"/>
+                      <rect x="1" y="9" width="7" height="1"/>
+                      <rect x="1" y="10" width="2" height="1"/><rect x="6" y="10" width="2" height="1"/>
+                    </g>
+                    <g class="cat-tail" fill="#FFFFFF">
+                      <rect x="9" y="7" width="1" height="1"/>
+                      <rect x="9" y="8" width="1" height="1"/>
+                      <rect x="8" y="9" width="2" height="1"/>
                     </g>
                     <g fill="#D71921" class="eye-blink">
-                      <rect x="3" y="3" width="1" height="1"/>
-                      <rect x="5" y="3" width="1" height="1"/>
+                      <rect x="3" y="4" width="1" height="1"/>
+                      <rect x="5" y="4" width="1" height="1"/>
+                    </g>
+                    <g fill="#FFFFFF" class="cat-zzz">
+                      <rect x="10" y="0" width="2" height="0.8"/>
+                      <rect x="10.8" y="1" width="0.8" height="0.8"/>
+                      <rect x="10" y="2" width="2" height="0.8"/>
                     </g>
                   </svg>
-                  <span class="dotcat-msg" id="dotcatMsg">TAP CAT</span>
                 </div>
 
-                <!-- 2. Now Playing -->
-                <div class="cap-panel music-panel" data-panel="music" id="musicPanel">
-                  <div class="album-art">DI</div>
-                  <div class="music-meta">
-                    <div class="music-title">Midnight Matrix</div>
-                    <div class="music-artist">Dot Island Audio • BT</div>
-                    <div class="eq-bars" id="eqBars">
-                      <span class="eq-bar"></span>
-                      <span class="eq-bar"></span>
-                      <span class="eq-bar"></span>
-                      <span class="eq-bar"></span>
-                      <span class="eq-bar"></span>
+                <div class="capsule" id="islandCapsule" data-mode="dotcat" data-call-state="ringing" title="Tap capsule to expand Dot Island">
+                  <!-- 1. Compact 124x36 Capsule (clean AMOLED pill around punch-hole) -->
+                  <div class="cap-panel dotcat-compact active" data-panel="dotcat" id="dotcatPanel">
+                    <span class="pill-dot-hint" aria-hidden="true"></span>
+                    <span class="pill-dot-hint" aria-hidden="true"></span>
+                  </div>
+
+                  <!-- 2. Recent Alerts / Dashboard (350x210 U-Notch Card) -->
+                  <div class="cap-panel" data-panel="alerts" id="alertsPanel">
+                    <div class="card-hdr">
+                      <div>
+                        <div class="dash-clock" id="dashClock">16:50</div>
+                        <div class="dash-date">WED, 25 NOV</div>
+                      </div>
+                      <span class="chip-muted">WEATHER OFF</span>
+                      <button class="chip-dark" data-collapse>COLLAPSE</button>
+                    </div>
+                    <div class="card-surface" id="alertsBox">
+                      <!-- Rendered dynamically by JS for live list / focused notification state -->
+                    </div>
+                    <div class="card-ftr">
+                      <span id="alertsFooterLabel">DOT ISLAND • DASHBOARD</span>
+                      <span id="alertsFooterRight">LIVE PREVIEW</span>
                     </div>
                   </div>
-                  <button class="mini-play-btn" id="playPauseBtn" aria-label="Toggle playback">❚❚</button>
-                </div>
 
-                <!-- 3. 3-State Call UI -->
-                <div class="cap-panel call-panel" data-panel="call" id="callPanel">
-                  <div class="caller-avatar" id="callAvatar">DW</div>
-                  <div class="call-info">
-                    <div class="call-sub" id="callSub">Incoming Call</div>
-                    <div class="call-name" id="callName">Daisy Williams</div>
+                  <!-- 3. Now Playing (MusicExpandedView U-Notch Card) -->
+                  <div class="cap-panel" data-panel="music" id="musicPanel">
+                    <div class="card-hdr">
+                      <div class="card-hdr-left">
+                        <span class="card-hdr-title" id="musicAppLabel">SPOTIFY</span>
+                        <span class="chip-muted">NOTHING EAR</span>
+                      </div>
+                      <button class="chip-dark" data-collapse>COLLAPSE</button>
+                    </div>
+                    <div class="card-surface music-body">
+                      <div class="album-art">DI</div>
+                      <div class="music-meta">
+                        <div class="music-title" id="musicTitle">Midnight Matrix</div>
+                        <div class="music-artist" id="musicArtist">Dot Island Audio • Glyph</div>
+                      </div>
+                      <div class="eq-bars" id="eqBars">
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                      </div>
+                    </div>
+                    <div class="scrubber-wrap">
+                      <div class="scrubber-times">
+                        <span id="musicElapsed">1:24</span>
+                        <span>3:18</span>
+                      </div>
+                      <div class="scrubber-track"><div class="scrubber-fill" id="musicFill"></div></div>
+                    </div>
+                    <div class="music-controls">
+                      <button class="ctrl-round" id="prevTrackBtn" aria-label="Previous track">⏮</button>
+                      <button class="ctrl-round ctrl-play" id="playPauseBtn" aria-label="Play or pause">❚❚</button>
+                      <button class="ctrl-round" id="nextTrackBtn" aria-label="Next track">⏭</button>
+                    </div>
                   </div>
-                  <div class="call-actions" id="callActions">
-                    <button class="call-circle c-red" id="callDeclineBtn" aria-label="Decline call">✕</button>
-                    <button class="call-circle c-green" id="callAnswerBtn" aria-label="Answer call">✓</button>
-                  </div>
-                </div>
 
-                <!-- 4. Earbuds Connected -->
-                <div class="cap-panel earbuds-panel" data-panel="earbuds">
-                  <div style="min-width:0;">
-                    <div style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);">CONNECTED • L 100% · R 95%</div>
-                    <div style="font-family:var(--mono);font-size:0.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Ear (a) Stereo</div>
+                  <!-- 4. 3-State Call UI (CallExpandedView + CallCompactView) -->
+                  <div class="cap-panel" data-panel="call" id="callPanel" style="justify-content:center;">
+                    <div class="call-row" id="callExpandedRow">
+                      <div class="caller-avatar" id="callAvatar">DW</div>
+                      <div class="call-info">
+                        <div class="call-sub" id="callSub">Incoming Call</div>
+                        <div class="call-name" id="callName">Daisy Williams</div>
+                      </div>
+                      <div class="call-actions" id="callActions">
+                        <button class="call-circle c-red" id="callDeclineBtn" aria-label="Decline call">✕</button>
+                        <button class="call-circle c-green" id="callAnswerBtn" aria-label="Answer call">✓</button>
+                      </div>
+                    </div>
                   </div>
-                  <div class="ring-group">
-                    <div class="mini-ring"><span>100</span></div>
-                    <div class="mini-ring" style="background:conic-gradient(var(--green) 0deg 290deg, #2a2a2e 290deg);"><span>80</span></div>
-                  </div>
-                </div>
 
-                <!-- 5. Fast Charging -->
-                <div class="cap-panel charging-panel" data-panel="charging">
-                  <span style="color:var(--green);font-weight:700;">⚡ 65W FAST</span>
-                  <span style="color:var(--muted);">36°C</span>
-                  <span style="color:#ffffff;font-weight:700;">84%</span>
+                  <!-- 5. Earbuds Connected (Bluetooth Peripherals U-Notch Card) -->
+                  <div class="cap-panel" data-panel="earbuds">
+                    <div class="card-hdr">
+                      <div class="card-hdr-left">
+                        <span class="card-hdr-title">EAR (A) STEREO</span>
+                        <span class="chip-red">BT AUDIO</span>
+                      </div>
+                      <button class="chip-dark" data-collapse>COLLAPSE</button>
+                    </div>
+                    <div class="card-surface" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                      <div style="min-width:0;">
+                        <div style="font-family:var(--mono);font-size:0.64rem;font-weight:700;color:#fff;">CONNECTED</div>
+                        <div style="font-family:var(--mono);font-size:0.54rem;color:var(--muted);margin-top:2px;">L 100% · R 95% · CASE 80%</div>
+                        <div style="font-family:var(--mono);font-size:0.5rem;color:var(--green);margin-top:4px;">AAC • LOW LATENCY</div>
+                      </div>
+                      <div class="ring-group">
+                        <div class="mini-ring"><span>100</span></div>
+                        <div class="mini-ring" style="background:conic-gradient(var(--green) 0deg 290deg, #2a2a2e 290deg);"><span>95</span></div>
+                      </div>
+                    </div>
+                    <div class="card-ftr">
+                      <span>DOT ISLAND • EARBUDS</span>
+                      <span>LHDC 5.0</span>
+                    </div>
+                  </div>
+
+                  <!-- 6. Charging Intelligence (Matches Real Screenshot Telemetry Card) -->
+                  <div class="cap-panel" data-panel="charging">
+                    <div class="card-hdr">
+                      <div class="card-hdr-left">
+                        <span class="card-hdr-title">CHARGING</span>
+                        <span class="chip-red">FAST</span>
+                      </div>
+                      <div style="display:flex;gap:4px;">
+                        <button class="chip-dark" id="chargingToAlertsBtn">ALERTS</button>
+                        <button class="chip-dark" data-collapse>COLLAPSE</button>
+                      </div>
+                    </div>
+                    <div class="card-surface" style="display:flex;align-items:center;gap:12px;">
+                      <div class="chg-ring" aria-hidden="true"></div>
+                      <div>
+                        <div style="font-family:var(--mono);font-size:1.35rem;font-weight:700;line-height:1;">95<span style="color:var(--accent);font-size:0.85rem;">%</span></div>
+                        <div style="font-family:var(--mono);font-size:0.54rem;color:var(--muted);margin-top:2px;">AC CHARGER • 65W</div>
+                      </div>
+                    </div>
+                    <div class="chg-metrics">
+                      <div><div class="chg-m-k">TEMP</div><div class="chg-m-v">37.0°C</div></div>
+                      <div><div class="chg-m-k">VOLT</div><div class="chg-m-v">4.39V</div></div>
+                      <div><div class="chg-m-k">WATT</div><div class="chg-m-v">24.8W</div></div>
+                      <div><div class="chg-m-k">ETA</div><div class="chg-m-v" style="color:var(--accent);">14 min</div></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1412,7 +1843,7 @@
         <div class="card" data-reveal>
           <div class="step-num">STEP 01</div>
           <h3>Download Signed APK</h3>
-          <p>Grab <strong>DotIsland-v1.0.1.apk</strong> directly from GitHub Releases and allow installing from your browser.</p>
+          <p>Grab <strong>DotIsland-v1.0.2.apk</strong> directly from GitHub Releases and allow installing from your browser.</p>
         </div>
         <div class="card" data-reveal>
           <div class="step-num">STEP 02</div>
@@ -1429,7 +1860,7 @@
   </main>
 
   <div class="floating-cta" id="floatingCta">
-    <span>Dot Island v1.0.1</span>
+    <span>Dot Island v1.0.2</span>
     <a href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">Download APK ↗</a>
   </div>
 
@@ -1475,18 +1906,71 @@
       }
 
       const capsule = document.getElementById("islandCapsule");
+      const capsuleShell = document.getElementById("capsuleShell");
       const phoneScreen = document.getElementById("phoneScreen");
       const simHint = document.getElementById("simHint");
+      const modeTabsContainer = document.getElementById("modeTabs");
+      const modeThumb = modeTabsContainer ? modeTabsContainer.querySelector(".tabs-thumb") : null;
+      const modeButtons = modeTabsContainer ? Array.from(modeTabsContainer.querySelectorAll(".tab-btn")) : [];
+      let callPhase = "ringing";
+      let speakerOn = false;
+
+      function setMode(mode) {
+        capsule.setAttribute("data-mode", mode);
+        if (mode !== "call") {
+          capsule.removeAttribute("data-call-state");
+        } else {
+          renderCallPanel();
+        }
+        if (capsuleShell) capsuleShell.setAttribute("data-show-cat", String(mode === "dotcat"));
+        document.querySelectorAll(".cap-panel").forEach(p => {
+          p.classList.toggle("active", p.getAttribute("data-panel") === mode);
+        });
+        modeButtons.forEach(b => {
+          const match = b.getAttribute("data-mode") === mode;
+          b.setAttribute("aria-selected", match ? "true" : "false");
+          if (match && modeThumb) {
+            modeThumb.style.width = b.offsetWidth + "px";
+            modeThumb.style.height = b.offsetHeight + "px";
+            modeThumb.style.transform = "translate3d(" + b.offsetLeft + "px, " + b.offsetTop + "px, 0)";
+          }
+        });
+      }
 
       // Hero mode switching
       initSlidingTabs("modeTabs", btn => {
         const mode = btn.getAttribute("data-mode");
-        capsule.setAttribute("data-mode", mode);
-        if (mode !== "call") capsule.removeAttribute("data-call-state");
-        document.querySelectorAll(".cap-panel").forEach(p => {
-          p.classList.toggle("active", p.getAttribute("data-panel") === mode);
+        if (mode === "call") callPhase = "ringing";
+        setMode(mode);
+      });
+
+      // Tap compact DotCat capsule -> expand to Recent Alerts; COLLAPSE -> return to compact pill
+      if (capsule) {
+        capsule.addEventListener("click", () => {
+          const cur = capsule.getAttribute("data-mode");
+          if (cur === "dotcat") {
+            setMode("alerts");
+          } else if (cur === "call" && callPhase === "compact") {
+            callPhase = "ringing";
+            setMode("call");
+          }
+        });
+      }
+
+      document.querySelectorAll("[data-collapse]").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          setMode("dotcat");
         });
       });
+
+      const chargingToAlertsBtn = document.getElementById("chargingToAlertsBtn");
+      if (chargingToAlertsBtn) {
+        chargingToAlertsBtn.addEventListener("click", e => {
+          e.stopPropagation();
+          setMode("alerts");
+        });
+      }
 
       // Cutout switcher
       initSlidingTabs("cutoutTabs", btn => {
@@ -1496,29 +1980,146 @@
         simHint.textContent = "Cutout: " + label + " • Tap capsule or pills";
       });
 
-      // Interactive DotCat purr on tap
-      const dotcatPanel = document.getElementById("dotcatPanel");
+      // Interactive DotCat hop on tap
+      const dotcatPerch = document.getElementById("dotcatPerch");
       const dotcatSvg = document.getElementById("dotcatSvg");
-      const dotcatMsg = document.getElementById("dotcatMsg");
-      if (dotcatPanel) {
-        dotcatPanel.addEventListener("click", () => {
+      if (dotcatPerch && dotcatSvg) {
+        dotcatPerch.addEventListener("click", e => {
+          e.stopPropagation();
           dotcatSvg.classList.remove("purr-hop");
           void dotcatSvg.offsetWidth;
           dotcatSvg.classList.add("purr-hop");
-          dotcatMsg.textContent = "PURR ♥";
-          dotcatMsg.style.color = "#ffffff";
-          setTimeout(() => {
-            dotcatMsg.textContent = "TAP CAT";
-            dotcatMsg.style.color = "";
-          }, 950);
         });
       }
 
-      // Interactive Now Playing play/pause
+      // Interactive Recent Alerts list & Focused Notification view
+      const alertsBox = document.getElementById("alertsBox");
+      const alertsFooterLabel = document.getElementById("alertsFooterLabel");
+      const sampleAlerts = [
+        { id: "a1", app: "WHATSAPP", badge: "W", title: "Aarav", body: "Dot Island v1.0.2 feels super snappy!", time: "NOW" },
+        { id: "a2", app: "GITHUB", badge: "G", title: "v1.0.2 Checks", body: "355 unit tests passed • APK signed", time: "1m ago" }
+      ];
+      let alertsState = sampleAlerts.map(a => Object.assign({}, a));
+      let focusedAlertId = null;
+
+      function renderAlertsBox() {
+        if (!alertsBox) return;
+        if (focusedAlertId) {
+          const item = alertsState.find(a => a.id === focusedAlertId);
+          if (!item) { focusedAlertId = null; renderAlertsBox(); return; }
+          if (alertsFooterLabel) alertsFooterLabel.textContent = "DOT ISLAND • NOTIFICATION";
+          alertsBox.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">' +
+              '<span style="font-family:var(--mono);font-size:0.54rem;font-weight:700;color:#fff;">' + item.app + '</span>' +
+              '<button class="chip-dark" id="backToAlertsBtn">← ALERTS</button>' +
+            '</div>' +
+            '<div style="font-family:var(--mono);font-size:0.66rem;font-weight:700;color:#fff;">' + item.title + '</div>' +
+            '<div style="font-family:var(--mono);font-size:0.56rem;color:rgba(255,255,255,0.8);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + item.body + '</div>' +
+            '<div class="focus-actions">' +
+              '<button class="focus-btn" id="fReplyBtn">REPLY <span style="color:var(--accent);">•</span></button>' +
+              '<button class="focus-btn primary" id="fOpenBtn">OPEN</button>' +
+              '<button class="focus-btn" id="fDismissBtn">DISMISS</button>' +
+            '</div>';
+          document.getElementById("backToAlertsBtn").onclick = e => { e.stopPropagation(); focusedAlertId = null; renderAlertsBox(); };
+          document.getElementById("fReplyBtn").onclick = e => { e.stopPropagation(); focusedAlertId = null; renderAlertsBox(); };
+          document.getElementById("fOpenBtn").onclick = e => { e.stopPropagation(); setMode("dotcat"); };
+          document.getElementById("fDismissBtn").onclick = e => {
+            e.stopPropagation();
+            alertsState = alertsState.filter(a => a.id !== item.id);
+            focusedAlertId = null;
+            renderAlertsBox();
+          };
+          return;
+        }
+
+        if (alertsFooterLabel) alertsFooterLabel.textContent = "DOT ISLAND • DASHBOARD";
+        if (alertsState.length === 0) {
+          alertsBox.innerHTML =
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">' +
+              '<span style="font-family:var(--mono);font-size:0.54rem;font-weight:700;color:var(--muted);">RECENT ALERTS</span>' +
+              '<button class="chip-dark" id="restoreAlertsBtn">RESTORE</button>' +
+            '</div>' +
+            '<div style="font-family:var(--mono);font-size:0.56rem;color:var(--muted);padding:12px 0;text-align:center;">No recent notifications</div>';
+          document.getElementById("restoreAlertsBtn").onclick = e => {
+            e.stopPropagation();
+            alertsState = sampleAlerts.map(a => Object.assign({}, a));
+            renderAlertsBox();
+          };
+          return;
+        }
+
+        let html =
+          '<div style="display:flex;align-items:center;justify-content:space-between;">' +
+            '<span style="font-family:var(--mono);font-size:0.54rem;font-weight:700;color:var(--muted);">RECENT ALERTS</span>' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<button id="clearAllAlertsBtn" style="font-family:var(--mono);font-size:0.5rem;font-weight:700;color:var(--accent);">CLEAR ALL</button>' +
+              '<span style="font-family:var(--mono);font-size:0.5rem;color:var(--muted);">' + alertsState.length + '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="alerts-list">';
+
+        alertsState.forEach(a => {
+          html +=
+            '<div class="alert-row" data-alert-id="' + a.id + '">' +
+              '<div class="alert-icon">' + a.badge + '</div>' +
+              '<div class="alert-meta">' +
+                '<div class="alert-title">' + a.title + '</div>' +
+                '<div class="alert-body">' + a.body + '</div>' +
+              '</div>' +
+              '<span style="font-family:var(--mono);font-size:0.48rem;color:var(--muted);">' + a.time + '</span>' +
+              '<button class="alert-x" data-dismiss-id="' + a.id + '" aria-label="Dismiss">×</button>' +
+            '</div>';
+        });
+        html += '</div>';
+        alertsBox.innerHTML = html;
+
+        document.getElementById("clearAllAlertsBtn").onclick = e => {
+          e.stopPropagation();
+          alertsState = [];
+          renderAlertsBox();
+        };
+        alertsBox.querySelectorAll("[data-alert-id]").forEach(row => {
+          row.onclick = e => {
+            e.stopPropagation();
+            focusedAlertId = row.getAttribute("data-alert-id");
+            renderAlertsBox();
+          };
+        });
+        alertsBox.querySelectorAll("[data-dismiss-id]").forEach(btn => {
+          btn.onclick = e => {
+            e.stopPropagation();
+            const id = btn.getAttribute("data-dismiss-id");
+            alertsState = alertsState.filter(a => a.id !== id);
+            renderAlertsBox();
+          };
+        });
+      }
+      renderAlertsBox();
+
+      // Interactive Now Playing playback + track switcher
       const playBtn = document.getElementById("playPauseBtn");
+      const prevTrackBtn = document.getElementById("prevTrackBtn");
+      const nextTrackBtn = document.getElementById("nextTrackBtn");
       const eqBars = document.getElementById("eqBars");
+      const musicTitle = document.getElementById("musicTitle");
+      const musicArtist = document.getElementById("musicArtist");
+      const musicElapsed = document.getElementById("musicElapsed");
+      const musicFill = document.getElementById("musicFill");
+      const tracks = [
+        { title: "Midnight Matrix", artist: "Dot Island Audio • Glyph", elapsed: "1:24", pct: "44%" },
+        { title: "Red Dot Signal", artist: "Nothing OS • Studio Mix", elapsed: "2:08", pct: "67%" },
+        { title: "Tape Deck Drift", artist: "Mono Pixel • Session 04", elapsed: "0:49", pct: "26%" }
+      ];
+      let trackIdx = 0;
+      let playing = true;
+      function updateTrack() {
+        const t = tracks[trackIdx];
+        if (musicTitle) musicTitle.textContent = t.title;
+        if (musicArtist) musicArtist.textContent = t.artist;
+        if (musicElapsed) musicElapsed.textContent = t.elapsed;
+        if (musicFill) musicFill.style.width = t.pct;
+      }
       if (playBtn && eqBars) {
-        let playing = true;
         playBtn.addEventListener("click", e => {
           e.stopPropagation();
           playing = !playing;
@@ -1526,42 +2127,54 @@
           eqBars.classList.toggle("paused", !playing);
         });
       }
+      if (prevTrackBtn) prevTrackBtn.addEventListener("click", e => { e.stopPropagation(); trackIdx = (trackIdx - 1 + tracks.length) % tracks.length; updateTrack(); });
+      if (nextTrackBtn) nextTrackBtn.addEventListener("click", e => { e.stopPropagation(); trackIdx = (trackIdx + 1) % tracks.length; updateTrack(); });
 
-      // Interactive 3-state Call UI (Ringing -> Connected -> Compact)
-      const callSub = document.getElementById("callSub");
-      const callActions = document.getElementById("callActions");
-      let callPhase = "ringing";
-      let speakerOn = false;
+      // Interactive 3-state Call UI (Ringing -> Connected -> Compact Call Pill)
+      const callPanel = document.getElementById("callPanel");
 
-      function renderCallActions() {
-        if (callPhase === "ringing") {
-          capsule.setAttribute("data-call-state", "ringing");
-          callSub.textContent = "Incoming Call";
-          callSub.style.color = "var(--muted)";
-          callActions.innerHTML =
-            '<button class="call-circle c-red" id="cDecline" aria-label="Decline">✕</button>' +
-            '<button class="call-circle c-green" id="cAnswer" aria-label="Answer">✓</button>';
-          document.getElementById("cAnswer").onclick = () => { callPhase = "connected"; renderCallActions(); };
-          document.getElementById("cDecline").onclick = () => { callPhase = "compact"; renderCallActions(); };
-        } else if (callPhase === "connected") {
-          capsule.setAttribute("data-call-state", "connected");
-          callSub.textContent = "00:05 • LIVE";
-          callSub.style.color = "var(--green)";
-          callActions.innerHTML =
-            '<button class="call-circle ' + (speakerOn ? 'c-white' : 'c-dark') + '" id="cSpk" aria-label="Speaker">🔊</button>' +
-            '<button class="call-circle c-red" id="cEnd" aria-label="End">✕</button>';
-          document.getElementById("cSpk").onclick = () => { speakerOn = !speakerOn; renderCallActions(); };
-          document.getElementById("cEnd").onclick = () => { callPhase = "ringing"; renderCallActions(); };
-        } else {
+      function renderCallPanel() {
+        if (!callPanel) return;
+        if (callPhase === "compact") {
           capsule.setAttribute("data-call-state", "compact");
-          callSub.textContent = "00:05";
-          callSub.style.color = "var(--green)";
-          callActions.innerHTML =
-            '<button class="call-circle c-green" id="cExpand" aria-label="Expand Call">↗</button>';
-          document.getElementById("cExpand").onclick = () => { callPhase = "ringing"; renderCallActions(); };
+          if (capsuleShell) capsuleShell.setAttribute("data-show-cat", "false");
+          callPanel.innerHTML =
+            '<div class="call-compact-strip">' +
+              '<span>✆ 00:05</span>' +
+              '<span style="width:28px;"></span>' +
+              '<div class="call-wave"><span></span><span></span><span></span><span></span></div>' +
+            '</div>';
+          return;
+        }
+
+        capsule.setAttribute("data-call-state", callPhase);
+        if (capsuleShell) capsuleShell.setAttribute("data-show-cat", "false");
+        const subText = callPhase === "connected" ? "00:05" : "Incoming Call";
+        const subColor = callPhase === "connected" ? "var(--green)" : "var(--muted)";
+        const buttonsHtml = callPhase === "ringing"
+          ? '<button class="call-circle c-red" id="cDecline" aria-label="Decline Call">✕</button>' +
+            '<button class="call-circle c-green" id="cAnswer" aria-label="Answer Call">✓</button>'
+          : '<button class="call-circle ' + (speakerOn ? 'c-white' : 'c-dark') + '" id="cSpk" aria-label="Toggle Speaker">🔊</button>' +
+            '<button class="call-circle c-red" id="cEnd" aria-label="Hang up">✕</button>';
+
+        callPanel.innerHTML =
+          '<div class="call-row">' +
+            '<div class="caller-avatar">DW</div>' +
+            '<div class="call-info">' +
+              '<div class="call-sub" style="color:' + subColor + ';">' + subText + '</div>' +
+              '<div class="call-name">Daisy Williams</div>' +
+            '</div>' +
+            '<div class="call-actions">' + buttonsHtml + '</div>' +
+          '</div>';
+
+        if (callPhase === "ringing") {
+          document.getElementById("cAnswer").onclick = e => { e.stopPropagation(); callPhase = "connected"; renderCallPanel(); };
+          document.getElementById("cDecline").onclick = e => { e.stopPropagation(); callPhase = "compact"; renderCallPanel(); };
+        } else {
+          document.getElementById("cSpk").onclick = e => { e.stopPropagation(); speakerOn = !speakerOn; renderCallPanel(); };
+          document.getElementById("cEnd").onclick = e => { e.stopPropagation(); callPhase = "compact"; renderCallPanel(); };
         }
       }
-      renderCallActions();
 
       // 1:1 Gesture Slider Demo inside Bento Card
       const track = document.getElementById("gestureDemoTrack");

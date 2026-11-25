@@ -24,6 +24,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitHorizontalTouchSlopOrCancellation
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -899,13 +900,11 @@ fun IslandOverlayView(
                     // STRICT INVARIANT: ZERO clock or weather displayed!
                     // =========================================================================
                     val presentationToRender = remember(selectedNotificationKey, activeNotification, projectedHistory) {
-                        if (selectedNotificationKey != null) {
-                            projectedHistory.firstOrNull { it.key == selectedNotificationKey }
-                        } else if (activeNotification != null) {
-                            projectedHistory.firstOrNull { it.key == activeNotification.id }
-                        } else {
-                            null
-                        }
+                        resolveFocusedNotificationPresentation(
+                            selectedNotificationKey = selectedNotificationKey,
+                            activeNotificationId = activeNotification?.id,
+                            projectedHistory = projectedHistory
+                        )
                     }
 
                     var totalNotifDragX by remember { mutableFloatStateOf(0f) }
@@ -1645,7 +1644,29 @@ fun SwipeableHistoryItem(
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val velocityTracker = VelocityTracker()
                         velocityTracker.addPosition(down.uptimeMillis, down.position)
-                        val completed = horizontalDrag(down.id) { change ->
+                        var initialDelta = 0f
+                        val drag = awaitHorizontalTouchSlopOrCancellation(down.id) { change, over ->
+                            change.consume()
+                            initialDelta = over
+                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+                        }
+                        if (drag == null) {
+                            if (offsetX.value != 0f) {
+                                coroutineScope.launch {
+                                    offsetX.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f)
+                                    )
+                                }
+                            }
+                            return@awaitEachGesture
+                        }
+                        if (initialDelta != 0f) {
+                            coroutineScope.launch {
+                                offsetX.snapTo(offsetX.value + initialDelta)
+                            }
+                        }
+                        val completed = horizontalDrag(drag.id) { change ->
                             velocityTracker.addPosition(change.uptimeMillis, change.position)
                             val dx = change.positionChange().x
                             change.consume()
@@ -1654,7 +1675,10 @@ fun SwipeableHistoryItem(
                             }
                         }
                         val vx = velocityTracker.calculateVelocity().x
-                        val shouldDismiss = completed && (abs(offsetX.value) >= dismissThresholdPx || abs(vx) >= 900f)
+                        val shouldDismiss = completed && (
+                            abs(offsetX.value) >= dismissThresholdPx ||
+                                (abs(vx) >= 900f && abs(offsetX.value) >= dismissThresholdPx * 0.35f)
+                            )
                         if (shouldDismiss) {
                             coroutineScope.launch {
                                 val target = if (vx != 0f && abs(offsetX.value) < dismissThresholdPx) {
@@ -2060,4 +2084,24 @@ fun NotificationEmptyFocusedCard(
             }
         }
     }
+}
+
+/**
+ * Resolves the notification card to display in [ExpandedViewType.NOTIFICATION_FOCUSED]:
+ * prefers an explicitly selected historical entry, then the active pill notification,
+ * and falls back to the most recent alert in [projectedHistory] so tapping the pill
+ * after a banner's 4.5s auto-collapse still surfaces recent alerts instead of an empty state.
+ */
+internal fun resolveFocusedNotificationPresentation(
+    selectedNotificationKey: String?,
+    activeNotificationId: String?,
+    projectedHistory: List<com.nothing.island.ai.notifications.PrivacySafeNotificationPresentation>
+): com.nothing.island.ai.notifications.PrivacySafeNotificationPresentation? {
+    if (selectedNotificationKey != null) {
+        return projectedHistory.firstOrNull { it.key == selectedNotificationKey }
+    }
+    if (activeNotificationId != null) {
+        return projectedHistory.firstOrNull { it.key == activeNotificationId }
+    }
+    return projectedHistory.firstOrNull()
 }

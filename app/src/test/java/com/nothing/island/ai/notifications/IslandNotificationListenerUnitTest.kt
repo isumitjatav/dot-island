@@ -118,4 +118,29 @@ class IslandNotificationListenerUnitTest {
         val result = IslandNotificationListenerService.cancelSystemNotification("0|com.example|1|null|100")
         assertFalse("Calling cancelSystemNotification when unbound should return false safely", result)
     }
+
+    @Test
+    fun testExtractNotificationTextFallsBackToBigTextWhenPrimaryTextMissing() {
+        assertEquals("", IslandNotificationListenerService.extractNotificationText(null))
+        assertEquals(
+            "Primary message",
+            IslandNotificationListenerService.extractNotificationText("  Primary message  ", "Big text body")
+        )
+        assertEquals(
+            "Expanded BigText message",
+            IslandNotificationListenerService.extractNotificationText("   ", "  Expanded BigText message  ")
+        )
+        assertEquals(
+            "Expanded BigText message",
+            IslandNotificationListenerService.extractNotificationText(null, "Expanded BigText message")
+        )
+    }
+
+    @Test
+    fun testRequestRebindIfNecessaryIsSafeNoOpWhenAlreadyConnected() {
+        service.setConnectedForTesting(true)
+        // Should return early without touching framework NotificationListenerService APIs
+        IslandNotificationListenerService.requestRebindIfNecessary(service)
+        assertTrue(IslandNotificationListenerService.isConnected)
+    }
 }
