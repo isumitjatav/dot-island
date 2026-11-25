@@ -5,6 +5,7 @@
 [![Live Landing Page](https://img.shields.io/badge/Landing_Page-Live-d71921?style=for-the-badge)](https://sumitsinghjatav64-creator.github.io/nothing-island/)
 [![Latest APK](https://img.shields.io/badge/Download-Latest_APK-111111?style=for-the-badge&logo=android)](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest)
 [![Privacy Policy](https://img.shields.io/badge/Privacy-100%25_On--Device-1c1c1e?style=for-the-badge)](https://sumitsinghjatav64-creator.github.io/nothing-island/privacy.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-ffffff?style=for-the-badge)](LICENSE)
 
 ---
 
