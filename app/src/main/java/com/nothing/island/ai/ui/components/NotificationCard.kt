@@ -20,8 +20,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -417,13 +420,14 @@ fun NotificationCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 ) {
                     AppNotificationIcon(
                         packageName = packageName,
-                        fallbackChar = state.title?.firstOrNull()?.uppercaseChar()
-                            ?: state.appDisplayName.firstOrNull()?.uppercaseChar()
-                            ?: 'N',
+                        fallbackChar = TextBreakUtils.extractSafeFallbackChar(
+                            state.title ?: state.appDisplayName,
+                            'N'
+                        ),
                         size = 22.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -431,13 +435,18 @@ fun NotificationCard(
                         text = state.appDisplayName.uppercase(),
                         color = theme.textColorPrimary,
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Header controls (CLEAR ALL, DISMISS, COLLAPSE, or formatted timestamp)
                 Row(
@@ -457,7 +466,9 @@ fun NotificationCard(
                                 color = NothingRed,
                                 fontSize = 10.sp,
                                 fontFamily = FontFamily.Monospace,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -490,7 +501,9 @@ fun NotificationCard(
                                 color = collapseText,
                                 fontSize = 10.5.sp,
                                 fontFamily = theme.bodyFont,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     } else {
@@ -499,7 +512,9 @@ fun NotificationCard(
                             color = theme.textColorSecondary,
                             fontSize = 11.sp,
                             fontFamily = theme.displayFont,
-                            letterSpacing = 1.sp
+                            letterSpacing = 1.sp,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -559,8 +574,9 @@ fun NotificationCard(
                                 fontSize = 16.sp,
                                 fontFamily = theme.displayFont,
                                 fontWeight = theme.displayFontWeight,
-                                lineHeight = 20.sp,
+                                lineHeight = 22.sp,
                                 maxLines = 1,
+                                softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
@@ -573,7 +589,7 @@ fun NotificationCard(
                                 fontSize = 13.sp,
                                 fontFamily = theme.bodyFont,
                                 fontWeight = FontWeight.Medium,
-                                lineHeight = 17.sp,
+                                lineHeight = 18.sp,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -585,8 +601,10 @@ fun NotificationCard(
                                 text = state.subText,
                                 color = theme.textColorSecondary,
                                 fontSize = 10.5.sp,
+                                lineHeight = 14.sp,
                                 fontFamily = theme.bodyFont,
                                 maxLines = 1,
+                                softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
@@ -596,7 +614,7 @@ fun NotificationCard(
                     Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
-                            .size(7.dp)
+                            .requiredSize(7.dp)
                             .clip(CircleShape)
                             .background(NothingRed)
                     )
@@ -677,7 +695,7 @@ fun NotificationCard(
                                     modifier = Modifier
                                         .fillMaxWidth(0.35f)
                                         .fillMaxSize()
-                                        .offset(x = (200 * offsetFraction).dp)
+                                        .offset { IntOffset((200.dp.toPx() * offsetFraction).roundToInt(), 0) }
                                         .background(NothingRed)
                                 )
                             } else if (state.progressState == DownloadProgressState.COMPLETED) {

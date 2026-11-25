@@ -2,27 +2,29 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dot Island — Dynamic Capsule & Reactive Pixel Companions for Android</title>
-  <meta name="description" content="Dot Island brings a precision camera-cutout Dynamic Capsule, Live Activities, 3-state Call UI, and reactive pixel companions to Android. 100% on-device privacy." />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Dot Island — Dynamic Capsule, Live Activities &amp; Reactive Pixel Companions for Android</title>
+  <meta name="description" content="Interactive Dynamic Capsule, 3-state Call UI, Live Music &amp; Charging Pills, and reactive pixel companions (DotCat, GlyphOrb, TapeBuddy) for Android 10+. 100% on-device." />
   <meta name="theme-color" content="#000000" />
   <style>
     :root {
       --bg: #000000;
       --surface: #111111;
-      --surface-elevated: #18181b;
-      --border: #242428;
+      --surface-2: #161619;
+      --border: rgba(255, 255, 255, 0.1);
+      --border-strong: rgba(255, 255, 255, 0.24);
       --text: #ffffff;
-      --text-muted: #a1a1aa;
+      --muted: #a1a1aa;
       --accent: #d71921;
-      --accent-soft: rgba(215, 25, 33, 0.14);
+      --green: #00c853;
+      --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-snap: cubic-bezier(0.16, 1, 0.3, 1);
       --mono: "JetBrains Mono", "SFMono-Regular", ui-monospace, Menlo, Consolas, monospace;
       --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --hdr-s: 0;
     }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { box-sizing: border-box; }
 
     html {
       background: var(--bg);
@@ -35,532 +37,1614 @@
     body {
       margin: 0;
       min-height: 100vh;
+      overflow-x: hidden;
       background:
-        radial-gradient(circle at 50% 0%, rgba(215, 25, 33, 0.12) 0%, transparent 45%),
-        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        radial-gradient(ellipse 75% 42% at 50% 0%, rgba(215, 25, 33, 0.14) 0%, transparent 65%),
+        radial-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
         var(--bg);
       background-size: 100% 100%, 24px 24px, 100% 100%;
-      line-height: 1.6;
+      line-height: 1.55;
+      padding-bottom: 84px;
     }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; }
 
     .container {
       width: 100%;
-      max-width: 1040px;
+      max-width: 1120px;
       margin: 0 auto;
-      padding: 0 24px;
+      padding: 0 20px;
     }
 
-    /* Top Nav */
-    header {
-      padding: 24px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* Progressive glassmorphic top header (Layers-inspired floating pills) */
+    .hdr-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 14px 0;
+      transition: backdrop-filter 200ms ease, background-color 200ms ease;
     }
 
-    .nav {
+    .hdr-wrap::before {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 82px;
+      pointer-events: none;
+      backdrop-filter: blur(calc(var(--hdr-s) * 16px));
+      -webkit-backdrop-filter: blur(calc(var(--hdr-s) * 16px));
+      background: linear-gradient(180deg, rgba(0, 0, 0, calc(var(--hdr-s) * 0.85)) 0%, transparent 100%);
+      z-index: -1;
+    }
+
+    .nav-bar {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 12px;
     }
 
-    .brand {
+    .nav-pill {
       display: inline-flex;
       align-items: center;
       gap: 10px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(17, 17, 17, 0.78);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       font-family: var(--mono);
-      font-weight: 700;
-      font-size: 0.95rem;
-      letter-spacing: 0.14em;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
     }
 
     .brand-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       background: var(--accent);
-      box-shadow: 0 0 12px rgba(215, 25, 33, 0.8);
+      box-shadow: 0 0 12px rgba(215, 25, 33, 0.9);
+      animation: pulseDot 2.2s ease-in-out infinite;
     }
 
-    .nav-links {
-      display: flex;
-      align-items: center;
-      gap: 20px;
-      font-family: var(--mono);
-      font-size: 0.8rem;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      text-transform: uppercase;
+    @keyframes pulseDot {
+      0%, 100% { opacity: 0.65; transform: scale(0.95); }
+      50% { opacity: 1; transform: scale(1.1); }
     }
 
-    .nav-links a:hover {
-      color: var(--text);
+    .nav-center {
+      display: none;
     }
 
-    /* Hero */
+    @media (min-width: 760px) {
+      .nav-center {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+      }
+      .nav-center a {
+        padding: 6px 12px;
+        border-radius: 999px;
+        color: var(--muted);
+        transition: color 160ms ease, background-color 160ms ease;
+      }
+      .nav-center a:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    .nav-dl {
+      background: rgba(215, 25, 33, 0.16);
+      border-color: rgba(215, 25, 33, 0.5);
+      color: #ffffff;
+      transition: background-color 160ms ease, transform 140ms var(--ease-spring);
+    }
+
+    .nav-dl:hover { background: var(--accent); border-color: var(--accent); }
+    .nav-dl:active { transform: scale(0.96); }
+
+    /* Hero Layout */
     .hero {
-      padding: 72px 0 56px;
-      text-align: center;
+      padding: 36px 0 48px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 36px;
+      align-items: center;
     }
 
-    .hero-icon-wrap {
-      display: inline-flex;
-      padding: 10px;
-      border-radius: 28px;
-      background: #09090b;
-      border: 1px solid var(--border);
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.85), 0 0 36px rgba(255, 255, 255, 0.05);
-      margin-bottom: 28px;
+    @media (min-width: 920px) {
+      .hero {
+        padding: 52px 0 64px;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 44px;
+      }
     }
 
-    .hero-icon {
-      width: 108px;
-      height: 108px;
-      display: block;
-      border-radius: 22px;
-    }
-
-    .badge {
+    .eyebrow {
       display: inline-flex;
       align-items: center;
       gap: 8px;
       padding: 6px 14px;
       border-radius: 999px;
-      border: 1px solid rgba(215, 25, 33, 0.45);
-      background: var(--accent-soft);
-      color: #ffffff;
+      border: 1px solid var(--border);
+      background: rgba(17, 17, 17, 0.85);
       font-family: var(--mono);
       font-size: 0.72rem;
-      letter-spacing: 0.12em;
+      letter-spacing: 0.11em;
       text-transform: uppercase;
+      color: var(--muted);
       margin-bottom: 18px;
     }
 
+    .eyebrow strong { color: #ffffff; font-weight: 600; }
+
+    /* Gradient metallic headline matching Layers typography */
     h1 {
       margin: 0 0 14px;
       font-family: var(--mono);
-      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-size: clamp(2.4rem, 6vw, 4rem);
       font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      line-height: 1.1;
+      letter-spacing: -0.02em;
+      line-height: 1.05;
+      background: linear-gradient(115deg, #ffffff 30%, #9b9ba6 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
 
-    .subtitle {
-      margin: 0 auto 32px;
-      max-width: 640px;
-      color: var(--text-muted);
-      font-size: clamp(1rem, 2vw, 1.18rem);
+    .hero-sub {
+      margin: 0 0 26px;
+      font-size: clamp(1rem, 2.2vw, 1.18rem);
+      color: var(--muted);
+      max-width: 540px;
     }
 
-    .cta-row {
+    .hero-ctas {
       display: flex;
       flex-wrap: wrap;
-      justify-content: center;
-      gap: 14px;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    /* Animated orbiting border-glow button (Layers pattern) */
+    .btn-glow-wrap {
+      position: relative;
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 1px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .btn-glow-wrap::before {
+      content: "";
+      position: absolute;
+      inset: -120%;
+      background: conic-gradient(from 0deg, transparent 0 260deg, rgba(255, 255, 255, 0.85) 300deg, var(--accent) 340deg, transparent 360deg);
+      animation: orbitGlow 4.2s linear infinite;
+    }
+
+    @keyframes orbitGlow {
+      to { transform: rotate(360deg); }
     }
 
     .btn {
+      position: relative;
+      z-index: 1;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 9px;
       min-height: 48px;
-      padding: 12px 26px;
+      padding: 12px 24px;
       border-radius: 999px;
       font-family: var(--mono);
-      font-size: 0.84rem;
+      font-size: 0.82rem;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       touch-action: manipulation;
-      transition: transform 140ms cubic-bezier(0.22, 1, 0.36, 1), background-color 140ms ease, border-color 140ms ease;
+      transition: transform 150ms var(--ease-spring), background-color 150ms ease, border-color 150ms ease;
     }
 
-    .btn:active {
-      transform: scale(0.97);
-    }
+    .btn:active { transform: scale(0.96); }
 
     .btn-primary {
       background: var(--accent);
       color: #ffffff;
-      border: 1px solid var(--accent);
-      box-shadow: 0 8px 28px rgba(215, 25, 33, 0.35);
+      box-shadow: 0 10px 30px rgba(215, 25, 33, 0.35);
     }
 
-    .btn-primary:hover {
-      background: #e5242c;
-    }
+    .btn-primary:hover { background: #e62129; }
 
     .btn-secondary {
       background: var(--surface);
-      color: #ffffff;
       border: 1px solid var(--border);
+      color: #ffffff;
     }
 
     .btn-secondary:hover {
-      border-color: rgba(255, 255, 255, 0.35);
-      background: var(--surface-elevated);
+      border-color: var(--border-strong);
+      background: #1a1a1f;
     }
 
-    .hero-meta {
-      margin-top: 18px;
+    .arrow-lift {
+      display: inline-block;
+      transition: transform 180ms var(--ease-spring);
+    }
+
+    .btn:hover .arrow-lift,
+    .card:hover .arrow-lift {
+      transform: translate3d(2px, -2px, 0);
+    }
+
+    /* Sliding pill switcher bar (Layers .lib-tabs-thumb) */
+    .control-block {
+      margin-bottom: 16px;
+    }
+
+    .control-label {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sliding-tabs {
+      position: relative;
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      max-width: 100%;
+    }
+
+    .tabs-thumb {
+      position: absolute;
+      top: 0;
+      left: 0;
+      border-radius: 11px;
+      background: #ffffff;
+      pointer-events: none;
+      transition: transform 280ms var(--ease-spring), width 280ms var(--ease-spring), height 280ms var(--ease-spring);
+      z-index: 0;
+    }
+
+    .tab-btn {
+      position: relative;
+      z-index: 1;
+      padding: 8px 13px;
+      border-radius: 11px;
       font-family: var(--mono);
       font-size: 0.74rem;
-      color: var(--text-muted);
-      letter-spacing: 0.08em;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      white-space: nowrap;
+      touch-action: manipulation;
+      transition: color 180ms ease;
     }
 
-    /* Sections */
-    section {
-      padding: 40px 0;
+    .tab-btn[aria-selected="true"] {
+      color: #000000;
     }
 
-    .section-label {
+    /* OEM Chips */
+    .oem-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .oem-chip {
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(17, 17, 17, 0.7);
+      transition: border-color 180ms ease, color 180ms ease;
+    }
+
+    .oem-chip:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+    }
+
+    /* Interactive Phone Simulator */
+    .phone-stage {
+      display: flex;
+      justify-content: center;
+      perspective: 1200px;
+    }
+
+    .phone-chassis {
+      position: relative;
+      width: 320px;
+      height: 608px;
+      border-radius: 44px;
+      background: linear-gradient(155deg, #27272c 0%, #111113 45%, #1c1c20 100%);
+      padding: 10px;
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255, 255, 255, 0.12),
+        inset 0 1px 1px rgba(255, 255, 255, 0.25);
+    }
+
+    .phone-screen {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 35px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 28%, rgba(215, 25, 33, 0.12), transparent 55%),
+        radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+        #050507;
+      background-size: 100% 100%, 16px 16px, 100% 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 14px 18px;
+    }
+
+    /* Status bar & camera cutout */
+    .status-bar {
+      position: relative;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.85);
+      z-index: 2;
+    }
+
+    .camera-lens {
+      position: absolute;
+      top: 13px;
+      left: 50%;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 38% 35%, #232738 0%, #09090c 60%, #000000 100%);
+      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      transform: translateX(-50%);
+      transition: left 360ms var(--ease-spring), width 360ms var(--ease-spring), border-radius 360ms var(--ease-spring), transform 360ms var(--ease-spring);
+      z-index: 6;
+      pointer-events: none;
+    }
+
+    .phone-screen[data-cutout="left"] .camera-lens {
+      left: 34px;
+      transform: translateX(0);
+    }
+
+    .phone-screen[data-cutout="wide"] .camera-lens {
+      left: 50%;
+      width: 44px;
+      border-radius: 10px;
+      transform: translateX(-50%);
+    }
+
+    /* Live Morphing Dot Island Capsule */
+    .island-anchor {
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 8;
+      display: flex;
+      justify-content: center;
+      width: 280px;
+      pointer-events: none;
+      transition: left 360ms var(--ease-spring), transform 360ms var(--ease-spring);
+    }
+
+    .phone-screen[data-cutout="left"] .island-anchor {
+      left: 16px;
+      transform: translateX(0);
+      justify-content: flex-start;
+    }
+
+    .capsule {
+      pointer-events: auto;
+      position: relative;
+      background: #000000;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.85), 0 0 18px rgba(255, 255, 255, 0.06);
+      color: #ffffff;
+      overflow: hidden;
+      transition:
+        width 420ms var(--ease-spring),
+        height 420ms var(--ease-spring),
+        border-radius 420ms var(--ease-spring),
+        padding 360ms var(--ease-spring),
+        border-color 220ms ease;
+    }
+
+    /* Capsule states */
+    .capsule[data-mode="dotcat"] {
+      width: 176px;
+      height: 36px;
+      border-radius: 18px;
+      padding: 0 12px;
+    }
+
+    .capsule[data-mode="music"] {
+      width: 274px;
+      height: 112px;
+      border-radius: 26px;
+      padding: 34px 14px 12px;
+      border-color: rgba(215, 25, 33, 0.45);
+    }
+
+    .capsule[data-mode="call"] {
+      width: 276px;
+      height: 98px;
+      border-radius: 30px;
+      padding: 32px 12px 10px;
+    }
+
+    .capsule[data-mode="call"][data-call-state="compact"] {
+      width: 196px;
+      height: 36px;
+      border-radius: 18px;
+      padding: 0 12px;
+    }
+
+    .capsule[data-mode="earbuds"] {
+      width: 272px;
+      height: 92px;
+      border-radius: 24px;
+      padding: 32px 14px 10px;
+    }
+
+    .capsule[data-mode="charging"] {
+      width: 238px;
+      height: 36px;
+      border-radius: 18px;
+      padding: 0 14px;
+      border-color: rgba(0, 200, 83, 0.45);
+    }
+
+    .cap-panel {
+      display: none;
+      width: 100%;
+      height: 100%;
+      animation: capIn 240ms var(--ease-spring) both;
+    }
+
+    .cap-panel.active {
+      display: flex;
+    }
+
+    @keyframes capIn {
+      from { opacity: 0; transform: scale(0.94); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Inside DotCat compact */
+    .dotcat-row {
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.66rem;
+    }
+
+    .dotcat-msg {
+      color: var(--muted);
+      letter-spacing: 0.06em;
+      transition: color 180ms ease;
+    }
+
+    .eye-blink {
+      animation: blinkEyes 3.8s infinite;
+      transform-origin: center;
+    }
+
+    @keyframes blinkEyes {
+      0%, 92%, 100% { opacity: 1; }
+      95% { opacity: 0.12; }
+    }
+
+    .purr-hop {
+      animation: catHop 380ms var(--ease-spring);
+    }
+
+    @keyframes catHop {
+      0% { transform: translateY(0); }
+      40% { transform: translateY(-4px) scale(1.08); }
+      100% { transform: translateY(0); }
+    }
+
+    /* Inside Music */
+    .music-panel {
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .album-art {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #d71921, #2c0709);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .music-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .music-title {
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .music-artist {
+      font-size: 0.66rem;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .eq-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 18px;
+      margin-top: 4px;
+    }
+
+    .eq-bar {
+      width: 3px;
+      border-radius: 2px;
+      background: var(--accent);
+      height: 6px;
+      animation: eqDance 0.9s var(--ease-spring) infinite alternate;
+    }
+
+    .eq-bar:nth-child(2) { animation-delay: 0.18s; }
+    .eq-bar:nth-child(3) { animation-delay: 0.34s; }
+    .eq-bar:nth-child(4) { animation-delay: 0.1s; }
+    .eq-bar:nth-child(5) { animation-delay: 0.28s; }
+
+    .paused .eq-bar {
+      animation-play-state: paused;
+      height: 4px !important;
+      opacity: 0.45;
+    }
+
+    @keyframes eqDance {
+      0% { height: 4px; }
+      100% { height: 17px; }
+    }
+
+    .mini-play-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #000000;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      font-size: 0.76rem;
+      font-weight: 700;
+      transition: transform 140ms var(--ease-spring);
+    }
+
+    .mini-play-btn:active { transform: scale(0.9); }
+
+    /* Call UI */
+    .call-panel {
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .caller-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7b4bff, #ff5fa2);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 0.78rem;
+      flex-shrink: 0;
+    }
+
+    .call-info { flex: 1; min-width: 0; }
+    .call-sub {
+      font-family: var(--mono);
+      font-size: 0.64rem;
+      color: var(--green);
+      letter-spacing: 0.04em;
+    }
+    .call-name {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .call-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .call-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.72rem;
+      transition: transform 140ms var(--ease-spring), background-color 160ms ease;
+    }
+
+    .call-circle:active { transform: scale(0.9); }
+    .c-red { background: #ff3b30; color: #ffffff; }
+    .c-green { background: #34c759; color: #ffffff; }
+    .c-dark { background: #3a3a3c; color: #ffffff; }
+    .c-white { background: #ffffff; color: #000000; }
+
+    /* Earbuds Panel */
+    .earbuds-panel {
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .ring-group {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .mini-ring {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: conic-gradient(var(--green) 0deg 315deg, #2a2a2e 315deg);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      font-weight: 700;
+    }
+
+    .mini-ring span {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #000000;
+      display: grid;
+      place-items: center;
+    }
+
+    /* Charging Panel */
+    .charging-panel {
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+    }
+
+    /* Mock screen inside phone */
+    .mock-home {
+      margin-top: 96px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mock-widget {
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px;
+    }
+
+    .mock-clock {
+      font-family: var(--mono);
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .mock-hint {
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .mock-icons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .mock-app {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .mock-app.accent {
+      background: #000000;
+      border-color: rgba(255, 255, 255, 0.35);
+      color: #ffffff;
+    }
+
+    .home-pill-indicator {
+      width: 96px;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.35);
+      margin: 0 auto;
+    }
+
+    /* Bento Grid (GetLayers-inspired cards with spotlight & scroll reveal) */
+    section { padding: 48px 0; }
+
+    .section-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .section-kicker {
+      font-family: var(--mono);
+      font-size: 0.72rem;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     .section-title {
-      margin: 0 0 24px;
+      margin: 0;
       font-family: var(--mono);
-      font-size: 1.45rem;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
+      font-size: clamp(1.35rem, 3vw, 1.85rem);
+      letter-spacing: -0.01em;
     }
 
-    .grid {
+    .bento-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: 1fr;
       gap: 16px;
     }
 
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
+    @media (min-width: 760px) {
+      .bento-grid {
+        grid-template-columns: repeat(6, 1fr);
+      }
+      .span-3 { grid-column: span 3; }
+      .span-2 { grid-column: span 2; }
+      .span-4 { grid-column: span 4; }
     }
 
-    .card-tag {
-      display: inline-block;
+    .card {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      overflow: hidden;
+      transition: border-color 200ms ease, transform 240ms var(--ease-spring);
+      opacity: 0;
+      transform: translateY(18px);
+    }
+
+    .card.revealed {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 420ms var(--ease-spring), transform 420ms var(--ease-spring), border-color 200ms ease;
+    }
+
+    .card:hover {
+      border-color: var(--border-strong);
+    }
+
+    /* Cursor spotlight sheen on hover */
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 255, 255, 0.065), transparent 60%);
+      opacity: 0;
+      transition: opacity 220ms ease;
+      pointer-events: none;
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .card-pill {
       font-family: var(--mono);
-      font-size: 0.68rem;
-      letter-spacing: 0.12em;
+      font-size: 0.66rem;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 10px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border);
+      color: var(--muted);
     }
 
     .card h3 {
       margin: 0 0 8px;
       font-family: var(--mono);
-      font-size: 1rem;
-      letter-spacing: 0.04em;
+      font-size: 1.05rem;
     }
 
     .card p {
       margin: 0;
-      font-size: 0.92rem;
-      color: var(--text-muted);
+      color: var(--muted);
+      font-size: 0.9rem;
     }
+
+    /* Interactive Mini Demos Inside Bento Cards */
+    .mini-demo {
+      margin-top: 18px;
+      border-radius: 14px;
+      background: #08080a;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 14px;
+    }
+
+    .gesture-track {
+      position: relative;
+      height: 44px;
+      border-radius: 22px;
+      background: #16161a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      cursor: ew-resize;
+    }
+
+    .gesture-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 64%;
+      background: rgba(215, 25, 33, 0.28);
+      border-right: 3px solid var(--accent);
+      pointer-events: none;
+    }
+
+    .gesture-label {
+      position: relative;
+      z-index: 1;
+      height: 100%;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 0.74rem;
+      pointer-events: none;
+    }
+
+    /* Mascot Mini Stage */
+    .mascot-stage {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .mascot-pills {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mascot-chip {
+      padding: 6px 10px;
+      border-radius: 9px;
+      border: 1px solid var(--border);
+      background: #141418;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .mascot-chip.active {
+      background: #ffffff;
+      color: #000000;
+      border-color: #ffffff;
+    }
+
+    .mascot-canvas {
+      width: 56px;
+      height: 42px;
+      border-radius: 14px;
+      background: #000000;
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    /* Game-mode switch demo */
+    .game-demo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .toggle-pill {
+      width: 48px;
+      height: 26px;
+      border-radius: 999px;
+      background: var(--accent);
+      padding: 3px;
+      display: flex;
+      align-items: center;
+      transition: background-color 180ms ease;
+    }
+
+    .toggle-pill[data-on="false"] { background: #2c2c32; }
+    .toggle-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      transform: translateX(22px);
+      transition: transform 240ms var(--ease-spring);
+    }
+    .toggle-pill[data-on="false"] .toggle-thumb { transform: translateX(0); }
 
     /* Install Steps */
     .steps {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 16px;
-    }
-
-    .step {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
     }
 
     .step-num {
       font-family: var(--mono);
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: var(--accent);
       letter-spacing: 0.14em;
       margin-bottom: 8px;
     }
 
-    .step h3 {
-      margin: 0 0 8px;
+    /* Floating Bottom Action Pill (Layers floating bar) */
+    .floating-cta {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(14px);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 60;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 8px 7px 16px;
+      border-radius: 999px;
+      background: rgba(16, 16, 19, 0.86);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.75);
       font-family: var(--mono);
-      font-size: 0.98rem;
+      font-size: 0.74rem;
+      transition: opacity 220ms ease, transform 280ms var(--ease-spring);
     }
 
-    .step p {
-      margin: 0;
-      font-size: 0.9rem;
-      color: var(--text-muted);
+    .floating-cta.visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
     }
 
-    /* Footer */
+    .floating-cta a {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #ffffff;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
     footer {
-      margin-top: 48px;
-      padding: 28px 0 40px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 32px;
+      padding: 28px 0 36px;
+      border-top: 1px solid var(--border);
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
       font-family: var(--mono);
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    footer a:hover {
-      color: var(--text);
+      font-size: 0.76rem;
+      color: var(--muted);
     }
 
     .footer-links {
       display: flex;
-      gap: 20px;
+      gap: 18px;
+    }
+
+    .footer-links a:hover { color: #ffffff; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .card { opacity: 1; transform: none; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="container nav">
-      <a class="brand" href="index.html">
+  <header class="hdr-wrap">
+    <div class="container nav-bar">
+      <a class="nav-pill" href="index.html">
         <span class="brand-dot" aria-hidden="true"></span>
         <span>DOT ISLAND</span>
       </a>
-      <nav class="nav-links" aria-label="Primary navigation">
-        <a href="#features">Features</a>
+      <nav class="nav-pill nav-center" aria-label="Section links">
+        <a href="#features">Showcase</a>
+        <a href="#compatibility">Cutouts</a>
         <a href="#install">Install</a>
         <a href="privacy.html">Privacy</a>
-        <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">GitHub</a>
       </nav>
+      <a class="nav-pill nav-dl" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
+        Get v1.0.1
+      </a>
     </div>
   </header>
 
   <main class="container">
     <section class="hero">
-      <div class="hero-icon-wrap">
-        <!-- SVG version of the Dot-Cat Perched on Glowing Capsule icon -->
-        <svg class="hero-icon" viewBox="0 0 108 108" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dot Island Dot-Cat launcher icon">
-          <defs>
-            <filter id="capsuleGlow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="1.8" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <rect width="108" height="108" rx="22" fill="#000000" />
-          <!-- Dark charcoal capsule body -->
-          <rect x="28" y="52.5" width="52" height="18" rx="9" fill="#1C1C1E" />
-          <!-- Subtle punch-hole lens -->
-          <circle cx="36.2" cy="61.5" r="3.8" fill="#0D0D10" />
-          <circle cx="36.2" cy="61.5" r="2.2" fill="#18181D" />
-          <!-- Glowing white dot-matrix capsule outline -->
-          <rect x="28" y="52.5" width="52" height="18" rx="9" fill="none" stroke="#FFFFFF" stroke-width="1.45" stroke-linecap="round" stroke-dasharray="0.1 2.55" filter="url(#capsuleGlow)" />
-          <!-- DotCat pixel silhouette perched on top-right shoulder -->
-          <g fill="#FFFFFF">
-            <!-- Ears -->
-            <rect x="51.26" y="33.2" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="33.2" width="1.44" height="1.44" rx="0.28" />
-            <rect x="51.26" y="34.96" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="34.96" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="34.96" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="34.96" width="1.44" height="1.44" rx="0.28" />
-            <!-- Head top -->
-            <rect x="51.26" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="36.72" width="1.44" height="1.44" rx="0.28" />
-            <!-- Face around eyes -->
-            <rect x="51.26" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <!-- Cheeks -->
-            <rect x="51.26" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="40.24" width="1.44" height="1.44" rx="0.28" />
-            <!-- Neck -->
-            <rect x="53.02" y="42.0" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="42.0" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="42.0" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="42.0" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="42.0" width="1.44" height="1.44" rx="0.28" />
-            <!-- Torso + Tail -->
-            <rect x="53.02" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="43.76" width="1.44" height="1.44" rx="0.28" />
-            <rect x="67.10" y="43.76" width="1.44" height="1.44" rx="0.28" />
-
-            <rect x="51.26" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="63.58" y="45.52" width="1.44" height="1.44" rx="0.28" />
-            <rect x="67.10" y="45.52" width="1.44" height="1.44" rx="0.28" />
-
-            <rect x="51.26" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="63.58" y="47.28" width="1.44" height="1.44" rx="0.28" />
-            <rect x="65.34" y="47.28" width="1.44" height="1.44" rx="0.28" />
-
-            <rect x="51.26" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="54.78" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="56.54" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <rect x="63.58" y="49.04" width="1.44" height="1.44" rx="0.28" />
-            <!-- Paws on capsule -->
-            <rect x="51.26" y="50.80" width="1.44" height="1.44" rx="0.28" />
-            <rect x="53.02" y="50.80" width="1.44" height="1.44" rx="0.28" />
-            <rect x="60.06" y="50.80" width="1.44" height="1.44" rx="0.28" />
-            <rect x="61.82" y="50.80" width="1.44" height="1.44" rx="0.28" />
-          </g>
-          <!-- Nothing-Red Pixel Eyes -->
-          <g fill="#D71921">
-            <rect x="54.78" y="38.48" width="1.44" height="1.44" rx="0.28" />
-            <rect x="58.30" y="38.48" width="1.44" height="1.44" rx="0.28" />
-          </g>
-          <!-- Floating Zzz dots -->
-          <g fill="#FFFFFF">
-            <rect x="68.2" y="29.8" width="1.0" height="1.0" rx="0.2" />
-            <rect x="69.5" y="29.8" width="1.0" height="1.0" rx="0.2" />
-            <rect x="70.8" y="29.8" width="1.0" height="1.0" rx="0.2" />
-            <rect x="69.5" y="31.1" width="1.0" height="1.0" rx="0.2" />
-            <rect x="68.2" y="32.4" width="1.0" height="1.0" rx="0.2" />
-            <rect x="69.5" y="32.4" width="1.0" height="1.0" rx="0.2" />
-            <rect x="70.8" y="32.4" width="1.0" height="1.0" rx="0.2" />
-          </g>
-          <g fill="#B8B8C0">
-            <rect x="65.0" y="34.8" width="0.85" height="0.85" rx="0.2" />
-            <rect x="66.1" y="34.8" width="0.85" height="0.85" rx="0.2" />
-            <rect x="67.2" y="34.8" width="0.85" height="0.85" rx="0.2" />
-            <rect x="66.1" y="35.9" width="0.85" height="0.85" rx="0.2" />
-            <rect x="65.0" y="37.0" width="0.85" height="0.85" rx="0.2" />
-            <rect x="66.1" y="37.0" width="0.85" height="0.85" rx="0.2" />
-            <rect x="67.2" y="37.0" width="0.85" height="0.85" rx="0.2" />
-          </g>
-        </svg>
-      </div>
-
       <div>
-        <span class="badge">ANDROID 10+ • ZERO TELEMETRY • ON-DEVICE</span>
-      </div>
-      <h1>Dot Island</h1>
-      <p class="subtitle">
-        Dynamic Capsule, Live Activities &amp; Reactive Pixel Companions for Android
-      </p>
-
-      <div class="cta-row">
-        <a class="btn btn-primary" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
-          Download Latest APK
-        </a>
-        <a class="btn btn-secondary" href="https://github.com/sumitsinghjatav64-creator/nothing-island">
-          View Source
-        </a>
-      </div>
-      <div class="hero-meta">
-        SIGNED RELEASE v1.0.0 • ANDROID 10+ (API 29+) • MINIMAL AMOLED ENGINE
-      </div>
-    </section>
-
-    <section id="features">
-      <div class="section-label">CAPABILITIES</div>
-      <h2 class="section-title">Precision Punch-Hole Architecture</h2>
-      <div class="grid">
-        <article class="card">
-          <span class="card-tag">01 • GEOMETRY STUDIO</span>
-          <h3>Universal Camera Cutout Calibration</h3>
-          <p>Detects `DisplayCutout` bounds automatically and gives fine X/Y offset calibration so the capsule wraps cleanly around center or corner punch-holes without clipping status bar icons.</p>
-        </article>
-        <article class="card">
-          <span class="card-tag">02 • TELEPHONY</span>
-          <h3>3-State Call UI &amp; Loudspeaker Routing</h3>
-          <p>Smoothly transitions between compact live call pill, incoming answer/decline controls, and connected speakerphone routing built for Android 12+ audio APIs.</p>
-        </article>
-        <article class="card">
-          <span class="card-tag">03 • LIVE ACTIVITIES</span>
-          <h3>Live Music &amp; Charging Pills</h3>
-          <p>Interruptible spring-physics capsules for playback controls, real-time audio visualizers, Bluetooth peripheral battery alerts, and fast-charging telemetry.</p>
-        </article>
-        <article class="card">
-          <span class="card-tag">04 • MASCOT STUDIO</span>
-          <h3>Interactive Pixel Mascots</h3>
-          <p>Bring your notch to life with <strong>DotCat</strong>, <strong>GlyphOrb</strong>, and <strong>TapeBuddy</strong> — lightweight Compose pixel companions reacting to idle, music, calls, charging, and taps.</p>
-        </article>
-        <article class="card">
-          <span class="card-tag">05 • GAMING COMFORT</span>
-          <h3>Game-Mode Auto-Hide</h3>
-          <p>Automatically hides the floating capsule (`CATEGORY_GAME` or landscape immersive fullscreen) so HUD controls stay unobstructed and restores it the moment you exit.</p>
-        </article>
-      </div>
-    </section>
-
-    <section id="install">
-      <div class="section-label">QUICK SETUP</div>
-      <h2 class="section-title">3-Step Installation</h2>
-      <div class="steps">
-        <div class="step">
-          <div class="step-num">STEP 01</div>
-          <h3>Download APK</h3>
-          <p>Grab signed <strong>DotIsland-v1.0.0.apk</strong> from the latest GitHub Release using the button above.</p>
+        <div class="eyebrow">
+          <span><strong>v1.0.1</strong> • ANDROID 10+ • ZERO TELEMETRY</span>
         </div>
-        <div class="step">
+        <h1>Dot Island</h1>
+        <p class="hero-sub">
+          Dynamic Capsule, Live Activities &amp; Reactive Pixel Companions for Android.
+        </p>
+
+        <div class="hero-ctas">
+          <span class="btn-glow-wrap">
+            <a class="btn btn-primary" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
+              <span>Download Latest APK</span>
+              <span class="arrow-lift" aria-hidden="true">↗</span>
+            </a>
+          </span>
+          <a class="btn btn-secondary" href="#install">
+            <span>3-Step Setup</span>
+          </a>
+        </div>
+
+        <!-- Live Capsule Mode Switcher -->
+        <div class="control-block">
+          <div class="control-label">LIVE CAPSULE PREVIEW — TAP TO MORPH</div>
+          <div class="sliding-tabs" id="modeTabs" role="tablist" aria-label="Dot Island live modes">
+            <span class="tabs-thumb" aria-hidden="true"></span>
+            <button class="tab-btn" role="tab" aria-selected="true" data-mode="dotcat">DotCat</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-mode="music">Now Playing</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-mode="call">Incoming Call</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-mode="earbuds">Earbuds</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-mode="charging">Charging</button>
+          </div>
+        </div>
+
+        <!-- Cutout Alignment Switcher -->
+        <div class="control-block" id="compatibility">
+          <div class="control-label">UNIVERSAL CUTOUT ALIGNMENT — WORKS ON ALL ANDROID PHONES</div>
+          <div class="sliding-tabs" id="cutoutTabs" role="tablist" aria-label="Camera cutout position">
+            <span class="tabs-thumb" aria-hidden="true"></span>
+            <button class="tab-btn" role="tab" aria-selected="true" data-cutout="center">Center Punch-Hole</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-cutout="left">Left Punch-Hole</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-cutout="wide">Wide Pill</button>
+          </div>
+          <div class="oem-strip" aria-label="Supported Android skins">
+            <span class="oem-chip">Nothing OS</span>
+            <span class="oem-chip">Google Pixel</span>
+            <span class="oem-chip">Samsung One UI</span>
+            <span class="oem-chip">OnePlus OxygenOS</span>
+            <span class="oem-chip">Xiaomi HyperOS</span>
+            <span class="oem-chip">Motorola</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Android Phone Simulator -->
+      <div class="phone-stage">
+        <div class="phone-chassis">
+          <div class="phone-screen" id="phoneScreen" data-cutout="center">
+            <div class="status-bar">
+              <span>16:20</span>
+              <span>5G+ • 84%</span>
+            </div>
+            <div class="camera-lens" aria-hidden="true"></div>
+
+            <div class="island-anchor">
+              <div class="capsule" id="islandCapsule" data-mode="dotcat" data-call-state="ringing">
+                <!-- 1. DotCat Companion -->
+                <div class="cap-panel dotcat-row active" data-panel="dotcat" id="dotcatPanel" title="Tap DotCat to purr">
+                  <svg id="dotcatSvg" width="24" height="22" viewBox="0 0 11 10" xmlns="http://www.w3.org/2000/svg" aria-label="DotCat pixel mascot">
+                    <g fill="#FFFFFF">
+                      <rect x="1" y="0" width="1" height="1"/><rect x="7" y="0" width="1" height="1"/>
+                      <rect x="1" y="1" width="2" height="1"/><rect x="6" y="1" width="2" height="1"/>
+                      <rect x="1" y="2" width="7" height="1"/>
+                      <rect x="1" y="3" width="2" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="2" height="1"/>
+                      <rect x="1" y="4" width="7" height="1"/>
+                      <rect x="2" y="5" width="5" height="1"/>
+                      <rect x="2" y="6" width="6" height="1"/><rect x="10" y="6" width="1" height="1"/>
+                      <rect x="1" y="7" width="8" height="1"/><rect x="10" y="7" width="1" height="1"/>
+                      <rect x="1" y="8" width="9" height="1"/>
+                      <rect x="1" y="9" width="2" height="1"/><rect x="6" y="9" width="2" height="1"/>
+                    </g>
+                    <g fill="#D71921" class="eye-blink">
+                      <rect x="3" y="3" width="1" height="1"/>
+                      <rect x="5" y="3" width="1" height="1"/>
+                    </g>
+                  </svg>
+                  <span class="dotcat-msg" id="dotcatMsg">TAP CAT</span>
+                </div>
+
+                <!-- 2. Now Playing -->
+                <div class="cap-panel music-panel" data-panel="music" id="musicPanel">
+                  <div class="album-art">DI</div>
+                  <div class="music-meta">
+                    <div class="music-title">Midnight Matrix</div>
+                    <div class="music-artist">Dot Island Audio • BT</div>
+                    <div class="eq-bars" id="eqBars">
+                      <span class="eq-bar"></span>
+                      <span class="eq-bar"></span>
+                      <span class="eq-bar"></span>
+                      <span class="eq-bar"></span>
+                      <span class="eq-bar"></span>
+                    </div>
+                  </div>
+                  <button class="mini-play-btn" id="playPauseBtn" aria-label="Toggle playback">❚❚</button>
+                </div>
+
+                <!-- 3. 3-State Call UI -->
+                <div class="cap-panel call-panel" data-panel="call" id="callPanel">
+                  <div class="caller-avatar" id="callAvatar">DW</div>
+                  <div class="call-info">
+                    <div class="call-sub" id="callSub">Incoming Call</div>
+                    <div class="call-name" id="callName">Daisy Williams</div>
+                  </div>
+                  <div class="call-actions" id="callActions">
+                    <button class="call-circle c-red" id="callDeclineBtn" aria-label="Decline call">✕</button>
+                    <button class="call-circle c-green" id="callAnswerBtn" aria-label="Answer call">✓</button>
+                  </div>
+                </div>
+
+                <!-- 4. Earbuds Connected -->
+                <div class="cap-panel earbuds-panel" data-panel="earbuds">
+                  <div style="min-width:0;">
+                    <div style="font-family:var(--mono);font-size:0.6rem;color:var(--muted);">CONNECTED • L 100% · R 95%</div>
+                    <div style="font-family:var(--mono);font-size:0.78rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Ear (a) Stereo</div>
+                  </div>
+                  <div class="ring-group">
+                    <div class="mini-ring"><span>100</span></div>
+                    <div class="mini-ring" style="background:conic-gradient(var(--green) 0deg 290deg, #2a2a2e 290deg);"><span>80</span></div>
+                  </div>
+                </div>
+
+                <!-- 5. Fast Charging -->
+                <div class="cap-panel charging-panel" data-panel="charging">
+                  <span style="color:var(--green);font-weight:700;">⚡ 65W FAST</span>
+                  <span style="color:var(--muted);">36°C</span>
+                  <span style="color:#ffffff;font-weight:700;">84%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mock-home">
+              <div class="mock-widget">
+                <div class="mock-clock">16:20</div>
+                <div class="mock-hint" id="simHint">Cutout: Center Punch-Hole • Tap capsule or pills</div>
+              </div>
+              <div class="mock-icons">
+                <div class="mock-app accent">DI</div>
+                <div class="mock-app">♪</div>
+                <div class="mock-app">✆</div>
+                <div class="mock-app">⚙</div>
+              </div>
+            </div>
+
+            <div class="home-pill-indicator" aria-hidden="true"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bento Grid -->
+    <section id="features">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">DESIGN ENGINEERING</div>
+          <h2 class="section-title">Crafted for 120Hz Physics &amp; Daily Restraint</h2>
+        </div>
+      </div>
+
+      <div class="bento-grid">
+        <!-- 1:1 Gesture Physics -->
+        <article class="card span-3" data-reveal>
+          <div class="card-top">
+            <span class="card-pill">01 • 1:1 TRACKING</span>
+            <span class="arrow-lift">↗</span>
+          </div>
+          <h3>1:1 Gesture Physics &amp; Interruptible Springs</h3>
+          <p>Zero syrup lag while dragging quick sliders or swiping alerts. Release hands off seamlessly to velocity-seeded springs.</p>
+          <div class="mini-demo">
+            <div class="gesture-track" id="gestureDemoTrack" aria-label="Interactive 1:1 volume slider demo">
+              <div class="gesture-fill" id="gestureFill"></div>
+              <div class="gesture-label">
+                <span>♪ VOLUME SLIDER (DRAG ME 1:1)</span>
+                <strong id="gesturePct">64%</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Reactive Pixel Companions -->
+        <article class="card span-3" data-reveal>
+          <div class="card-top">
+            <span class="card-pill">02 • MASCOT STUDIO</span>
+            <span class="arrow-lift">↗</span>
+          </div>
+          <h3>Reactive Pixel Companions</h3>
+          <p>Lightweight Compose <code>Canvas</code> mascots react to idle, music playback, active calls, charging, and taps.</p>
+          <div class="mini-demo mascot-stage">
+            <div class="mascot-pills" id="mascotPicker">
+              <button class="mascot-chip active" data-mascot="DotCat">DotCat</button>
+              <button class="mascot-chip" data-mascot="GlyphOrb">GlyphOrb</button>
+              <button class="mascot-chip" data-mascot="TapeBuddy">TapeBuddy</button>
+            </div>
+            <div class="mascot-canvas" id="mascotMiniBox"></div>
+          </div>
+        </article>
+
+        <!-- 3-State Call UI -->
+        <article class="card span-2" data-reveal>
+          <div class="card-top">
+            <span class="card-pill">03 • TELEPHONY</span>
+          </div>
+          <h3>3-State Call UI &amp; Loudspeaker</h3>
+          <p>Incoming answer/decline, active connected controls with Android 12+ loudspeaker routing, and compact waveform pill.</p>
+        </article>
+
+        <!-- Smart Game Mode -->
+        <article class="card span-2" data-reveal>
+          <div class="card-top">
+            <span class="card-pill">04 • GAMING</span>
+          </div>
+          <h3>Smart Game-Mode Auto-Hide</h3>
+          <p>Detects <code>CATEGORY_GAME</code> or landscape fullscreen automatically so HUD buttons stay touchable.</p>
+          <div class="mini-demo game-demo-row">
+            <span style="font-family:var(--mono);font-size:0.72rem;" id="gameStateText">ISLAND HIDDEN IN GAME</span>
+            <button class="toggle-pill" id="gameToggle" data-on="true" aria-label="Toggle Game-Mode Auto-Hide demo">
+              <span class="toggle-thumb"></span>
+            </button>
+          </div>
+        </article>
+
+        <!-- Zero Telemetry Privacy -->
+        <article class="card span-2" data-reveal>
+          <div class="card-top">
+            <span class="card-pill">05 • ZERO TELEMETRY</span>
+            <a href="privacy.html" class="arrow-lift" aria-label="Read Privacy Policy">↗</a>
+          </div>
+          <h3>100% On-Device Processing</h3>
+          <p>Zero network trackers, zero analytics, and zero message logging. All parsing runs locally in memory. <a href="privacy.html" style="color:#fff;text-decoration:underline;">Read policy</a>.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- 3-Step Install Flow -->
+    <section id="install">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">GET STARTED IN 60 SECONDS</div>
+          <h2 class="section-title">3-Step Installation</h2>
+        </div>
+      </div>
+      <div class="steps">
+        <div class="card" data-reveal>
+          <div class="step-num">STEP 01</div>
+          <h3>Download Signed APK</h3>
+          <p>Grab <strong>DotIsland-v1.0.1.apk</strong> directly from GitHub Releases and allow installing from your browser.</p>
+        </div>
+        <div class="card" data-reveal>
           <div class="step-num">STEP 02</div>
           <h3>Grant Core Permissions</h3>
-          <p>Allow installing unknown apps, then enable <strong>Display over other apps</strong> and <strong>Notification access</strong> inside Dot Island.</p>
+          <p>Enable <strong>Display over other apps</strong> and <strong>Notification access</strong> (plus optional Accessibility for global screenshots).</p>
         </div>
-        <div class="step">
+        <div class="card" data-reveal>
           <div class="step-num">STEP 03</div>
-          <h3>Calibrate Cutout</h3>
-          <p>Open <strong>Studios → Geometry Calibration</strong> to align the capsule around your front camera and tap <strong>Start Dot Island</strong>.</p>
+          <h3>Calibrate &amp; Launch</h3>
+          <p>Open <strong>Studios → Geometry Calibration</strong> to align around your punch-hole and tap <strong>Start Dot Island</strong>.</p>
         </div>
       </div>
     </section>
   </main>
 
+  <div class="floating-cta" id="floatingCta">
+    <span>Dot Island v1.0.1</span>
+    <a href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">Download APK ↗</a>
+  </div>
+
   <footer class="container">
-    <span>DOT ISLAND • ON-DEVICE PUNCH-HOLE OVERLAY</span>
+    <span>DOT ISLAND • DYNAMIC CAPSULE FOR ANDROID 10+</span>
     <div class="footer-links">
       <a href="privacy.html">Privacy Policy</a>
       <a href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">Releases</a>
-      <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">Source</a>
+      <a href="https://github.com/sumitsinghjatav64-creator/nothing-island">Source Code</a>
     </div>
   </footer>
+
+  <script>
+    (function () {
+      // 1. Sliding pill tab indicator (Layers-style transform animation)
+      function initSlidingTabs(containerId, onSelect) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        const thumb = container.querySelector(".tabs-thumb");
+        const buttons = Array.from(container.querySelectorAll(".tab-btn"));
+
+        function positionThumb(btn) {
+          if (!btn || !thumb) return;
+          thumb.style.width = btn.offsetWidth + "px";
+          thumb.style.height = btn.offsetHeight + "px";
+          thumb.style.transform = "translate3d(" + btn.offsetLeft + "px, " + btn.offsetTop + "px, 0)";
+        }
+
+        const initial = buttons.find(b => b.getAttribute("aria-selected") === "true") || buttons[0];
+        requestAnimationFrame(() => positionThumb(initial));
+        window.addEventListener("resize", () => {
+          const active = buttons.find(b => b.getAttribute("aria-selected") === "true") || buttons[0];
+          positionThumb(active);
+        });
+
+        buttons.forEach(btn => {
+          btn.addEventListener("click", () => {
+            buttons.forEach(b => b.setAttribute("aria-selected", b === btn ? "true" : "false"));
+            positionThumb(btn);
+            onSelect(btn);
+          });
+        });
+      }
+
+      const capsule = document.getElementById("islandCapsule");
+      const phoneScreen = document.getElementById("phoneScreen");
+      const simHint = document.getElementById("simHint");
+
+      // Hero mode switching
+      initSlidingTabs("modeTabs", btn => {
+        const mode = btn.getAttribute("data-mode");
+        capsule.setAttribute("data-mode", mode);
+        if (mode !== "call") capsule.removeAttribute("data-call-state");
+        document.querySelectorAll(".cap-panel").forEach(p => {
+          p.classList.toggle("active", p.getAttribute("data-panel") === mode);
+        });
+      });
+
+      // Cutout switcher
+      initSlidingTabs("cutoutTabs", btn => {
+        const pos = btn.getAttribute("data-cutout");
+        phoneScreen.setAttribute("data-cutout", pos);
+        const label = pos === "left" ? "Left Punch-Hole" : (pos === "wide" ? "Wide Pill" : "Center Punch-Hole");
+        simHint.textContent = "Cutout: " + label + " • Tap capsule or pills";
+      });
+
+      // Interactive DotCat purr on tap
+      const dotcatPanel = document.getElementById("dotcatPanel");
+      const dotcatSvg = document.getElementById("dotcatSvg");
+      const dotcatMsg = document.getElementById("dotcatMsg");
+      if (dotcatPanel) {
+        dotcatPanel.addEventListener("click", () => {
+          dotcatSvg.classList.remove("purr-hop");
+          void dotcatSvg.offsetWidth;
+          dotcatSvg.classList.add("purr-hop");
+          dotcatMsg.textContent = "PURR ♥";
+          dotcatMsg.style.color = "#ffffff";
+          setTimeout(() => {
+            dotcatMsg.textContent = "TAP CAT";
+            dotcatMsg.style.color = "";
+          }, 950);
+        });
+      }
+
+      // Interactive Now Playing play/pause
+      const playBtn = document.getElementById("playPauseBtn");
+      const eqBars = document.getElementById("eqBars");
+      if (playBtn && eqBars) {
+        let playing = true;
+        playBtn.addEventListener("click", e => {
+          e.stopPropagation();
+          playing = !playing;
+          playBtn.textContent = playing ? "❚❚" : "▶";
+          eqBars.classList.toggle("paused", !playing);
+        });
+      }
+
+      // Interactive 3-state Call UI (Ringing -> Connected -> Compact)
+      const callSub = document.getElementById("callSub");
+      const callActions = document.getElementById("callActions");
+      let callPhase = "ringing";
+      let speakerOn = false;
+
+      function renderCallActions() {
+        if (callPhase === "ringing") {
+          capsule.setAttribute("data-call-state", "ringing");
+          callSub.textContent = "Incoming Call";
+          callSub.style.color = "var(--muted)";
+          callActions.innerHTML =
+            '<button class="call-circle c-red" id="cDecline" aria-label="Decline">✕</button>' +
+            '<button class="call-circle c-green" id="cAnswer" aria-label="Answer">✓</button>';
+          document.getElementById("cAnswer").onclick = () => { callPhase = "connected"; renderCallActions(); };
+          document.getElementById("cDecline").onclick = () => { callPhase = "compact"; renderCallActions(); };
+        } else if (callPhase === "connected") {
+          capsule.setAttribute("data-call-state", "connected");
+          callSub.textContent = "00:05 • LIVE";
+          callSub.style.color = "var(--green)";
+          callActions.innerHTML =
+            '<button class="call-circle ' + (speakerOn ? 'c-white' : 'c-dark') + '" id="cSpk" aria-label="Speaker">🔊</button>' +
+            '<button class="call-circle c-red" id="cEnd" aria-label="End">✕</button>';
+          document.getElementById("cSpk").onclick = () => { speakerOn = !speakerOn; renderCallActions(); };
+          document.getElementById("cEnd").onclick = () => { callPhase = "ringing"; renderCallActions(); };
+        } else {
+          capsule.setAttribute("data-call-state", "compact");
+          callSub.textContent = "00:05";
+          callSub.style.color = "var(--green)";
+          callActions.innerHTML =
+            '<button class="call-circle c-green" id="cExpand" aria-label="Expand Call">↗</button>';
+          document.getElementById("cExpand").onclick = () => { callPhase = "ringing"; renderCallActions(); };
+        }
+      }
+      renderCallActions();
+
+      // 1:1 Gesture Slider Demo inside Bento Card
+      const track = document.getElementById("gestureDemoTrack");
+      const fill = document.getElementById("gestureFill");
+      const pctEl = document.getElementById("gesturePct");
+      if (track && fill && pctEl) {
+        let dragging = false;
+        function updateSlider(clientX) {
+          const rect = track.getBoundingClientRect();
+          const p = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+          const pct = Math.round(p * 100);
+          fill.style.width = pct + "%";
+          pctEl.textContent = pct + "%";
+        }
+        track.addEventListener("pointerdown", e => {
+          dragging = true;
+          track.setPointerCapture(e.pointerId);
+          updateSlider(e.clientX);
+        });
+        track.addEventListener("pointermove", e => { if (dragging) updateSlider(e.clientX); });
+        track.addEventListener("pointerup", () => { dragging = false; });
+        track.addEventListener("pointercancel", () => { dragging = false; });
+      }
+
+      // Mini Mascot Switcher
+      const mascotBox = document.getElementById("mascotMiniBox");
+      const mascotChips = Array.from(document.querySelectorAll(".mascot-chip"));
+      const mascotSvgs = {
+        DotCat: '<svg width="24" height="22" viewBox="0 0 11 10"><rect x="1" y="0" width="1" height="1" fill="#fff"/><rect x="7" y="0" width="1" height="1" fill="#fff"/><rect x="1" y="2" width="7" height="5" fill="#fff"/><rect x="3" y="3" width="1" height="1" fill="#d71921"/><rect x="5" y="3" width="1" height="1" fill="#d71921"/></svg>',
+        GlyphOrb: '<svg width="24" height="24" viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.2" fill="none" stroke="#fff" stroke-width="1.4" stroke-dasharray="2 1.4"/><circle cx="6" cy="6" r="1.5" fill="#d71921"/></svg>',
+        TapeBuddy: '<svg width="28" height="20" viewBox="0 0 14 10"><rect x="1" y="1" width="12" height="8" rx="2" fill="none" stroke="#fff" stroke-width="1.2"/><circle cx="4.5" cy="5" r="1.6" fill="#d71921"/><circle cx="9.5" cy="5" r="1.6" fill="#fff"/></svg>'
+      };
+      if (mascotBox) mascotBox.innerHTML = mascotSvgs.DotCat;
+      mascotChips.forEach(c => {
+        c.addEventListener("click", () => {
+          mascotChips.forEach(x => x.classList.toggle("active", x === c));
+          mascotBox.innerHTML = mascotSvgs[c.getAttribute("data-mascot")];
+        });
+      });
+
+      // Game-mode toggle demo
+      const gameToggle = document.getElementById("gameToggle");
+      const gameText = document.getElementById("gameStateText");
+      if (gameToggle && gameText) {
+        gameToggle.addEventListener("click", () => {
+          const on = gameToggle.getAttribute("data-on") !== "true";
+          gameToggle.setAttribute("data-on", String(on));
+          gameText.textContent = on ? "ISLAND HIDDEN IN GAME" : "ISLAND VISIBLE OVER HUD";
+        });
+      }
+
+      // Cursor spotlight tracking + scroll-driven header blur + floating pill + reveal
+      document.querySelectorAll(".card").forEach(card => {
+        card.addEventListener("pointermove", e => {
+          const r = card.getBoundingClientRect();
+          card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+          card.style.setProperty("--my", (e.clientY - r.top) + "px");
+        });
+      });
+
+      const io = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("revealed");
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll("[data-reveal]").forEach((el, i) => {
+        el.style.transitionDelay = Math.min(i * 45, 220) + "ms";
+        io.observe(el);
+      });
+
+      const floatingCta = document.getElementById("floatingCta");
+      function onScroll() {
+        const y = window.scrollY || 0;
+        const p = Math.min(1, y / 180);
+        document.documentElement.style.setProperty("--hdr-s", p.toFixed(3));
+        if (floatingCta) floatingCta.classList.toggle("visible", y > 420);
+      }
+      window.addEventListener("scroll", onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
 </body>
 </html>

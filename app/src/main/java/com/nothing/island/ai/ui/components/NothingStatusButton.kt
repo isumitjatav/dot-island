@@ -333,7 +333,7 @@ fun NothingFluidToggle(
 
         Box(
             modifier = Modifier
-                .offset(x = offsetDp)
+                .offset { androidx.compose.ui.unit.IntOffset(offsetDp.roundToPx(), 0) }
                 .size(knobSize)
                 .graphicsLayer {
                     scaleX = stretchFactor.coerceIn(1f, 1.35f)

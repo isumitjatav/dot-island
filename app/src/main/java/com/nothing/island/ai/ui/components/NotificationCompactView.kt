@@ -135,7 +135,7 @@ fun NotificationCompactView(
             ) {
                 AppNotificationIcon(
                     packageName = event.packageName,
-                    fallbackChar = event.title.firstOrNull()?.uppercaseChar() ?: 'N',
+                    fallbackChar = TextBreakUtils.extractSafeFallbackChar(event.title, 'N'),
                     size = 18.dp
                 )
             }
@@ -155,9 +155,11 @@ fun NotificationCompactView(
                     text = rightWingText,
                     color = theme.textColorPrimary,
                     fontSize = 11.sp,
+                    lineHeight = 15.sp,
                     fontFamily = theme.bodyFont,
                     fontWeight = theme.bodyFontWeight,
                     maxLines = 1,
+                    softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
             }

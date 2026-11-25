@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import com.nothing.island.ai.IslandOverlayController
 import com.nothing.island.ai.MainActivity
 import com.nothing.island.ai.hardware.TorchCallbackHandler
@@ -157,7 +158,9 @@ fun Modifier.islandGestureDetector(
     onTap: (() -> Unit)? = null,
     onVolumeDrag: ((Float) -> Unit)? = null,
     onSwipeActivity: ((SwipeDirection) -> Unit)? = null,
-    onPressChange: ((Boolean) -> Unit)? = null
+    onPressChange: ((Boolean) -> Unit)? = null,
+    onDragProgress: ((Float, Float) -> Unit)? = null,
+    onDragRelease: ((Float, Float) -> Unit)? = null
 ): Modifier = pointerInput(preferences, isMediaIslandActive) {
     val touchSlop = viewConfiguration.touchSlop
     val longPressTimeoutMs = preferences.longPressDurationMs // default 500L
@@ -251,29 +254,39 @@ fun Modifier.islandGestureDetector(
                 return@awaitEachGesture
             }
 
-            // Phase 4: User moved beyond touch slop before 500ms -> Directional Swipe
+            // Phase 4: User moved beyond touch slop before 500ms -> 1:1 Track & Velocity-Seeded Release
             if (isMovedBeyondSlop) {
+                val velocityTracker = VelocityTracker()
+                velocityTracker.addPosition(down.uptimeMillis, startPosition)
+                onDragProgress?.invoke(totalDragX, totalDragY)
+
                 while (true) {
                     val event = awaitPointerEvent()
                     val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
                     if (change.positionChanged()) {
+                        velocityTracker.addPosition(change.uptimeMillis, change.position)
                         totalDragX = change.position.x - startPosition.x
                         totalDragY = change.position.y - startPosition.y
+                        onDragProgress?.invoke(totalDragX, totalDragY)
                     }
 
                     if (!change.pressed) {
                         change.consume()
                         onPressChange?.invoke(false)
+                        val velocity = velocityTracker.calculateVelocity()
+                        onDragRelease?.invoke(velocity.x, velocity.y)
+
                         val swipeThreshold = 16f
+                        val flickVelocityThreshold = 650f
                         if (abs(totalDragX) > abs(totalDragY)) {
-                            if (totalDragX > swipeThreshold) {
+                            if (totalDragX > swipeThreshold || (totalDragX > 6f && velocity.x > flickVelocityThreshold)) {
                                 if (onSwipeActivity != null) {
                                     onSwipeActivity(SwipeDirection.RIGHT)
                                 } else {
                                     executor.execute(preferences.swipeRightAction)
                                 }
-                            } else if (totalDragX < -swipeThreshold) {
+                            } else if (totalDragX < -swipeThreshold || (totalDragX < -6f && velocity.x < -flickVelocityThreshold)) {
                                 if (onSwipeActivity != null) {
                                     onSwipeActivity(SwipeDirection.LEFT)
                                 } else {
@@ -281,14 +294,14 @@ fun Modifier.islandGestureDetector(
                                 }
                             }
                         } else {
-                            if (totalDragY > swipeThreshold) {
+                            if (totalDragY > swipeThreshold || (totalDragY > 6f && velocity.y > flickVelocityThreshold)) {
                                 // Swipe down opens quick tools drawer
                                 if (onSwipeActivity != null) {
                                     onSwipeActivity(SwipeDirection.DOWN)
                                 } else {
                                     executor.execute(preferences.swipeDownAction)
                                 }
-                            } else if (totalDragY < -swipeThreshold) {
+                            } else if (totalDragY < -swipeThreshold || (totalDragY < -6f && velocity.y < -flickVelocityThreshold)) {
                                 // Swipe up collapses overlay to compact pill
                                 if (onSwipeActivity != null) {
                                     onSwipeActivity(SwipeDirection.UP)
@@ -303,6 +316,9 @@ fun Modifier.islandGestureDetector(
             }
         } finally {
             onPressChange?.invoke(false)
+            if (isMovedBeyondSlop) {
+                onDragRelease?.invoke(0f, 0f)
+            }
         }
     }
 }

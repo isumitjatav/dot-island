@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -127,6 +128,7 @@ fun CallCompactView(
         ) {
             // Left of camera cutout: Green phone vector icon + live green tnum timer
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(5.dp)
             ) {
@@ -134,7 +136,7 @@ fun CallCompactView(
                     imageVector = Icons.Rounded.Call,
                     contentDescription = "Call",
                     tint = greenCallColor,
-                    modifier = Modifier.size(15.dp)
+                    modifier = Modifier.requiredSize(15.dp)
                 )
                 Text(
                     text = when {
@@ -144,17 +146,25 @@ fun CallCompactView(
                     },
                     color = greenCallColor,
                     fontSize = 12.sp,
+                    lineHeight = 16.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
+            // Center 40dp punch-hole clearance dead-zone
+            Spacer(modifier = Modifier.width(40.dp))
+
             // Right of camera cutout: Animated green voice waveform bars
             Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                modifier = Modifier.height(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.End)
             ) {
                 waveHeights.forEach { animatedHeight ->
                     Box(
@@ -236,7 +246,7 @@ fun CallExpandedView(
             // Left: 48.dp circular caller photo / avatar
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .requiredSize(48.dp)
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -253,18 +263,14 @@ fun CallExpandedView(
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
-                    val initials = caller.trim()
-                        .split(" ")
-                        .filter { it.isNotBlank() }
-                        .take(2)
-                        .map { it.first().uppercase() }
-                        .joinToString("")
-                        .ifEmpty { "C" }
+                    val initials = TextBreakUtils.extractAvatarInitials(caller, maxInitials = 2, fallback = "C")
                     Text(
                         text = initials,
                         color = Color.White,
                         fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
             }
@@ -281,25 +287,32 @@ fun CallExpandedView(
                         text = if ((event as? IslandEvent.IncomingCallRinging)?.isVideoCall == true) "Incoming Video Call" else "Incoming Call",
                         color = theme.textColorSecondary,
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         fontFamily = theme.bodyFont,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
                     )
                 } else if (isDialing) {
                     Text(
                         text = "Calling...",
                         color = theme.textColorSecondary,
                         fontSize = 12.sp,
+                        lineHeight = 16.sp,
                         fontFamily = theme.bodyFont,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false
                     )
                 } else {
                     Text(
                         text = formatCallDuration(elapsedSeconds),
                         color = greenCallColor,
                         fontSize = 13.sp,
+                        lineHeight = 17.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
 
@@ -309,9 +322,11 @@ fun CallExpandedView(
                     text = caller,
                     color = theme.textColorPrimary,
                     fontSize = 17.sp,
+                    lineHeight = 22.sp,
                     fontFamily = theme.displayFont,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
+                    softWrap = false,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -327,7 +342,7 @@ fun CallExpandedView(
                     // Red Decline button (phone down vector icon)
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .requiredSize(44.dp)
                             .clip(CircleShape)
                             .background(declineRed)
                             .clickable(onClick = onDecline),
@@ -344,7 +359,7 @@ fun CallExpandedView(
                     // Green Answer button (phone vector icon)
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .requiredSize(44.dp)
                             .clip(CircleShape)
                             .background(answerGreen)
                             .clickable(onClick = onAnswer),
@@ -364,7 +379,7 @@ fun CallExpandedView(
 
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .requiredSize(44.dp)
                             .clip(CircleShape)
                             .background(speakerBg)
                             .clickable(onClick = { onToggleSpeaker?.invoke() }),
@@ -381,7 +396,7 @@ fun CallExpandedView(
                     // Red Hang-up button (phone down vector icon)
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .requiredSize(44.dp)
                             .clip(CircleShape)
                             .background(declineRed)
                             .clickable(onClick = onDecline),

@@ -20,8 +20,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -117,20 +119,20 @@ fun EarbudConnectionView(
     val dropY by animateDpAsState(
         targetValue = if (dropped) 72.dp else 0.dp,
         animationSpec = spring(
-            dampingRatio = 0.38f,
-            stiffness = Spring.StiffnessMediumLow,
+            dampingRatio = 0.72f,
+            stiffness = 460f,
         ),
         label = "earbudDropY",
     )
     val pillWidth by animateDpAsState(
         targetValue = if (dropped) 320.dp else 124.dp,
         animationSpec = spring(
-            dampingRatio = 0.45f,
-            stiffness = Spring.StiffnessLow,
+            dampingRatio = 0.74f,
+            stiffness = 420f,
         ),
         label = "earbudWidth",
     )
-    val pillHeight = 52.dp
+    val pillHeight = 56.dp
 
     val pulse = rememberInfiniteTransition(label = "earbudPulse")
     val ringAlpha by pulse.animateFloat(
@@ -159,17 +161,17 @@ fun EarbudConnectionView(
         modifier = modifier
             .offset { IntOffset(0, dropY.roundToPx()) }
             .width(pillWidth)
-            .height(pillHeight)
+            .heightIn(min = pillHeight)
             .clip(RoundedCornerShape(20.dp))
             .background(NothingPrimaryBackground)
             .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
             .semantics { contentDescription = a11yDescription }
             .clickable(onClick = onTap)
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 20.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(modifier = Modifier.size(34.dp)) {
+            Canvas(modifier = Modifier.requiredSize(34.dp)) {
                 drawEarbuds(this, NothingPrimaryText)
             }
             Spacer(Modifier.width(14.dp))
@@ -178,6 +180,7 @@ fun EarbudConnectionView(
                     text = if (detailLine != null) "CONNECTED · $detailLine" else "CONNECTED",
                     color = NothingSecondaryText,
                     fontSize = 10.5.sp,
+                    lineHeight = 14.sp,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 0.sp,
                     maxLines = 1,
@@ -187,15 +190,17 @@ fun EarbudConnectionView(
                 Text(
                     text = safeName,
                     color = NothingPrimaryText,
-                    fontSize = 17.sp,
+                    fontSize = 16.5.sp,
+                    lineHeight = 22.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    softWrap = false,
                 )
             }
             Spacer(Modifier.width(10.dp))
-            Box(modifier = Modifier.size(38.dp), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.requiredSize(38.dp), contentAlignment = Alignment.Center) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
                     val stroke = 3.dp.toPx()
                     val inset = stroke / 2
@@ -245,7 +250,7 @@ fun EarbudDisconnectedView(
     LaunchedEffect(Unit) { shown = true }
     val dropY by animateDpAsState(
         targetValue = if (shown) 72.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.38f, stiffness = Spring.StiffnessMediumLow),
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
         label = "earbudOffDropY",
     )
     Box(
@@ -262,7 +267,7 @@ fun EarbudDisconnectedView(
         contentAlignment = Alignment.Center,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(modifier = Modifier.size(22.dp)) {
+            Canvas(modifier = Modifier.requiredSize(22.dp)) {
                 drawEarbuds(this, NothingSecondaryText)
             }
             Spacer(Modifier.width(8.dp))
@@ -270,9 +275,12 @@ fun EarbudDisconnectedView(
                 text = "$safeName disconnected",
                 color = NothingSecondaryText,
                 fontSize = 11.sp,
+                lineHeight = 16.sp,
                 fontFamily = FontFamily.Monospace,
                 maxLines = 1,
+                softWrap = false,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
             )
         }
     }

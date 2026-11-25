@@ -567,7 +567,7 @@ fun SettingsScreen(
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Dot Island v1.0.0 (M4.1)",
+                    text = "Dot Island v1.0.1",
                     color = NothingPrimaryText,
                     fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,

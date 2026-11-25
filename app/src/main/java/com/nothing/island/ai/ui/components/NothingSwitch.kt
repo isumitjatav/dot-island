@@ -116,7 +116,7 @@ fun NothingSwitch(
         // Sliding Circular Thumb with fluid elongation
         Box(
             modifier = Modifier
-                .offset(x = offsetDp)
+                .offset { androidx.compose.ui.unit.IntOffset(offsetDp.roundToPx(), 0) }
                 .size(20.dp)
                 .graphicsLayer {
                     scaleX = safeStretch

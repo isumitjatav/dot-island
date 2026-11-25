@@ -22,9 +22,14 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.horizontalDrag
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -505,13 +510,48 @@ fun IslandOverlayView(
 
     var isPressed by remember { mutableStateOf(false) }
     val animatedTactileScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1.0f,
+        targetValue = if (isPressed && !preferences.reducedMotionEnabled) 0.96f else 1.0f,
         animationSpec = spring(
             dampingRatio = signatureTheme.springDampingRatio,
             stiffness = signatureTheme.springStiffness
         ),
         label = "island_tactile_scale"
     )
+
+    // 1:1 rubber-banded drag tracking during gesture, seeded with pointer velocity on release.
+    val gestureScope = rememberCoroutineScope()
+    val dragTranslationX = remember { Animatable(0f) }
+    val dragTranslationY = remember { Animatable(0f) }
+    val handleCompactDragProgress: (Float, Float) -> Unit = remember(preferences.reducedMotionEnabled) {
+        { dx, dy ->
+            if (!preferences.reducedMotionEnabled) {
+                val dampedX = (dx * 0.25f).coerceIn(-28f, 28f)
+                val dampedY = (dy * 0.25f).coerceIn(-18f, 22f)
+                gestureScope.launch {
+                    dragTranslationX.snapTo(dampedX)
+                    dragTranslationY.snapTo(dampedY)
+                }
+            }
+        }
+    }
+    val handleCompactDragRelease: (Float, Float) -> Unit = remember {
+        { vx, vy ->
+            gestureScope.launch {
+                dragTranslationX.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+                    initialVelocity = (vx * 0.22f).coerceIn(-1200f, 1200f)
+                )
+            }
+            gestureScope.launch {
+                dragTranslationY.animateTo(
+                    targetValue = 0f,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+                    initialVelocity = (vy * 0.22f).coerceIn(-1200f, 1200f)
+                )
+            }
+        }
+    }
 
     val rawPillBgHex = preferences.pillBackgroundColorHex
     val capsuleBgColor = when (signatureTheme) {
@@ -573,6 +613,8 @@ fun IslandOverlayView(
                     .graphicsLayer {
                         scaleX = animatedTactileScale
                         scaleY = animatedTactileScale
+                        translationX = dragTranslationX.value
+                        translationY = dragTranslationY.value
                     }
                     .size(width = animatedWidth, height = animatedHeight)
                     .clip(outerCapsuleShape)
@@ -614,19 +656,24 @@ fun IslandOverlayView(
                 AnimatedContent(
                     targetState = if (isExpanded) state.expandedViewType else null,
                     transitionSpec = {
-                        (fadeIn(animationSpec = tween(150)) + scaleIn(
-                            initialScale = 0.92f,
-                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f),
-                            animationSpec = spring(
-                                dampingRatio = signatureTheme.springDampingRatio,
-                                stiffness = signatureTheme.springStiffness
+                        if (preferences.reducedMotionEnabled) {
+                            fadeIn(animationSpec = tween(100)) togetherWith fadeOut(animationSpec = tween(80))
+                        } else {
+                            (fadeIn(animationSpec = tween(160)) + scaleIn(
+                                initialScale = 0.93f,
+                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f),
+                                animationSpec = spring(
+                                    dampingRatio = 0.82f,
+                                    stiffness = 480f
+                                )
+                            )).togetherWith(
+                                fadeOut(animationSpec = tween(100)) + scaleOut(
+                                    targetScale = 0.95f,
+                                    transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f),
+                                    animationSpec = tween(100)
+                                )
                             )
-                        )).togetherWith(
-                            fadeOut(animationSpec = tween(100)) + scaleOut(
-                                targetScale = 0.94f,
-                                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0f)
-                            )
-                        )
+                        }
                     },
                     label = "islandContentTransition"
                 ) { currentExpandedType ->
@@ -747,7 +794,10 @@ fun IslandOverlayView(
                                     executor = gestureExecutor,
                                     isMediaIslandActive = true,
                                     onTap = handleSmartCompactTap,
-                                    onSwipeActivity = onSwipeActivity
+                                    onSwipeActivity = onSwipeActivity,
+                                    onPressChange = { isPressed = it },
+                                    onDragProgress = handleCompactDragProgress,
+                                    onDragRelease = handleCompactDragRelease
                                 )
                             )
                         } else if (isBatteryActive || (batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying)) {
@@ -769,7 +819,10 @@ fun IslandOverlayView(
                                     executor = gestureExecutor,
                                     isMediaIslandActive = false,
                                     onTap = onExpandBattery,
-                                    onSwipeActivity = onSwipeActivity
+                                    onSwipeActivity = onSwipeActivity,
+                                    onPressChange = { isPressed = it },
+                                    onDragProgress = handleCompactDragProgress,
+                                    onDragRelease = handleCompactDragRelease
                                 )
                             )
                         } else {
@@ -815,7 +868,10 @@ fun IslandOverlayView(
                                         executor = gestureExecutor,
                                         isMediaIslandActive = false,
                                         onTap = handleSmartCompactTap,
-                                        onSwipeActivity = onSwipeActivity
+                                        onSwipeActivity = onSwipeActivity,
+                                        onPressChange = { isPressed = it },
+                                        onDragProgress = handleCompactDragProgress,
+                                        onDragRelease = handleCompactDragRelease
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {
@@ -903,18 +959,18 @@ fun IslandOverlayView(
                             animationSpec = if (preferences.reducedMotionEnabled) {
                                 tween(1)
                             } else {
-                                androidx.compose.animation.core.spring(
-                                    dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
-                                    stiffness = androidx.compose.animation.core.Spring.StiffnessMediumLow,
+                                spring(
+                                    dampingRatio = 0.85f,
+                                    stiffness = 480f,
                                 )
                             },
                             label = "notifSlideDown",
                         )
-                        val slideOffsetDp = (1f - reveal) * -28f
+                        val slideOffsetDp = (1f - reveal) * -24f
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .offset(y = slideOffsetDp.dp)
+                                .offset { IntOffset(0, slideOffsetDp.dp.roundToPx()) }
                                 .alpha(reveal)
                         ) {
                         if (presentationToRender != null) {
@@ -1464,7 +1520,10 @@ fun DashboardCard(
                         ) {
                             AppNotificationIcon(
                                 packageName = activeNotification.packageName,
-                                fallbackChar = activeNotification.title.firstOrNull()?.uppercaseChar() ?: 'N',
+                                fallbackChar = com.nothing.island.ai.ui.components.TextBreakUtils.extractSafeFallbackChar(
+                                    activeNotification.title,
+                                    'N'
+                                ),
                                 size = 20.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
@@ -1472,9 +1531,11 @@ fun DashboardCard(
                                 text = activeNotification.title,
                                 color = NothingWhite,
                                 fontSize = 12.5.sp,
+                                lineHeight = 16.sp,
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
+                                softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
@@ -1575,37 +1636,49 @@ fun SwipeableHistoryItem(
             }
         }
 
-        // Draggable foreground item
+        // Draggable foreground item: 1:1 finger tracking + velocity-seeded interruptible spring release
         Box(
             modifier = Modifier
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .pointerInput(key) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            if (abs(offsetX.value) >= dismissThresholdPx) {
-                                coroutineScope.launch {
-                                    val target = if (offsetX.value > 0) size.width.toFloat() else -size.width.toFloat()
-                                    offsetX.animateTo(target)
-                                    onDismiss()
-                                }
-                            } else {
-                                coroutineScope.launch {
-                                    offsetX.animateTo(0f, spring())
-                                }
-                            }
-                        },
-                        onDragCancel = {
-                            coroutineScope.launch {
-                                offsetX.animateTo(0f, spring())
-                            }
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val velocityTracker = VelocityTracker()
+                        velocityTracker.addPosition(down.uptimeMillis, down.position)
+                        val completed = horizontalDrag(down.id) { change ->
+                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+                            val dx = change.positionChange().x
                             change.consume()
                             coroutineScope.launch {
-                                offsetX.snapTo(offsetX.value + dragAmount)
+                                offsetX.snapTo(offsetX.value + dx)
                             }
                         }
-                    )
+                        val vx = velocityTracker.calculateVelocity().x
+                        val shouldDismiss = completed && (abs(offsetX.value) >= dismissThresholdPx || abs(vx) >= 900f)
+                        if (shouldDismiss) {
+                            coroutineScope.launch {
+                                val target = if (vx != 0f && abs(offsetX.value) < dismissThresholdPx) {
+                                    if (vx > 0f) size.width.toFloat() else -size.width.toFloat()
+                                } else {
+                                    if (offsetX.value >= 0f) size.width.toFloat() else -size.width.toFloat()
+                                }
+                                offsetX.animateTo(
+                                    targetValue = target,
+                                    animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f),
+                                    initialVelocity = vx
+                                )
+                                onDismiss()
+                            }
+                        } else {
+                            coroutineScope.launch {
+                                offsetX.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f),
+                                    initialVelocity = vx
+                                )
+                            }
+                        }
+                    }
                 }
         ) {
             content()
@@ -1733,15 +1806,18 @@ fun DashboardHistoryItemRow(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f, fill = false)
+            modifier = Modifier.weight(1f)
         ) {
             AppNotificationIcon(
                 packageName = item.packageName,
-                fallbackChar = item.title.firstOrNull()?.uppercaseChar() ?: 'N',
+                fallbackChar = com.nothing.island.ai.ui.components.TextBreakUtils.extractSafeFallbackChar(
+                    item.title,
+                    'N'
+                ),
                 size = 18.dp
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Column(modifier = Modifier.weight(1f, fill = false)) {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = item.title,
@@ -1749,9 +1825,11 @@ fun DashboardHistoryItemRow(
                         fontSize = 12.5.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
-                        lineHeight = 16.sp,
+                        lineHeight = 17.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     if (!item.isSystemActive) {
                         Spacer(modifier = Modifier.width(4.dp))
@@ -1759,7 +1837,9 @@ fun DashboardHistoryItemRow(
                             text = "(REMOVED)",
                             color = NothingMutedText,
                             fontSize = 8.5.sp,
-                            fontFamily = FontFamily.Monospace
+                            fontFamily = FontFamily.Monospace,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -1769,7 +1849,7 @@ fun DashboardHistoryItemRow(
                         color = NothingWhite.copy(alpha = 0.85f * alpha),
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
-                        lineHeight = 14.sp,
+                        lineHeight = 16.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )

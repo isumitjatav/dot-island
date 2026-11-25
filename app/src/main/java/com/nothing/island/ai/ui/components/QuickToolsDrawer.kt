@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nothing.island.ai.ui.theme.NothingPrimaryAccent
@@ -215,7 +216,9 @@ fun QuickToolTile(
             color = NothingSecondaryText,
             fontSize = 8.sp,
             fontFamily = FontFamily.Monospace,
-            maxLines = 1
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -233,22 +236,27 @@ fun NothingSliderControl(
     modifier: Modifier = Modifier,
     activeColor: Color = Color.White
 ) {
+    val scope = rememberCoroutineScope()
     var isDragging by remember { mutableStateOf(false) }
-    var currentPercent by remember(percent) { mutableFloatStateOf(percent) }
+    val animPercent = remember { Animatable(percent.coerceIn(0f, 1f)) }
     var dragVelocity by remember { mutableFloatStateOf(0f) }
     var lastDragX by remember { mutableFloatStateOf(0f) }
     var lastDragTime by remember { mutableLongStateOf(0L) }
     var sliderWidthPx by remember { mutableFloatStateOf(1f) }
 
-    // Damped spring interpolation for percent (smooth overshoot)
-    val animatedPercent by animateFloatAsState(
-        targetValue = if (isDragging) currentPercent else percent,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessMediumLow
-        ),
-        label = "slider_percent"
-    )
+    // External updates animate cleanly with a fast crisp spring (<300ms); active drag tracks 1:1 via snapTo.
+    LaunchedEffect(percent, isDragging) {
+        if (!isDragging) {
+            animPercent.animateTo(
+                targetValue = percent.coerceIn(0f, 1f),
+                animationSpec = spring(
+                    dampingRatio = 0.85f,
+                    stiffness = 560f
+                )
+            )
+        }
+    }
+    val animatedPercent = animPercent.value
 
     // Velocity-driven squash & stretch (Sakuga VFX principle)
     val targetStretchX = 1f + (abs(dragVelocity) / 3800f).coerceIn(0f, 0.20f)
@@ -323,7 +331,9 @@ fun NothingSliderControl(
             .pointerInput(Unit) {
                 detectTapGestures { offset ->
                     val newP = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                    currentPercent = newP
+                    scope.launch {
+                        animPercent.animateTo(newP, spring(dampingRatio = 0.85f, stiffness = 560f))
+                    }
                     onValueChange(newP)
                 }
             }
@@ -336,7 +346,7 @@ fun NothingSliderControl(
                         dragVelocity = 0f
                         sliderWidthPx = size.width.toFloat().coerceAtLeast(1f)
                         val newP = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        currentPercent = newP
+                        scope.launch { animPercent.snapTo(newP) }
                         onValueChange(newP)
                     },
                     onDragEnd = {
@@ -358,7 +368,7 @@ fun NothingSliderControl(
                         sliderWidthPx = size.width.toFloat().coerceAtLeast(1f)
 
                         val newP = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
-                        currentPercent = newP
+                        scope.launch { animPercent.snapTo(newP) }
                         onValueChange(newP)
                     }
                 )
@@ -491,8 +501,8 @@ fun QuickToolsDrawer(
             .verticalScroll(scroll)
             .padding(16.dp),
     ) {
-        // Top Punch-hole clearance spacer
-        val topClearance = if (isCameraCutoutEnabled) 18.dp else 12.dp
+        // Top Punch-hole clearance spacer (36dp camera punch hole + 6dp safety margin)
+        val topClearance = 42.dp
         Spacer(Modifier.height(topClearance))
 
         // Header

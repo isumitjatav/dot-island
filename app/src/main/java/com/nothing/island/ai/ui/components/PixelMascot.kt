@@ -1,12 +1,14 @@
 package com.nothing.island.ai.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -118,11 +120,11 @@ fun MascotPillPreview(
     )
     val activeSprite = sprite
 
-    // One-shot hop: rise quickly, then fall back to rest — no stuck state.
+    // One-shot hop: crisp upward launch followed by interruptible spring settle.
     fun doHop() {
         scope.launch {
-            hop.animateTo(-14f, animationSpec = tween(160, easing = FastOutSlowInEasing))
-            hop.animateTo(0f, animationSpec = tween(220, easing = FastOutSlowInEasing))
+            hop.animateTo(-12f, animationSpec = tween(90, easing = FastOutSlowInEasing))
+            hop.animateTo(0f, animationSpec = spring(dampingRatio = 0.65f, stiffness = 480f))
         }
     }
 
@@ -138,7 +140,12 @@ fun MascotPillPreview(
         Canvas(
             modifier = Modifier
                 .size(20.dp)
-                .offset(x = walkX.dp - 44.dp, y = (hop.value + bob).dp)
+                .offset {
+                    IntOffset(
+                        x = (walkX.dp - 44.dp).roundToPx(),
+                        y = (hop.value + bob).dp.roundToPx(),
+                    )
+                }
                 .graphicsLayer { rotationZ = if (sprite.motion == MascotSprites.Motion.FLOAT) 0f else tilt },
         ) {
             drawSprite(draw = this, sprite = activeSprite, cell = size.width / activeSprite.rows[0].length)

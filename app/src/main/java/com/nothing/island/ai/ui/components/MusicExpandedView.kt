@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -281,17 +283,20 @@ fun MusicExpandedView(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
+                    modifier = Modifier.weight(1f)
                 ) {
                     Text(
                         text = if (trackState.isHistorical) "AUDIO STANDBY" else trackState.appDisplayName.uppercase(),
                         color = theme.textColorPrimary,
                         fontSize = 11.5.sp,
+                        lineHeight = 15.sp,
                         fontFamily = theme.bodyFont,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
 
                     Spacer(modifier = Modifier.width(6.dp))
@@ -299,6 +304,7 @@ fun MusicExpandedView(
                     // Audio output pill
                     Box(
                         modifier = Modifier
+                            .widthIn(max = 104.dp)
                             .clip(RoundedCornerShape(6.dp))
                             .background(outputPillBg)
                             .then(if (theme.isGlassmorphic) Modifier.border(1.dp, Color(0x28FFFFFF), RoundedCornerShape(6.dp)) else if (theme.isInverted) Modifier.border(1.dp, Color(0xFFCCCCCC), RoundedCornerShape(6.dp)) else Modifier)
@@ -308,13 +314,17 @@ fun MusicExpandedView(
                             text = trackState.audioOutputName.uppercase(),
                             color = outputPillText,
                             fontSize = 8.5.sp,
+                            lineHeight = 12.sp,
                             fontFamily = theme.bodyFont,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
 
                 Box(
                     modifier = Modifier
@@ -329,7 +339,9 @@ fun MusicExpandedView(
                         color = collapseText,
                         fontSize = 10.5.sp,
                         fontFamily = theme.bodyFont,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
@@ -374,7 +386,7 @@ fun MusicExpandedView(
                     ) {
                         MusicArtworkView(
                             bitmap = trackState.artworkBitmap,
-                            fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
+                            fallbackChar = TextBreakUtils.extractSafeFallbackChar(trackState.trackTitle, 'M'),
                             shape = preferences.artworkShape,
                             isPlaying = trackState.isPlaying,
                             rotationEnabled = preferences.albumRotationEnabled,
@@ -394,7 +406,7 @@ fun MusicExpandedView(
                     ) {
                         MusicArtworkView(
                             bitmap = trackState.artworkBitmap,
-                            fallbackChar = trackState.trackTitle.firstOrNull() ?: 'M',
+                            fallbackChar = TextBreakUtils.extractSafeFallbackChar(trackState.trackTitle, 'M'),
                             shape = preferences.artworkShape,
                             isPlaying = trackState.isPlaying,
                             rotationEnabled = preferences.albumRotationEnabled,
@@ -420,26 +432,31 @@ fun MusicExpandedView(
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Text(
-                        text = trackState.trackTitle,
+                        text = trackState.trackTitle.ifBlank { "No Track Playing" },
                         color = theme.textColorPrimary,
                         fontSize = 13.5.sp,
                         fontFamily = theme.displayFont,
                         fontWeight = theme.displayFontWeight,
-                        lineHeight = 17.sp,
+                        lineHeight = 19.sp,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Text(
-                        text = if (trackState.albumName.isNotBlank()) {
-                            "${trackState.artistName} • ${trackState.albumName}"
-                        } else {
-                            trackState.artistName
+                        text = when {
+                            trackState.artistName.isNotBlank() && trackState.albumName.isNotBlank() ->
+                                "${trackState.artistName} • ${trackState.albumName}"
+                            trackState.artistName.isNotBlank() -> trackState.artistName
+                            trackState.albumName.isNotBlank() -> trackState.albumName
+                            else -> trackState.appDisplayName
                         },
                         color = theme.textColorSecondary,
                         fontSize = 11.sp,
+                        lineHeight = 15.sp,
                         fontFamily = theme.bodyFont,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis
                     )
 
@@ -457,7 +474,7 @@ fun MusicExpandedView(
                 // Mini beat visualizer inside card
                 Box(
                     modifier = Modifier
-                        .size(width = 38.dp, height = 24.dp)
+                        .requiredSize(width = 38.dp, height = 24.dp)
                         .padding(start = 4.dp)
                 ) {
                     MusicVisualizerHost(
