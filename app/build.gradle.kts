@@ -13,22 +13,36 @@ val localProps = Properties().apply {
     }
 }
 
-fun resolveConfigValue(gradlePropKey: String, envKey: String): String? {
+val keystoreProps = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun resolveConfigValue(gradlePropKey: String, envKey: String, keystorePropKey: String? = null): String? {
     val fromGradle = project.findProperty(gradlePropKey)?.toString()?.takeIf { it.isNotBlank() }
     if (fromGradle != null) return fromGradle
+    if (keystorePropKey != null) {
+        val fromKeystore = keystoreProps.getProperty(keystorePropKey)?.takeIf { it.isNotBlank() }
+        if (fromKeystore != null) return fromKeystore
+    }
     val fromLocal = localProps.getProperty(gradlePropKey)?.takeIf { it.isNotBlank() }
     if (fromLocal != null) return fromLocal
     return System.getenv(envKey)?.takeIf { it.isNotBlank() }
 }
 
-val configuredVersionCode = resolveConfigValue("nothing.versionCode", "NOTHING_VERSION_CODE")?.toIntOrNull() ?: 3
-val configuredVersionName = resolveConfigValue("nothing.versionName", "NOTHING_VERSION_NAME") ?: "1.0.2"
+val configuredVersionCode = resolveConfigValue("nothing.versionCode", "NOTHING_VERSION_CODE")?.toIntOrNull() ?: 4
+val configuredVersionName = resolveConfigValue("nothing.versionName", "NOTHING_VERSION_NAME") ?: "1.1.0"
 
-val releaseStoreFilePath = resolveConfigValue("nothing.release.storeFile", "KEYSTORE_PATH")
-val releaseStorePassword = resolveConfigValue("nothing.release.storePassword", "KEYSTORE_PASSWORD")
-val releaseKeyAlias = resolveConfigValue("nothing.release.keyAlias", "KEY_ALIAS")
-val releaseKeyPassword = resolveConfigValue("nothing.release.keyPassword", "KEY_PASSWORD")
-val releaseKeystoreFile = releaseStoreFilePath?.let { rootProject.file(it) }
+val releaseStoreFilePath = resolveConfigValue("nothing.release.storeFile", "KEYSTORE_PATH", "storeFile")
+val releaseStorePassword = resolveConfigValue("nothing.release.storePassword", "KEYSTORE_PASSWORD", "storePassword")
+val releaseKeyAlias = resolveConfigValue("nothing.release.keyAlias", "KEY_ALIAS", "keyAlias")
+val releaseKeyPassword = resolveConfigValue("nothing.release.keyPassword", "KEY_PASSWORD", "keyPassword")
+val releaseKeystoreFile = releaseStoreFilePath?.let { path ->
+    val candidate = File(path)
+    if (candidate.isAbsolute) candidate else rootProject.file(path)
+}
 val hasReleaseSigning = !releaseStoreFilePath.isNullOrBlank() &&
     !releaseStorePassword.isNullOrBlank() &&
     !releaseKeyAlias.isNullOrBlank() &&

@@ -17,7 +17,7 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" xmlns:tools="http://schemas.android.com/tools" tools:ignore="ProtectedPermissions" />
 
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -38,7 +38,7 @@
         <service
             android:name=".IslandOverlayService"
             android:enabled="true"
-            android:exported="true"
+            android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
@@ -59,23 +59,6 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
-
-        <!-- Debug-only receiver for previewing pills via ADB (no hardware required) -->
-        <receiver
-            android:name=".receiver.DebugEventReceiver"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="com.nothing.island.ai.DEBUG_EARBUD" />
-                <action android:name="com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT" />
-                <action android:name="com.nothing.island.ai.DEBUG_MASCOT" />
-                <action android:name="com.nothing.island.ai.DEBUG_QUICK_TOOLS" />
-                <action android:name="com.nothing.island.ai.DEBUG_FACE_UNLOCK" />
-                <action android:name="com.nothing.island.ai.DEBUG_DUAL_PILL" />
-                <action android:name="com.nothing.island.ai.DEBUG_ORDER_TRACKING" />
-                <action android:name="com.nothing.island.ai.DEBUG_MUSIC" />
-                <action android:name="com.nothing.island.ai.DEBUG_CALL" />
-            </intent-filter>
-        </receiver>
 
         <!-- Nothing Island Headless Notification Listener Service (Milestone R6) -->
         <service

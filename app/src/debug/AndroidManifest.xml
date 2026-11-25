@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+        <!-- Debug-only: allow ADB to start overlay service and inject preview events -->
+        <service
+            android:name=".IslandOverlayService"
+            android:exported="true"
+            tools:replace="android:exported" />
+
+        <receiver
+            android:name=".receiver.DebugEventReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.nothing.island.ai.DEBUG_EARBUD" />
+                <action android:name="com.nothing.island.ai.DEBUG_EARBUD_DISCONNECT" />
+                <action android:name="com.nothing.island.ai.DEBUG_MASCOT" />
+                <action android:name="com.nothing.island.ai.DEBUG_QUICK_TOOLS" />
+                <action android:name="com.nothing.island.ai.DEBUG_FACE_UNLOCK" />
+                <action android:name="com.nothing.island.ai.DEBUG_DUAL_PILL" />
+                <action android:name="com.nothing.island.ai.DEBUG_ORDER_TRACKING" />
+                <action android:name="com.nothing.island.ai.DEBUG_MUSIC" />
+                <action android:name="com.nothing.island.ai.DEBUG_CALL" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

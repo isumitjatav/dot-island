@@ -161,6 +161,7 @@ class IslandPreferencesRepository internal constructor(
         val CALL_AUTO_EXPAND = booleanPreferencesKey("call_auto_expand")
         val CAMERA_CUTOUT_ENABLED = booleanPreferencesKey("camera_cutout_enabled")
         val AUTO_HIDE_IN_GAMES = booleanPreferencesKey("auto_hide_in_games")
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
     }
 
     object NotificationPreferencesKeys {
@@ -370,6 +371,9 @@ class IslandPreferencesRepository internal constructor(
     private val _liveCallPreferences = MutableStateFlow(com.nothing.island.ai.telephony.CallPreferences.DEFAULTS)
     val liveCallPreferences: StateFlow<com.nothing.island.ai.telephony.CallPreferences> = _liveCallPreferences.asStateFlow()
 
+    private val _onboardingCompleted = MutableStateFlow<Boolean?>(null)
+    val onboardingCompleted: StateFlow<Boolean?> = _onboardingCompleted.asStateFlow()
+
     private var syncJob: Job? = null
     private var notificationSyncJob: Job? = null
     private var musicSyncJob: Job? = null
@@ -377,9 +381,25 @@ class IslandPreferencesRepository internal constructor(
     private var gestureSyncJob: Job? = null
     private var systemEventsSyncJob: Job? = null
     private var callSyncJob: Job? = null
+    private var onboardingSyncJob: Job? = null
 
     init {
         // Synchronize live StateFlow with persisted DataStore values on launch
+        onboardingSyncJob = scope.launch {
+            dataStore.data
+                .catch { exception ->
+                    if (exception is IOException) {
+                        emit(emptyPreferences())
+                    } else {
+                        throw exception
+                    }
+                }
+                .map { prefs -> prefs[PreferencesKeys.ONBOARDING_COMPLETED] ?: false }
+                .distinctUntilChanged()
+                .collect { completed ->
+                    _onboardingCompleted.value = completed
+                }
+        }
         syncJob = scope.launch {
             preferencesFlow.collect { persisted ->
                 _livePreferences.value = persisted
@@ -428,6 +448,18 @@ class IslandPreferencesRepository internal constructor(
         gestureSyncJob?.cancel()
         systemEventsSyncJob?.cancel()
         callSyncJob?.cancel()
+        onboardingSyncJob?.cancel()
+    }
+
+    suspend fun setOnboardingCompleted(completed: Boolean) {
+        _onboardingCompleted.value = completed
+        try {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.ONBOARDING_COMPLETED] = completed
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to persist onboardingCompleted preference", e)
+        }
     }
 
     private fun mapPreferences(preferences: Preferences): IslandPreferences {

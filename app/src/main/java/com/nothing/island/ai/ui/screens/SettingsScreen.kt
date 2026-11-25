@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,10 +67,35 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     geometry: CutoutGeometry,
     onNavigateBack: () -> Unit,
+    onReopenOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+    var activeDisclosure by remember {
+        mutableStateOf<com.nothing.island.ai.ui.components.ProminentDisclosureType?>(null)
+    }
+
+    activeDisclosure?.let { type ->
+        com.nothing.island.ai.ui.components.ProminentDisclosureDialog(
+            type = type,
+            onAcceptAndContinue = {
+                activeDisclosure = null
+                when (type) {
+                    com.nothing.island.ai.ui.components.ProminentDisclosureType.ACCESSIBILITY -> {
+                        context.startActivity(OverlayPermissionManager.createAccessibilitySettingsIntent())
+                    }
+                    com.nothing.island.ai.ui.components.ProminentDisclosureType.NOTIFICATION_LISTENER -> {
+                        context.startActivity(
+                            com.nothing.island.ai.notifications.NotificationPermissionManager
+                                .createNotificationAccessIntent(context)
+                        )
+                    }
+                }
+            },
+            onDecline = { activeDisclosure = null }
+        )
+    }
 
     // Real Permission Queries
     val hasAccessibility = OverlayPermissionManager.isAccessibilityServiceEnabled(context)
@@ -185,8 +211,7 @@ fun SettingsScreen(
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (hasAccessibility) NothingElevatedSurface else NothingPrimaryAccent)
                             .clickable {
-                                val intent = OverlayPermissionManager.createAccessibilitySettingsIntent()
-                                context.startActivity(intent)
+                                activeDisclosure = com.nothing.island.ai.ui.components.ProminentDisclosureType.ACCESSIBILITY
                             }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -263,8 +288,7 @@ fun SettingsScreen(
                     subtitle = if (isNotificationListenerConnected) "Service active & connected (Milestone R6)" else "Allows reading incoming alerts & media metadata (R6)",
                     isGranted = hasNotificationListener,
                     onGrantClick = {
-                        val intent = OverlayPermissionManager.createNotificationListenerSettingsIntent()
-                        context.startActivity(intent)
+                        activeDisclosure = com.nothing.island.ai.ui.components.ProminentDisclosureType.NOTIFICATION_LISTENER
                     }
                 )
 
@@ -273,13 +297,7 @@ fun SettingsScreen(
                     subtitle = "Prevents system background termination during deep sleep",
                     isGranted = isIgnoringBatteryOptimizations,
                     onGrantClick = {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                                data = Uri.parse("package:${context.packageName}")
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            }
-                            try { context.startActivity(intent) } catch (_: Exception) {}
-                        }
+                        OverlayPermissionManager.launchBatteryOptimizationSettings(context)
                     }
                 )
 
@@ -560,6 +578,53 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(18.dp))
 
         // ABOUT CARD
+        SectionHeader(title = "SETUP & ONBOARDING")
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        IslandCard {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "3-Step Onboarding Wizard",
+                        color = NothingPrimaryText,
+                        fontSize = 13.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Review prominent disclosures, cutout alignment & battery guard",
+                        color = NothingMutedText,
+                        fontSize = 11.sp
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NothingElevatedSurface)
+                        .border(1.dp, NothingDivider, RoundedCornerShape(8.dp))
+                        .clickable { onReopenOnboarding() }
+                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                ) {
+                    Text(
+                        text = "OPEN",
+                        color = NothingPrimaryText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        // ABOUT CARD
         SectionHeader(title = "ABOUT DOT ISLAND")
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -567,7 +632,7 @@ fun SettingsScreen(
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Dot Island v1.0.2",
+                    text = "Dot Island v1.1.0",
                     color = NothingPrimaryText,
                     fontSize = 14.sp,
                     fontFamily = FontFamily.Monospace,

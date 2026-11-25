@@ -26,6 +26,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +74,18 @@ fun HomeScreen(
     val prefs by preferencesRepository.livePreferences.collectAsState()
     val scrollState = rememberScrollState()
     val isPreviewExpanded = remember { mutableStateOf(false) }
+    var showNotifDisclosure by remember { mutableStateOf(false) }
+
+    if (showNotifDisclosure) {
+        com.nothing.island.ai.ui.components.ProminentDisclosureDialog(
+            type = com.nothing.island.ai.ui.components.ProminentDisclosureType.NOTIFICATION_LISTENER,
+            onAcceptAndContinue = {
+                showNotifDisclosure = false
+                onRequestNotificationPermission()
+            },
+            onDecline = { showNotifDisclosure = false }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -243,7 +256,7 @@ fun HomeScreen(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(NothingPrimaryAccent)
-                                .clickable { onRequestNotificationPermission() }
+                                .clickable { showNotifDisclosure = true }
                                 .padding(horizontal = 12.dp, vertical = 7.dp)
                         ) {
                             Text(

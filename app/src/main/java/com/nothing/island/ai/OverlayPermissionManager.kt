@@ -103,4 +103,51 @@ object OverlayPermissionManager {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
+
+    /**
+     * Checks whether the app is exempted from OEM battery optimizations so the floating
+     * capsule service is not killed in the background.
+     */
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        val powerManager = context.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        return powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: false
+    }
+
+    /**
+     * Creates an Intent to request unrestricted background battery status for Dot Island.
+     */
+    fun createBatteryOptimizationIntent(context: Context): Intent {
+        return Intent(
+            Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            Uri.parse("package:${context.packageName}")
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+    }
+
+    /**
+     * Launches battery optimization exemption settings, falling back gracefully to the
+     * general Battery Optimization list or App Info page on strict OEM ROMs.
+     */
+    fun launchBatteryOptimizationSettings(context: Context) {
+        val candidates = listOf(
+            createBatteryOptimizationIntent(context),
+            Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            },
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:${context.packageName}")
+            ).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        )
+        for (intent in candidates) {
+            try {
+                context.startActivity(intent)
+                return
+            } catch (_: Exception) {
+            }
+        }
+    }
 }

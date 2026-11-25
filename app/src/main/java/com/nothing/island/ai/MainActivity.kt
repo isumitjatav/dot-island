@@ -57,6 +57,8 @@ class MainActivity : ComponentActivity() {
     private val hasOverlayPermissionState = mutableStateOf(false)
     private val isServiceRunningState = mutableStateOf(false)
     private val hasNotificationPermissionState = mutableStateOf(false)
+    private val hasAccessibilityPermissionState = mutableStateOf(false)
+    private val isIgnoringBatteryOptimizationsState = mutableStateOf(false)
 
     private val requestCallPermission = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -93,6 +95,62 @@ class MainActivity : ComponentActivity() {
                     ) {
                         val currentDestination = remember { mutableStateOf<IslandDestination>(IslandDestination.Home) }
                         val geometry = remember { CutoutDetector.detectCutout(context) }
+                        val onboardingCompleted by preferencesRepo.onboardingCompleted.collectAsState()
+                        val reopenOnboarding = remember { mutableStateOf(false) }
+
+                        if (onboardingCompleted == null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(NothingTokens.NothingBlack)
+                            )
+                        } else if (onboardingCompleted == false || reopenOnboarding.value) {
+                            BackHandler(enabled = reopenOnboarding.value) {
+                                reopenOnboarding.value = false
+                            }
+                            com.nothing.island.ai.ui.screens.OnboardingScreen(
+                                hasOverlayPermission = hasOverlayPermissionState.value,
+                                hasNotificationListenerPermission = hasNotificationPermissionState.value,
+                                hasAccessibilityPermission = hasAccessibilityPermissionState.value,
+                                isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizationsState.value,
+                                onRequestOverlayPermission = {
+                                    startActivity(OverlayPermissionManager.createOverlayPermissionIntent(this@MainActivity))
+                                },
+                                onRequestNotificationAccess = {
+                                    startActivity(
+                                        com.nothing.island.ai.notifications.NotificationPermissionManager
+                                            .createNotificationAccessIntent(this@MainActivity)
+                                    )
+                                },
+                                onRequestAccessibilityAccess = {
+                                    startActivity(OverlayPermissionManager.createAccessibilitySettingsIntent())
+                                },
+                                onRequestBatteryOptimization = {
+                                    OverlayPermissionManager.launchBatteryOptimizationSettings(this@MainActivity)
+                                },
+                                onSkip = {
+                                    reopenOnboarding.value = false
+                                    lifecycleScope.launch {
+                                        preferencesRepo.setOnboardingCompleted(true)
+                                    }
+                                },
+                                onFinish = {
+                                    reopenOnboarding.value = false
+                                    lifecycleScope.launch {
+                                        preferencesRepo.setOnboardingCompleted(true)
+                                    }
+                                    if (hasOverlayPermissionState.value && !IslandOverlayService.isRunning) {
+                                        IslandOverlayService.startService(this@MainActivity)
+                                        isServiceRunningState.value = true
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(NothingTokens.NothingBlack)
+                                    .statusBarsPadding()
+                                    .navigationBarsPadding()
+                            )
+                        } else {
 
                     // Intelligent Back Navigation:
                     // Sub-studios return to Studios Hub; Primary tabs return to Home
@@ -219,6 +277,9 @@ class MainActivity : ComponentActivity() {
                                             geometry = geometry,
                                             onNavigateBack = {
                                                 currentDestination.value = IslandDestination.Studios
+                                            },
+                                            onReopenOnboarding = {
+                                                reopenOnboarding.value = true
                                             }
                                         )
                                     }
@@ -254,6 +315,7 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                     }
+                        }
                 }
             }
         }
@@ -310,5 +372,7 @@ class MainActivity : ComponentActivity() {
         hasNotificationPermissionState.value =
             com.nothing.island.ai.notifications.NotificationPermissionManager
                 .isNotificationListenerEnabled(this)
+        hasAccessibilityPermissionState.value = OverlayPermissionManager.isAccessibilityServiceEnabled(this)
+        isIgnoringBatteryOptimizationsState.value = OverlayPermissionManager.isIgnoringBatteryOptimizations(this)
     }
 }
