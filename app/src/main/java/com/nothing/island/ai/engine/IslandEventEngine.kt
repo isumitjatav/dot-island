@@ -85,7 +85,7 @@ class IslandEventEngine(
 
         // 1. Non-critical events pass through coalescing and semantic deduplication
         if (!isCritical) {
-            // 2. High-frequency update coalescing (TimerTick, Media position updates without track change)
+            // 2. High-frequency media position update coalescing
             if (shouldCoalesce(event, now)) {
                 Log.d(TAG, "Event coalesced (throttled): id=${event.id}, source=${event.source}, type=${event.javaClass.simpleName}")
                 return false
@@ -147,7 +147,6 @@ class IslandEventEngine(
 
     private fun shouldCoalesce(event: IslandEvent, now: Long): Boolean {
         val coalesceKey = when (event) {
-            is IslandEvent.TimerTick -> "TimerTick_${event.timerId}"
             is IslandEvent.MediaPlaybackChanged -> {
                 val last = lastEventRef.get() as? IslandEvent.MediaPlaybackChanged
                 if (last != null && (last.isPlaying != event.isPlaying ||

@@ -470,28 +470,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
         collapse()
     }
 
-    /** Opens the AI assistant gateway from quick controls. */
-    fun openQuickAi() {
-        try {
-            val intent = android.content.Intent(appContext, MainActivity::class.java)
-            intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-            intent.putExtra("open_ai", true)
-            appContext.startActivity(intent)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open AI", e)
-        }
-        collapse()
-    }
-
     private val _lastScreenshotResult = MutableStateFlow<com.nothing.island.ai.gestures.ScreenshotActionResult?>(null)
     val lastScreenshotResult: StateFlow<com.nothing.island.ai.gestures.ScreenshotActionResult?> = _lastScreenshotResult.asStateFlow()
 
     fun reportScreenshotResult(result: com.nothing.island.ai.gestures.ScreenshotActionResult) {
         _lastScreenshotResult.value = result
     }
-
-    val weatherProvider: com.nothing.island.ai.weather.WeatherProvider =
-        com.nothing.island.ai.weather.UnavailableWeatherProvider()
 
     val quickToolExecutor: com.nothing.island.ai.ui.components.QuickToolExecutor by lazy {
         com.nothing.island.ai.ui.components.QuickToolExecutor(
@@ -863,7 +847,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
-                        val weatherState by weatherProvider.state.collectAsState()
                         val signatureTheme = remember(prefs.presetName) {
                             com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
                         }
@@ -948,7 +931,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             getQuickVolumePercent = { getMediaVolumePercent() },
                             getQuickBrightnessPercent = { getScreenBrightnessPercent() },
                             onQuickHistory = { openQuickHistory() },
-                            onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 val currentCall = priorityManager?.activeEvent
@@ -1017,7 +999,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs,
                             stateManager = stateManager,
-                            weatherState = weatherState,
                             onScreenshotResult = { res -> reportScreenshotResult(res) },
                             onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) },
                             onMascotBoundsChanged = { l, t, r, b -> updateMascotBounds(l, t, r, b) }
@@ -1259,7 +1240,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
-                        val weatherState by weatherProvider.state.collectAsState()
                         val signatureTheme = remember(prefs.presetName) {
                             com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(prefs.presetName)
                         }
@@ -1344,7 +1324,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             getQuickVolumePercent = { getMediaVolumePercent() },
                             getQuickBrightnessPercent = { getScreenBrightnessPercent() },
                             onQuickHistory = { openQuickHistory() },
-                            onQuickAi = { openQuickAi() },
                             onDeclineCall = {
                                 Log.d("IslandTouch", "onDeclineCall lambda invoked")
                                 val currentCall = priorityManager?.activeEvent
@@ -1413,7 +1392,6 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             gesturePreferences = gesturePrefs,
                             stateManager = stateManager,
-                            weatherState = weatherState,
                             onScreenshotResult = { res -> reportScreenshotResult(res) },
                             onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) },
                             onMascotBoundsChanged = { l, t, r, b -> updateMascotBounds(l, t, r, b) }
@@ -1793,8 +1771,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
             state.activeEvent is IslandEvent.WifiStateChanged ||
             state.activeEvent is IslandEvent.DndStateChanged ||
             state.activeEvent is IslandEvent.BatteryThresholdWarning ||
-            (state.activeEvent is IslandEvent.DeviceUnlocked &&
-                state.activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE)
+            state.activeEvent is IslandEvent.DeviceUnlocked
 
         val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS

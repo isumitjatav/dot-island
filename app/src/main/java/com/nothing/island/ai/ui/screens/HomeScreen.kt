@@ -303,37 +303,6 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // Quick Shortcuts Row
-        SectionHeader(title = "QUICK SHORTCUTS")
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            ShortcutCard(
-                label = "APPEARANCE",
-                subLabel = "Calibrate & Style",
-                modifier = Modifier.weight(1f),
-                onClick = { onNavigateToDestination(IslandDestination.Appearance) }
-            )
-            ShortcutCard(
-                label = "FEATURES",
-                subLabel = "Modules Registry",
-                modifier = Modifier.weight(1f),
-                onClick = { onNavigateToDestination(IslandDestination.Features) }
-            )
-            ShortcutCard(
-                label = "GEMINI AI",
-                subLabel = "AI Assistant",
-                modifier = Modifier.weight(1f),
-                onClick = { onNavigateToDestination(IslandDestination.Gemini) }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
         // Activity Overview (Honest Module States)
         SectionHeader(title = "MODULE ACTIVITY OVERVIEW")
 
@@ -367,8 +336,7 @@ fun HomeScreen(
                         fontFamily = FontFamily.Monospace
                     )
                 }
-                ModuleStatusRow("Charging & Battery", "UI Integration Pending (M4.4)", NothingMutedText)
-                ModuleStatusRow("Gemini AI Engine", "Not configured (M5)", NothingMutedText)
+                ModuleStatusRow("Charging & Battery", "Available", NothingSuccess)
             }
         }
 

@@ -4,8 +4,7 @@ package com.nothing.island.ai.navigation
  * Screen destinations for the Nothing Island Studio Navigation Architecture.
  *
  * Implements the 5 primary destinations (Home, Notifications, Music, Battery, Studios)
- * plus dedicated Studios sub-screens, while preserving legacy destination objects
- * for backward compatibility.
+ * plus dedicated Studios sub-screens.
  */
 sealed class IslandDestination(
     val route: String,
@@ -28,11 +27,6 @@ sealed class IslandDestination(
     data object GeometryStudio : IslandDestination("studio_geometry", "GEOMETRY CALIBRATION", "CALIBRATE")
     data object Settings : IslandDestination("settings", "SYSTEM SETTINGS", "SETUP")
     data object CallStudio : IslandDestination("studio_call", "CALL STUDIO", "CALL")
-
-    // --- Preserved Legacy Destinations (Backward Compatibility) ---
-    data object Appearance : IslandDestination("appearance", "APPEARANCE", "STYLE")
-    data object Features : IslandDestination("features", "FEATURES", "MODULES")
-    data object Gemini : IslandDestination("gemini", "GEMINI AI", "AI")
 
     companion object {
         /**

@@ -147,7 +147,7 @@ class IslandEngineUnitTest {
         val job = launch { eventEngine.events.collect { collected.add(it) } }
         testScheduler.advanceUntilIdle()
 
-        val e1 = IslandEvent.DeviceUnlocked(id = "order_1", unlockMethod = UnlockMethod.FACE)
+        val e1 = IslandEvent.DeviceUnlocked(id = "order_1", unlockMethod = UnlockMethod.PIN_PATTERN)
         val e2 = IslandEvent.BluetoothDeviceConnected(id = "order_2", deviceName = "Ear (a)", deviceAddress = "00:11:22")
         val e3 = IslandEvent.ChargingConnected(id = "order_3", batteryLevel = 80, chargeType = "WIRELESS")
 
@@ -391,37 +391,6 @@ class IslandEngineUnitTest {
     }
 
     // -------------------------------------------------------------
-    // Test 12: High-frequency event coalescing
-    // -------------------------------------------------------------
-    @Test
-    fun test12_highFrequencyEventCoalescing() = testScope.runTest {
-        val collected = mutableListOf<IslandEvent>()
-        val job = launch { eventEngine.events.collect { collected.add(it) } }
-        testScheduler.advanceUntilIdle()
-
-        // Emit 5 TimerTicks in rapid succession (within 250ms coalescing window)
-        var acceptedCount = 0
-        for (sec in 60 downTo 56) {
-            val tick = IslandEvent.TimerTick(
-                id = "tick_$sec",
-                timerId = "timer_main",
-                remainingSeconds = sec.toLong()
-            )
-            if (eventEngine.emit(tick)) {
-                acceptedCount++
-            }
-        }
-        testScheduler.advanceUntilIdle()
-
-        // Only the first tick should be emitted; rapid successive ticks are throttled/coalesced
-        assertEquals("Only first tick should be accepted within window", 1, acceptedCount)
-        assertEquals(1, collected.size)
-        assertEquals(60L, (collected[0] as IslandEvent.TimerTick).remainingSeconds)
-
-        job.cancel()
-    }
-
-    // -------------------------------------------------------------
     // Test 13: Critical event preservation under heavy buffer saturation (> 64 events)
     // -------------------------------------------------------------
     @Test
@@ -442,7 +411,7 @@ class IslandEngineUnitTest {
         // 2. Flood event bus with 80 low-priority events WITHOUT advancing the collector scheduler
         // Buffer capacity is 64. In a naive DROP_OLDEST implementation, the critical call would be evicted!
         for (i in 1..80) {
-            eventEngine.emit(IslandEvent.DeviceUnlocked(id = "unlock_$i", unlockMethod = UnlockMethod.FACE))
+            eventEngine.emit(IslandEvent.DeviceUnlocked(id = "unlock_$i", unlockMethod = UnlockMethod.PIN_PATTERN))
         }
 
         // 3. Now advance the test scheduler and let the collector drain the flows
@@ -604,80 +573,6 @@ class IslandEngineUnitTest {
         testScheduler.advanceUntilIdle()
         assertEquals(3, collected.size)
         job.cancel()
-    }
-
-    // -------------------------------------------------------------
-    // Test 18: Completed timers removed from fallbacks (no resurrection)
-    // -------------------------------------------------------------
-    @Test
-    fun test18_timerFinishedFallbackCleanup() = testScope.runTest {
-        // 1. Timer countdown running
-        val timerStart = IslandEvent.TimerStarted(
-            id = "t_start",
-            timerId = "timer_egg",
-            label = "Boil Egg",
-            totalDurationSeconds = 180L,
-            remainingSeconds = 180L
-        )
-        priorityManager.processEvent(timerStart)
-        assertEquals("TIMER: 180s", stateRepository.state.value.title)
-        assertEquals(IslandPriority.LIVE_ACTIVITY, priorityManager.activePriority)
-
-        // 2. Timer reaches 0: TimerFinished arrives (P55, timeoutMs = 5000L)
-        val timerFinished = IslandEvent.TimerFinished(
-            id = "t_fin",
-            timerId = "timer_egg",
-            label = "Boil Egg"
-        )
-        priorityManager.processEvent(timerFinished)
-        assertEquals("TIMER FINISHED", stateRepository.state.value.title)
-        assertEquals(IslandPriority.NOTIFICATION, priorityManager.activePriority)
-
-        // 3. Advance virtual time past the 5000ms expiration deadline
-        testScheduler.advanceTimeBy(5001L)
-        testScheduler.advanceUntilIdle()
-
-        // 4. Assert: Must cleanly revert to Base Idle, NOT resurrect the old timer!
-        assertNull("Active event must be null after timer completion expiration", priorityManager.activeEvent)
-        assertEquals(IslandPriority.IDLE_BASE, priorityManager.activePriority)
-        assertEquals("NOTHING ISLAND", stateRepository.state.value.title)
-    }
-
-    // -------------------------------------------------------------
-    // Test 19: Incoming call preserved across equal/higher priority alerts
-    // -------------------------------------------------------------
-    @Test
-    fun test19_incomingCallFallbackPreservation() = testScope.runTest {
-        // 1. Incoming call ringing (P100, persistent)
-        val call = IslandEvent.IncomingCallRinging(
-            id = "call_p100",
-            callId = "call_vip",
-            callerDisplayName = "Carl Pei"
-        )
-        priorityManager.processEvent(call)
-        assertEquals("INCOMING CALL", stateRepository.state.value.title)
-        assertEquals(IslandPriority.CRITICAL_TELEPHONY, priorityManager.activePriority)
-
-        // 2. Temporary emergency alert arrives (P100, timeoutMs = 3000L)
-        val emergencyAlert = IslandEvent.EmergencyAlert(
-            id = "alert_p100",
-            alertTitle = "FLASH FLOOD WARNING",
-            alertMessage = "Seek higher ground immediately",
-            timeoutMs = 3000L
-        )
-        priorityManager.processEvent(emergencyAlert)
-        assertEquals("alert_p100", priorityManager.activeEvent?.id)
-        assertEquals("FLASH FLOOD WARNING", stateRepository.state.value.title)
-
-        // 3. Emergency alert expires after 3000ms
-        testScheduler.advanceTimeBy(3001L)
-        testScheduler.advanceUntilIdle()
-
-        // 4. Assert: Incoming call was stored in background fallbacks and is restored!
-        assertEquals("INCOMING CALL", stateRepository.state.value.title)
-        assertEquals("Carl Pei", stateRepository.state.value.subtitle)
-        assertEquals(IslandPriority.CRITICAL_TELEPHONY, priorityManager.activePriority)
-        assertEquals("call_p100", priorityManager.activeEvent?.id)
     }
 
     // -------------------------------------------------------------

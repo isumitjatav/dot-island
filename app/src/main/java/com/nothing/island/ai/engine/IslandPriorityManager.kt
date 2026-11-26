@@ -71,10 +71,6 @@ class IslandPriorityManager(
                     handleCallEnded(event)
                     return@withLock
                 }
-                is IslandEvent.TimerFinished -> {
-                    // Remove completed timer from fallback storage so it cannot be resurrected
-                    backgroundFallbacks.remove("TIMER")
-                }
                 is IslandEvent.UserDismissCurrent -> {
                     dismissActivePresentation(reason = "UserDismissCurrent")
                     return@withLock
@@ -231,16 +227,6 @@ class IslandPriorityManager(
                 }
                 is IslandEvent.CallConnected -> {
                     backgroundFallbacks["CALL"] = event
-                }
-                is IslandEvent.TimerStarted, is IslandEvent.TimerTick -> {
-                    backgroundFallbacks["TIMER"] = event
-                }
-                is IslandEvent.RecordingStateChanged -> {
-                    if (event.isRecording) {
-                        backgroundFallbacks["RECORDING"] = event
-                    } else {
-                        backgroundFallbacks.remove("RECORDING")
-                    }
                 }
                 else -> {
                     // Other persistent events

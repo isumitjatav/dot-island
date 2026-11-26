@@ -30,15 +30,6 @@ enum class UnlockMethod {
 }
 
 /**
- * Type of active recording session.
- */
-enum class RecordingType {
-    AUDIO,
-    CAMERA,
-    SCREEN
-}
-
-/**
  * State of download or ongoing progress activity.
  */
 enum class DownloadProgressState {
@@ -73,10 +64,6 @@ sealed interface IslandEvent {
         if (this.timeoutMs != other.timeoutMs) return false
 
         return when (this) {
-            is OrderTrackingUpdated -> {
-                val o = other as OrderTrackingUpdated
-                merchant == o.merchant && status == o.status && etaMinutes == o.etaMinutes
-            }
             is NotificationPosted -> {
                 val o = other as NotificationPosted
                 packageName == o.packageName &&
@@ -131,10 +118,6 @@ sealed interface IslandEvent {
                         temperatureC == o.temperatureC &&
                         isOverheat == o.isOverheat
             }
-            is EmergencyAlert -> {
-                val o = other as EmergencyAlert
-                alertTitle == o.alertTitle && alertMessage == o.alertMessage
-            }
             is IncomingCallRinging -> {
                 val o = other as IncomingCallRinging
                 callId == o.callId &&
@@ -170,28 +153,6 @@ sealed interface IslandEvent {
                 val o = other as BluetoothDeviceDisconnected
                 deviceName == o.deviceName &&
                         deviceAddress == o.deviceAddress
-            }
-            is TimerStarted -> {
-                val o = other as TimerStarted
-                timerId == o.timerId &&
-                        label == o.label &&
-                        totalDurationSeconds == o.totalDurationSeconds &&
-                        remainingSeconds == o.remainingSeconds
-            }
-            is TimerTick -> {
-                val o = other as TimerTick
-                timerId == o.timerId &&
-                        remainingSeconds == o.remainingSeconds
-            }
-            is TimerFinished -> {
-                val o = other as TimerFinished
-                timerId == o.timerId &&
-                        label == o.label
-            }
-            is RecordingStateChanged -> {
-                val o = other as RecordingStateChanged
-                isRecording == o.isRecording &&
-                        recordingType == o.recordingType
             }
             is UserToggleExpand, is UserTogglePulse, is UserDismissCurrent -> true
             is OverlayAttached -> {
@@ -330,18 +291,8 @@ sealed interface IslandEvent {
     ) : IslandEvent
 
     // ==========================================
-    // 4. TELEPHONY & CALLS / CRITICAL SAFETY
+    // 4. TELEPHONY & CALLS
     // ==========================================
-    data class EmergencyAlert(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "SafetyEngine",
-        override val priority: Int = IslandPriority.CRITICAL_TELEPHONY,
-        override val timeoutMs: Long = 3000L,
-        val alertTitle: String,
-        val alertMessage: String
-    ) : IslandEvent
-
     data class IncomingCallRinging(
         override val id: String,
         override val timestamp: Long = System.currentTimeMillis(),
@@ -415,54 +366,6 @@ sealed interface IslandEvent {
         override val timeoutMs: Long = 2000L,
         val deviceName: String,
         val deviceAddress: String
-    ) : IslandEvent
-
-    // ==========================================
-    // 7. TIMERS & LIVE ACTIVITIES
-    // ==========================================
-    data class TimerStarted(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "TimerEngine",
-        override val priority: Int = IslandPriority.LIVE_ACTIVITY,
-        override val timeoutMs: Long = 0L,
-        val timerId: String,
-        val label: String,
-        val totalDurationSeconds: Long,
-        val remainingSeconds: Long
-    ) : IslandEvent
-
-    data class TimerTick(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "TimerEngine",
-        override val priority: Int = IslandPriority.LIVE_ACTIVITY,
-        override val timeoutMs: Long = 0L,
-        val timerId: String,
-        val remainingSeconds: Long
-    ) : IslandEvent
-
-    data class TimerFinished(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "TimerEngine",
-        override val priority: Int = IslandPriority.NOTIFICATION,
-        override val timeoutMs: Long = 5000L,
-        val timerId: String,
-        val label: String
-    ) : IslandEvent
-
-    // ==========================================
-    // 8. RECORDING INDICATOR
-    // ==========================================
-    data class RecordingStateChanged(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "RecordingIndicatorEngine",
-        override val priority: Int = IslandPriority.RECORDING_INDICATOR,
-        override val timeoutMs: Long = 0L,
-        val isRecording: Boolean,
-        val recordingType: RecordingType
     ) : IslandEvent
 
     // ==========================================
@@ -571,15 +474,4 @@ sealed interface IslandEvent {
         val isCritical: Boolean
     ) : IslandEvent
 
-    /** Live order/delivery tracking state, typically derived from notifications. */
-    data class OrderTrackingUpdated(
-        override val id: String,
-        override val timestamp: Long = System.currentTimeMillis(),
-        override val source: String = "OrderTrackingEngine",
-        override val priority: Int = IslandPriority.LIVE_ACTIVITY,
-        override val timeoutMs: Long = 8000L,
-        val merchant: String,
-        val status: String,
-        val etaMinutes: Int? = null,
-    ) : IslandEvent
 }

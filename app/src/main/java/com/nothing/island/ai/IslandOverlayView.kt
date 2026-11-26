@@ -297,8 +297,8 @@ internal fun shouldShowIdleMascot(
 /**
  * Main floating overlay view for Nothing Island.
  * Manages presentation switching between compact pill modes and the two distinct expanded states:
- * - State A: Normal Dashboard (Time, Date, Compact Weather, Recent notification previews).
- * - State B: Notification-Focused View (Active notification card, actions; strictly NO clock/weather).
+ * - State A: Normal Dashboard (Time, Date, Recent notification previews).
+ * - State B: Notification-Focused View (Active notification card and actions).
  */
 @Composable
 fun IslandOverlayView(
@@ -349,12 +349,10 @@ fun IslandOverlayView(
     getQuickVolumePercent: () -> Float = { 0.5f },
     getQuickBrightnessPercent: () -> Float = { 0.5f },
     onQuickHistory: () -> Unit = {},
-    onQuickAi: () -> Unit = {},
     onSwipeActivity: (SwipeDirection) -> Unit = {},
     activitySwitcherInterface: IslandInterface = IslandInterface.DASHBOARD,
     gesturePreferences: GesturePreferences = GesturePreferences(),
     stateManager: IslandStateManager = IslandStateManager.getInstance(),
-    weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable(),
     onScreenshotResult: ((com.nothing.island.ai.gestures.ScreenshotActionResult) -> Unit)? = null,
     onPillBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> },
     onMascotBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> }
@@ -917,17 +915,6 @@ fun IslandOverlayView(
                                 )
                                 else -> Unit
                             }
-                        } else if (activeEvent is IslandEvent.OrderTrackingUpdated) {
-                            com.nothing.island.ai.ui.components.OrderTrackingPill(
-                                event = activeEvent,
-                                onTap = onToggleExpand,
-                            )
-                        } else if (activeEvent is IslandEvent.DeviceUnlocked &&
-                            activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE
-                        ) {
-                            com.nothing.island.ai.ui.components.FaceUnlockPill(
-                                onTap = onToggleExpand,
-                            )
                         } else if (isSystemAlertActive) {
                             // SYSTEM ALERT PILL (REQ-36, REQ-37, REQ-60, REQ-61, REQ-62, REQ-64, REQ-75)
                             SystemAlertPill(
@@ -1277,7 +1264,6 @@ fun IslandOverlayView(
                         projectedHistory = projectedHistory,
                         activeNotification = activeNotification,
                         activeUndo = activeUndo,
-                        weatherState = weatherState,
                         onSelectHistoricalNotification = onSelectHistoricalNotification,
                         onDismissHistoryEntry = onDismissHistoryEntry,
                         onUndoDismiss = onUndoDismiss,
@@ -1427,9 +1413,9 @@ fun IslandOverlayView(
 
 /**
  * State A: Normal Dashboard Card.
- * Displays Time, Date, Compact Weather, and Recent Notification Previews.
+ * Displays Time, Date, and Recent Notification Previews.
  * Features a bounded, vertically scrollable LazyColumn allowing navigation through all history entries (up to 30),
- * with pinned header and clock/date/weather elements, smooth Nothing OS scrollbar, and stable key preservation.
+ * with pinned header and clock/date elements, smooth Nothing OS scrollbar, and stable key preservation.
  * Phase 3.4/3.5 adds horizontal swipe-to-dismiss, visible 'x' dismiss affordance, CLEAR ALL confirmation,
  * and compact Nothing OS-style Undo Snackbar with live countdown ticker.
  */
@@ -1447,8 +1433,7 @@ fun DashboardCard(
     onSwipe: (SwipeDirection) -> Unit = {},
     listState: LazyListState = rememberLazyListState(),
     modifier: Modifier = Modifier,
-    isCameraCutoutEnabled: Boolean = false,
-    weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable()
+    isCameraCutoutEnabled: Boolean = false
 ) {
     val cardShape = if (isCameraCutoutEnabled) com.nothing.island.ai.ui.components.currentNotchedCardShape() else RoundedCornerShape(26.dp)
     var isConfirmingClear by remember { mutableStateOf(false) }
@@ -1536,7 +1521,7 @@ fun DashboardCard(
                         .height(42.dp)
                 )
 
-                // 2. Header Row: Clock & Date (Left), Weather (Center), COLLAPSE (Right)
+                // 2. Header Row: Clock & Date (Left), COLLAPSE (Right)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1557,32 +1542,6 @@ fun DashboardCard(
                             color = theme.textColorSecondary,
                             fontSize = 10.sp,
                             fontFamily = theme.bodyFont,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    // Formalized Weather State Chip (explicit Unavailable/Loading/Permission/Error/Available)
-                    val weatherChipLabel = com.nothing.island.ai.weather.WeatherStateFormatter.formatChipLabel(weatherState)
-                    val weatherA11y = com.nothing.island.ai.weather.WeatherStateFormatter.formatContentDescription(weatherState)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(NothingDarkGray)
-                            .semantics {
-                                contentDescription = weatherA11y
-                            }
-                            .padding(horizontal = 8.dp, vertical = 5.dp)
-                    ) {
-                        Text(
-                            text = weatherChipLabel,
-                            color = when (weatherState) {
-                                is com.nothing.island.ai.weather.WeatherState.Available -> theme.textColorPrimary
-                                is com.nothing.island.ai.weather.WeatherState.Error -> NothingRed
-                                else -> NothingMutedText
-                            },
-                            fontSize = 8.5.sp,
-                            fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Medium
                         )
                     }

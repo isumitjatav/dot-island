@@ -83,14 +83,6 @@ class DesignSystemAndNavigationTest {
     }
 
     @Test
-    fun testBackwardCompatibilityLegacyDestinations() {
-        // Ensure legacy destinations remain instantiated and accessible
-        assertEquals("appearance", IslandDestination.Appearance.route)
-        assertEquals("features", IslandDestination.Features.route)
-        assertEquals("gemini", IslandDestination.Gemini.route)
-    }
-
-    @Test
     fun testNothingTokensBaselineValues() {
         assertEquals(androidx.compose.ui.graphics.Color(0xFF000000), NothingTokens.NothingBlack)
         assertEquals(androidx.compose.ui.graphics.Color(0xFFD71920), NothingTokens.NothingRed)

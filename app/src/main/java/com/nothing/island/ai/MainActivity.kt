@@ -36,10 +36,7 @@ import com.nothing.island.ai.notifications.NotificationPreviewMode
 import com.nothing.island.ai.telephony.CallController
 import com.nothing.island.ai.ui.components.NothingBottomNavigation
 import com.nothing.island.ai.ui.screens.AnimationStudioScreen
-import com.nothing.island.ai.ui.screens.AppearanceScreen
 import com.nothing.island.ai.ui.screens.ChargingStudioScreen
-import com.nothing.island.ai.ui.screens.FeaturesScreen
-import com.nothing.island.ai.ui.screens.GeminiScreen
 import com.nothing.island.ai.ui.screens.GeometryStudioScreen
 import com.nothing.island.ai.ui.screens.GestureStudioScreen
 import com.nothing.island.ai.ui.screens.HomeScreen
@@ -332,16 +329,6 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
-                                    // Preserved Legacy Destinations (Backward Compatibility)
-                                    is IslandDestination.Appearance -> {
-                                        AppearanceScreen()
-                                    }
-                                    is IslandDestination.Features -> {
-                                        FeaturesScreen()
-                                    }
-                                    is IslandDestination.Gemini -> {
-                                        GeminiScreen()
-                                    }
                                 }
                             }
                         }

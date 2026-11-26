@@ -22,7 +22,6 @@ data class IslandMasterState(
     val subtitle: String = "ACTIVE • CALIBRATED",
     val statusText: String = "A069 (FroggerIND)",
     val isPulsing: Boolean = true,
-    val isRecordingActive: Boolean = false,
     val timeoutDeadlineMs: Long? = null,
     val selectedNotificationKey: String? = null,
     /**
@@ -119,7 +118,6 @@ class IslandStateRepository(
                     title = presentation.title,
                     subtitle = presentation.subtitle,
                     statusText = presentation.statusText,
-                    isRecordingActive = event is IslandEvent.RecordingStateChanged && event.isRecording,
                     timeoutDeadlineMs = deadline,
                     isAutoExpanded = if (isEarbudEvent) false else current.isAutoExpanded,
                 )
@@ -378,11 +376,6 @@ class IslandStateRepository(
 
     private fun derivePresentationDetails(event: IslandEvent): PresentationDetails {
         return when (event) {
-            is IslandEvent.EmergencyAlert -> PresentationDetails(
-                title = event.alertTitle,
-                subtitle = event.alertMessage,
-                statusText = "CRITICAL ALERT"
-            )
             is IslandEvent.IncomingCallRinging -> PresentationDetails(
                 title = "INCOMING CALL",
                 subtitle = event.callerDisplayName,
@@ -452,26 +445,6 @@ class IslandStateRepository(
                 title = "UNLOCKED",
                 subtitle = event.unlockMethod.name,
                 statusText = "AUTHENTICATED"
-            )
-            is IslandEvent.TimerStarted -> PresentationDetails(
-                title = "TIMER: ${event.remainingSeconds}s",
-                subtitle = event.label,
-                statusText = "STARTED"
-            )
-            is IslandEvent.TimerTick -> PresentationDetails(
-                title = "TIMER: ${event.remainingSeconds}s",
-                subtitle = "ACTIVE COUNTDOWN",
-                statusText = "RUNNING"
-            )
-            is IslandEvent.TimerFinished -> PresentationDetails(
-                title = "TIMER FINISHED",
-                subtitle = event.label,
-                statusText = "TIME UP"
-            )
-            is IslandEvent.RecordingStateChanged -> PresentationDetails(
-                title = "RECORDING ACTIVE",
-                subtitle = event.recordingType.name,
-                statusText = "PRIVACY ANCHOR"
             )
             is IslandEvent.RingerModeChanged -> PresentationDetails(
                 title = when (event.ringerMode) {

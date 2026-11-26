@@ -665,30 +665,3 @@ fun QuickToolsDrawer(
     }
 }
 
-/**
- * Backward-compatible overload for legacy callers.
- */
-@Composable
-fun QuickToolsDrawer(
-    tools: List<QuickTool>,
-    onCollapse: () -> Unit,
-    onVolumeChange: (Int) -> Unit = {},
-    onHistory: () -> Unit = {},
-    onAi: () -> Unit = {},
-    modifier: Modifier = Modifier,
-    isCameraCutoutEnabled: Boolean = false,
-) {
-    QuickToolsDrawer(
-        tools = tools,
-        onCollapse = onCollapse,
-        volumePercent = 0.5f,
-        onVolumeChange = { percent ->
-            val delta = if (percent > 0.5f) 1 else -1
-            onVolumeChange(delta)
-        },
-        brightnessPercent = 0.5f,
-        onBrightnessChange = {},
-        modifier = modifier,
-        isCameraCutoutEnabled = isCameraCutoutEnabled
-    )
-}
