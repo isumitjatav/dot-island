@@ -2,14 +2,14 @@
 
 **Dynamic Capsule, Live Activities & Reactive Pixel Companions for Android — 100% Offline, Zero Internet Permissions**
 
-[![Live Website](https://img.shields.io/badge/Live_Site-GitHub_Pages-d71921?style=for-the-badge)](https://sumitsinghjatav64-creator.github.io/nothing-island/)
-[![Download Latest APK](https://img.shields.io/badge/Download-v1.1.2_APK-111111?style=for-the-badge&logo=android)](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest)
-[![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline_%2F_No_INTERNET-00c853?style=for-the-badge)](https://sumitsinghjatav64-creator.github.io/nothing-island/privacy.html)
+[![Live Website](https://img.shields.io/badge/Live_Site-GitHub_Pages-d71921?style=for-the-badge)](https://isumitjatav.github.io/dot-island/)
+[![Download Latest APK](https://img.shields.io/badge/Download-v1.1.2_APK-111111?style=for-the-badge&logo=android)](https://github.com/isumitjatav/dot-island/releases/latest)
+[![Privacy](https://img.shields.io/badge/Privacy-100%25_Offline_%2F_No_INTERNET-00c853?style=for-the-badge)](https://isumitjatav.github.io/dot-island/privacy.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-262629?style=for-the-badge)](LICENSE)
 
 Dot Island turns the camera punch-hole on Android 10+ devices into a responsive, AMOLED-black Dynamic Capsule for active calls, media visualizers, charging telemetry, Bluetooth peripherals, and pixel companions — running strictly on-device with zero network permissions (`android.permission.INTERNET` is absent from the release manifest).
 
-→ **[Explore the Interactive Live Site](https://sumitsinghjatav64-creator.github.io/nothing-island/)** · **[Download DotIsland-v1.1.2.apk](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest)**
+→ **[Explore the Interactive Live Site](https://isumitjatav.github.io/dot-island/)** · **[Download DotIsland-v1.1.2.apk](https://github.com/isumitjatav/dot-island/releases/latest)**
 
 ---
 
@@ -63,7 +63,7 @@ Dot Island turns the camera punch-hole on Android 10+ devices into a responsive,
 
 ## 3-Step Installation & Setup
 
-1. **Download Signed APK:** Grab `DotIsland-v1.1.2.apk` from the **[Latest GitHub Release](https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest)**.
+1. **Download Signed APK:** Grab `DotIsland-v1.1.2.apk` from the **[Latest GitHub Release](https://github.com/isumitjatav/dot-island/releases/latest)**.
 2. **Grant Core Permissions:** Allow installation from your browser, open **Dot Island**, and enable **Display over other apps** and **Notification access** *(optional: enable Accessibility in System Settings as a top-bar anchor and global screenshot action)*.
 3. **Calibrate & Start:** Open **Studios → Geometry Calibration** to align around your punch-hole and tap **Start Dot Island**.
 
@@ -78,4 +78,4 @@ Dot Island turns the camera punch-hole on Android 10+ devices into a responsive,
 
 ## Privacy & Open Source
 
-Dot Island collects and transmits **zero user data**. Read the full [Privacy Policy](https://sumitsinghjatav64-creator.github.io/nothing-island/privacy.html) or browse the [Live Showcase Site](https://sumitsinghjatav64-creator.github.io/nothing-island/).
+Dot Island collects and transmits **zero user data**. Read the full [Privacy Policy](https://isumitjatav.github.io/dot-island/privacy.html) or browse the [Live Showcase Site](https://isumitjatav.github.io/dot-island/).
