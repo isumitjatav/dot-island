@@ -1396,6 +1396,68 @@
       gap: 16px;
     }
 
+    /* Captured on Device Showcase (Monochrome Dot-Matrix Grid) */
+    .captures-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 580px) {
+      .captures-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 980px) {
+      .captures-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+
+    .capture-card {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .capture-frame {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 9 / 20;
+      border-radius: 14px;
+      overflow: hidden;
+      background:
+        radial-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        #050507;
+      background-size: 12px 12px, auto;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .capture-frame img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      transition: transform 320ms var(--ease-spring);
+    }
+
+    .capture-card:hover .capture-frame img {
+      transform: scale(1.02);
+    }
+
+    .capture-meta h3 {
+      font-size: 0.92rem;
+      margin: 0 0 4px;
+    }
+
+    .capture-meta p {
+      font-size: 0.8rem;
+      line-height: 1.45;
+    }
+
     .step-num {
       font-family: var(--mono);
       font-size: 0.72rem;
@@ -1484,12 +1546,13 @@
       </a>
       <nav class="nav-pill nav-center" aria-label="Section links">
         <a href="#features">Showcase</a>
+        <a href="#captures">Captures</a>
         <a href="#compatibility">Cutouts</a>
         <a href="#install">Install</a>
         <a href="privacy.html">Privacy</a>
       </nav>
       <a class="nav-pill nav-dl" href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">
-        Get v1.1.0
+        Get v1.1.2
       </a>
     </div>
   </header>
@@ -1498,7 +1561,7 @@
     <section class="hero">
       <div>
         <div class="eyebrow">
-          <span><strong>v1.1.0</strong> • ANDROID 10+ • ZERO TELEMETRY</span>
+          <span><strong>v1.1.2</strong> • ANDROID 10+ • ZERO TELEMETRY</span>
         </div>
         <h1>Dot Island</h1>
         <p class="hero-sub">
@@ -1831,6 +1894,71 @@
       </div>
     </section>
 
+    <!-- Captured on Device Showcase -->
+    <section id="captures">
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">PIXEL 8 • SYSTEM UI DEMO MODE</div>
+          <h2 class="section-title">Captured on Device</h2>
+        </div>
+        <span class="card-pill">04 LIVE STATES • 100% DUMMY DATA</span>
+      </div>
+
+      <div class="captures-grid">
+        <article class="card capture-card" data-reveal>
+          <div class="card-top" style="margin-bottom: 0;">
+            <span class="card-pill">01 • TELEPHONY</span>
+          </div>
+          <div class="capture-frame">
+            <img src="assets/call-active.png" alt="Dot Island active call capsule with live timer and in-call controls" loading="lazy" />
+          </div>
+          <div class="capture-meta">
+            <h3>Active Call Capsule</h3>
+            <p>Live duration timer, speaker toggle, mute, hold, DTMF keypad, and end-call controls.</p>
+          </div>
+        </article>
+
+        <article class="card capture-card" data-reveal>
+          <div class="card-top" style="margin-bottom: 0;">
+            <span class="card-pill">02 • MUSIC</span>
+          </div>
+          <div class="capture-frame">
+            <img src="assets/music-pill.png" alt="Dot Island compact music visualizer pill displaying track metadata AURA" loading="lazy" />
+          </div>
+          <div class="capture-meta">
+            <h3>Compact Music Pill</h3>
+            <p>Live waveform visualizer synced to track metadata around the camera punch-hole.</p>
+          </div>
+        </article>
+
+        <article class="card capture-card" data-reveal>
+          <div class="card-top" style="margin-bottom: 0;">
+            <span class="card-pill">03 • COMPANION</span>
+          </div>
+          <div class="capture-frame">
+            <img src="assets/companion-idle.png" alt="Dot Island idle capsule with pixel chibi cat companion perched on the curve" loading="lazy" />
+          </div>
+          <div class="capture-meta">
+            <h3>Pixel Companion</h3>
+            <p>Reactive chibi sprite perched along the lower capsule curve without blocking status icons.</p>
+          </div>
+        </article>
+
+        <article class="card capture-card" data-reveal>
+          <div class="card-top" style="margin-bottom: 0;">
+            <span class="card-pill">04 • CALIBRATION</span>
+          </div>
+          <div class="capture-frame">
+            <img src="assets/calibration-ui.png" alt="Dot Island Geometry Calibration UI showing punch-hole X, Y, and corner radius sliders" loading="lazy" />
+          </div>
+          <div class="capture-meta">
+            <h3>Geometry Calibration</h3>
+            <p>Per-dp width, height, corner radius, and U-notch offset sliders with live preview.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- 3-Step Install Flow -->
     <section id="install">
       <div class="section-head">
@@ -1843,7 +1971,7 @@
         <div class="card" data-reveal>
           <div class="step-num">STEP 01</div>
           <h3>Download Signed APK</h3>
-          <p>Grab <strong>DotIsland-v1.1.0.apk</strong> directly from GitHub Releases and allow installing from your browser.</p>
+          <p>Grab <strong>DotIsland-v1.1.2.apk</strong> directly from GitHub Releases and allow installing from your browser.</p>
         </div>
         <div class="card" data-reveal>
           <div class="step-num">STEP 02</div>
@@ -1860,7 +1988,7 @@
   </main>
 
   <div class="floating-cta" id="floatingCta">
-    <span>Dot Island v1.1.0</span>
+    <span>Dot Island v1.1.2</span>
     <a href="https://github.com/sumitsinghjatav64-creator/nothing-island/releases/latest">Download APK ↗</a>
   </div>
 
