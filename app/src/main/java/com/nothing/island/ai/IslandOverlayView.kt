@@ -78,9 +78,11 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathMeasure
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
@@ -90,6 +92,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.nothing.island.ai.data.IslandPreferences
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.DownloadProgressState
@@ -263,6 +266,35 @@ fun Modifier.islandProgressBorder(
 }
 
 /**
+ * Pure predicate deciding whether the idle pixel mascot (and 52.dp unclipped shoulder headroom)
+ * should render on the compact default capsule.
+ * Always true whenever mascotEnabled == true and no expanded card or active event pill is visible.
+ */
+internal fun shouldShowIdleMascot(
+    isExpanded: Boolean,
+    isDualPill: Boolean,
+    isCallActive: Boolean,
+    isEarbudEvent: Boolean,
+    isSystemAlertActive: Boolean,
+    hasActiveNotification: Boolean,
+    isMusicPlaying: Boolean,
+    isBatteryActive: Boolean,
+    isChargingPillVisible: Boolean,
+    hasDownloadProgress: Boolean,
+    mascotEnabled: Boolean,
+): Boolean {
+    if (!mascotEnabled || isExpanded || isDualPill) return false
+    return !(isCallActive ||
+        isEarbudEvent ||
+        isSystemAlertActive ||
+        hasActiveNotification ||
+        isMusicPlaying ||
+        isBatteryActive ||
+        isChargingPillVisible ||
+        hasDownloadProgress)
+}
+
+/**
  * Main floating overlay view for Nothing Island.
  * Manages presentation switching between compact pill modes and the two distinct expanded states:
  * - State A: Normal Dashboard (Time, Date, Compact Weather, Recent notification previews).
@@ -278,6 +310,7 @@ fun IslandOverlayView(
     batteryPreferences: BatteryPreferences = BatteryPreferences(),
     batteryState: BatteryState = BatteryState.INITIAL,
     currentTrack: MediaTrackState = MediaTrackState.EMPTY,
+    resumableMedia: MediaTrackState? = null,
     activeEvent: IslandEvent? = null,
     isDualPill: Boolean = false,
     projectedHistory: List<PrivacySafeNotificationPresentation> = emptyList(),
@@ -308,6 +341,8 @@ fun IslandOverlayView(
     onSkipPrevious: () -> Unit = {},
     onSeekTo: (Long) -> Unit = {},
     onToggleRepeat: (Int) -> Unit = {},
+    onOpenMediaApp: () -> Unit = {},
+    onResumeLastMedia: () -> Unit = {},
     onQuickVolume: (Int) -> Unit = {},
     onQuickVolumePercent: (Float) -> Unit = {},
     onQuickBrightnessPercent: (Float) -> Unit = {},
@@ -321,9 +356,12 @@ fun IslandOverlayView(
     stateManager: IslandStateManager = IslandStateManager.getInstance(),
     weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable(),
     onScreenshotResult: ((com.nothing.island.ai.gestures.ScreenshotActionResult) -> Unit)? = null,
-    onPillBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> }
+    onPillBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> },
+    onMascotBoundsChanged: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> }
 ) {
-    val isExpanded = state.mode == IslandMode.EXPANDED
+    val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
+            activeEvent is IslandEvent.BluetoothDeviceDisconnected
+    val isExpanded = state.mode == IslandMode.EXPANDED && !isEarbudEvent
     val accentColor = Color(preferences.accentColorHex)
     val signatureTheme = remember(preferences.presetName) {
         com.nothing.island.ai.ui.theme.IslandSignatureTheme.resolve(preferences.presetName)
@@ -339,8 +377,48 @@ fun IslandOverlayView(
         com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context).callPreferencesFlow()
     }.collectAsState(initial = com.nothing.island.ai.telephony.CallPreferences.DEFAULTS)
     val isSpeakerOn by com.nothing.island.ai.telephony.CallController.isSpeakerOn.collectAsState()
+    val isMuted by com.nothing.island.ai.telephony.CallController.isMuted.collectAsState()
+    val isOnHold by com.nothing.island.ai.telephony.CallController.isOnHold.collectAsState()
+    val isRecording by com.nothing.island.ai.telephony.CallController.isRecording.collectAsState()
+
+    val activeCallIdentity = when (activeEvent) {
+        is IslandEvent.IncomingCallRinging -> activeEvent.callId
+        is IslandEvent.CallConnected -> activeEvent.callId
+        else -> null
+    }
+    var callControlsExpanded by remember(activeCallIdentity) {
+        mutableStateOf(activeEvent is IslandEvent.CallConnected)
+    }
+    var callNumpadExpanded by remember(activeCallIdentity) {
+        mutableStateOf(false)
+    }
+    androidx.compose.runtime.LaunchedEffect(activeEvent) {
+        if (activeEvent is IslandEvent.CallConnected && !callControlsExpanded) {
+            callControlsExpanded = true
+        } else if (activeEvent is IslandEvent.CallEnded || activeEvent !is IslandEvent.CallConnected && activeEvent !is IslandEvent.IncomingCallRinging) {
+            callControlsExpanded = false
+            callNumpadExpanded = false
+        }
+    }
+
     val onToggleSpeaker = {
         com.nothing.island.ai.telephony.CallController.toggleSpeaker(context)
+        Unit
+    }
+    val onToggleMute = {
+        com.nothing.island.ai.telephony.CallController.toggleMute(context)
+        Unit
+    }
+    val onToggleHold = {
+        com.nothing.island.ai.telephony.CallController.toggleHold(context)
+        Unit
+    }
+    val onToggleRecord = {
+        com.nothing.island.ai.telephony.CallController.toggleRecord(context)
+        Unit
+    }
+    val onOpenDialerScreen = {
+        com.nothing.island.ai.telephony.CallController.openInCallScreen(context)
         Unit
     }
 
@@ -412,9 +490,6 @@ fun IslandOverlayView(
             activeEvent is IslandEvent.CallConnected ||
             activeEvent is IslandEvent.CallEnded
 
-    val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
-            activeEvent is IslandEvent.BluetoothDeviceDisconnected
-
     val isBatteryActive = (batteryState.isCharging && activeEvent is IslandEvent.ChargingConnected) ||
             (activeEvent is IslandEvent.BatteryStateChanged && activeEvent.isLowBattery) ||
             (activeEvent is IslandEvent.BatteryWarning)
@@ -434,13 +509,25 @@ fun IslandOverlayView(
     if (isExpanded) {
         when (state.expandedViewType) {
             ExpandedViewType.CALL -> {
+                val baseCutoutOffset = if (preferences.isCameraCutoutEnabled) 42 else 0
+                val mascotRowBoost = if (preferences.mascotEnabled && activeEvent !is IslandEvent.CallEnded) 14 else 0
+                val desiredCallHeight = when {
+                    activeEvent is IslandEvent.CallEnded || !callControlsExpanded -> 78 + baseCutoutOffset + mascotRowBoost
+                    callNumpadExpanded -> 388 + baseCutoutOffset + mascotRowBoost
+                    else -> 150 + baseCutoutOffset + mascotRowBoost
+                }
                 targetWidth = 344.dp
-                targetHeight = if (preferences.isCameraCutoutEnabled) 120.dp else 78.dp
-                targetCornerRadius = if (preferences.isCameraCutoutEnabled) 36.dp else 39.dp
+                targetHeight = desiredCallHeight.dp
+                targetCornerRadius = if (callControlsExpanded || callNumpadExpanded) 30.dp else if (preferences.isCameraCutoutEnabled) 36.dp else 39.dp
             }
             ExpandedViewType.QUICK_TOOLS -> {
                 targetWidth = preferences.expandedWidthDp.dp
                 targetHeight = 360.dp
+                targetCornerRadius = 28.dp
+            }
+            ExpandedViewType.MUSIC -> {
+                targetWidth = preferences.expandedWidthDp.dp
+                targetHeight = (preferences.expandedHeightDp + 22f).dp
                 targetCornerRadius = 28.dp
             }
             else -> {
@@ -462,16 +549,21 @@ fun IslandOverlayView(
                 targetCornerRadius = (preferences.compactHeightDp / 2f).dp
             }
             isEarbudEvent -> {
-                targetWidth = 320.dp
-                targetHeight = 52.dp
-                targetCornerRadius = 26.dp
+                targetWidth = 236.dp
+                targetHeight = 38.dp
+                targetCornerRadius = 19.dp
             }
             isSystemAlertActive -> {
                 targetWidth = 220.dp
                 targetHeight = 36.dp
                 targetCornerRadius = 18.dp
             }
-            activeNotification != null || (currentTrack.isPlaying && !isBatteryActive) || isBatteryActive -> {
+            currentTrack.isPlaying && !isBatteryActive && activeNotification == null -> {
+                targetWidth = 224.dp
+                targetHeight = preferences.compactHeightDp.dp
+                targetCornerRadius = (preferences.compactHeightDp / 2f).dp
+            }
+            activeNotification != null || isBatteryActive -> {
                 targetWidth = 200.dp
                 targetHeight = preferences.compactHeightDp.dp
                 targetCornerRadius = (preferences.compactHeightDp / 2f).dp
@@ -562,19 +654,57 @@ fun IslandOverlayView(
         else -> if (rawPillBgHex == 0L || (rawPillBgHex and 0xFF000000L) == 0L) NothingBlack else Color(rawPillBgHex)
     }
     val capsuleBorderColor = when {
+        !isExpanded && isEarbudEvent -> Color(0xFFD71921)
         signatureTheme.isGlassmorphic -> Color(0x45FFFFFF)
         signatureTheme.isInverted -> Color(0xFFD0D0D0)
         else -> signatureTheme.borderColor
     }
 
+    val isChargingPillVisible = batteryState.isCharging && batteryPreferences.chargingAnimationEnabled && !currentTrack.isPlaying
+    val isMascotStageActive = !isExpanded && !isDualPill && preferences.mascotEnabled
+
+    androidx.compose.runtime.LaunchedEffect(isMascotStageActive) {
+        if (!isMascotStageActive) {
+            onMascotBoundsChanged(0, 0, 0, 0)
+        }
+    }
+
+    val screenWidthPx = context.resources.displayMetrics.widthPixels.toFloat()
+    val displayDensity = context.resources.displayMetrics.density
+    var expandedCardLeftXPx by remember(screenWidthPx, animatedWidth) {
+        mutableFloatStateOf((screenWidthPx - animatedWidth.value * displayDensity) / 2f)
+    }
+    val expandedNotchConfig = com.nothing.island.ai.ui.components.ExpandedNotchConfig(
+        notchWidthDp = preferences.expandedNotchWidth,
+        notchDepthDp = preferences.expandedNotchDepth,
+        physicalCameraCenterXPx = geometry.centerXpx,
+        expandedCardLeftXPx = expandedCardLeftXPx,
+        expandedOffsetXDp = preferences.expandedOffsetX,
+    )
+
     androidx.compose.runtime.CompositionLocalProvider(
-        com.nothing.island.ai.ui.theme.LocalIslandTheme provides signatureTheme
+        com.nothing.island.ai.ui.theme.LocalIslandTheme provides signatureTheme,
+        com.nothing.island.ai.ui.components.LocalExpandedNotchConfig provides expandedNotchConfig,
     ) {
         val outerCapsuleShape = if (isExpanded && preferences.isCameraCutoutEnabled && state.expandedViewType != ExpandedViewType.CALL) {
-            com.nothing.island.ai.ui.components.notchedCardShape(cornerRadiusDp = animatedCornerRadius.value)
+            com.nothing.island.ai.ui.components.notchedCardShape(
+                notchWidthDp = preferences.expandedNotchWidth,
+                notchDepthDp = preferences.expandedNotchDepth,
+                cornerRadiusDp = animatedCornerRadius.value,
+                physicalCameraCenterXPx = geometry.centerXpx,
+                expandedCardLeftXPx = expandedCardLeftXPx,
+                expandedOffsetXDp = preferences.expandedOffsetX,
+            )
         } else {
             RoundedCornerShape(animatedCornerRadius)
         }
+
+        val chibiState = com.nothing.island.ai.ui.components.resolveChibiState(
+            isCallActive = isCallActive,
+            isMusicPlaying = currentTrack.isPlaying && !isBatteryActive,
+            hasActiveNotification = activeNotification != null,
+            isCharging = isBatteryActive || isChargingPillVisible,
+        )
 
         Box(
             modifier = Modifier
@@ -594,11 +724,54 @@ fun IslandOverlayView(
                 ),
             contentAlignment = Alignment.TopCenter
         ) {
+            // Tight stage sizing matching WindowManager.LayoutParams bounds (no 280x92 transparent touch shield)
+            val compactSpec = com.nothing.island.ai.ui.components.computeCompactStageWindowSpec(
+                compactWidthDp = preferences.compactWidthDp,
+                compactHeightDp = preferences.compactHeightDp,
+                mascotEnabled = preferences.mascotEnabled,
+                isDualPill = isDualPill,
+                isEarbudActive = isEarbudEvent,
+                isSystemAlertActive = isSystemAlertActive,
+                isCallActive = isCallActive,
+                hasActiveNotification = activeNotification != null,
+                isMusicPlaying = currentTrack.isPlaying,
+                isChargingActive = isBatteryActive || isChargingPillVisible,
+            )
+            val stageWidthDp = if (!isExpanded) maxOf(compactSpec.widthDp, animatedWidth.value).dp else animatedWidth
+            val stageHeightDp = if (!isExpanded) maxOf(compactSpec.heightDp, animatedHeight.value).dp else animatedHeight
+
+            Box(
+                modifier = if (isMascotStageActive) {
+                    Modifier
+                        .size(width = stageWidthDp, height = stageHeightDp)
+                        .background(Color.Transparent)
+                } else {
+                    Modifier
+                },
+                contentAlignment = Alignment.TopCenter
+            ) {
+                if (isMascotStageActive && !isEarbudEvent && !isSystemAlertActive) {
+                    com.nothing.island.ai.ui.components.ChibiStageCompanion(
+                        state = chibiState,
+                        variant = com.nothing.island.ai.ui.components.resolveChibiVariant(preferences.mascotSpriteName),
+                        pillWidthDp = animatedWidth.value,
+                        pillHeightDp = animatedHeight.value,
+                        pillTopDp = 0f,
+                        batteryPercent = batteryState.percentage,
+                        isCallRinging = activeEvent is IslandEvent.IncomingCallRinging,
+                        notificationKey = activeNotification?.id,
+                        reducedMotionEnabled = preferences.reducedMotionEnabled,
+                        onMascotBoundsChanged = onMascotBoundsChanged,
+                    )
+                }
+
             Box(
                 modifier = Modifier
+                    .zIndex(com.nothing.island.ai.ui.components.ChibiStageMetrics.CAPSULE_Z_INDEX)
                     .onGloballyPositioned { coordinates ->
                         val pos = coordinates.positionInRoot()
                         val size = coordinates.size
+                        expandedCardLeftXPx = pos.x
                         onPillBoundsChanged(
                             pos.x.toInt(),
                             pos.y.toInt(),
@@ -715,6 +888,12 @@ fun IslandOverlayView(
                         val isEarbudEvent = activeEvent is IslandEvent.BluetoothDeviceConnected ||
                                 activeEvent is IslandEvent.BluetoothDeviceDisconnected
 
+                        val mascotIdleReactionState = com.nothing.island.ai.ui.components.resolveMascotReactionState(
+                            isCallOrAlertActive = false,
+                            isMusicPlaying = false,
+                            isCharging = batteryState.isCharging
+                        )
+
                         if (isCallActive) {
                             // R9: telephony capsule with breathing red accent
                             CallCompactView(
@@ -726,15 +905,15 @@ fun IslandOverlayView(
                                 onToggleSpeaker = onToggleSpeaker,
                             )
                         } else if (isEarbudEvent) {
-                            // Bluetooth headset pill with circular battery ring
+                            // Compact centered Bluetooth headphones pill; never toggles an expanded blank container
                             when (val e = activeEvent) {
                                 is IslandEvent.BluetoothDeviceConnected -> EarbudConnectionView(
                                     event = e,
-                                    onTap = onToggleExpand,
+                                    onTap = handleCollapseWithAck,
                                 )
                                 is IslandEvent.BluetoothDeviceDisconnected -> EarbudDisconnectedView(
                                     event = e,
-                                    onTap = onToggleExpand,
+                                    onTap = handleCollapseWithAck,
                                 )
                                 else -> Unit
                             }
@@ -854,39 +1033,87 @@ fun IslandOverlayView(
                                 else -> if (rawPillBgHex == 0L || (rawPillBgHex and 0xFF000000L) == 0L) NothingBlack else Color(rawPillBgHex)
                             }
 
+                            val haptics = LocalHapticFeedback.current
+                            val resumeSwipeThresholdPx = with(LocalDensity.current) { 28.dp.toPx() }
+                            val canSwipeToResume = !isExpanded &&
+                                activeEvent == null &&
+                                !currentTrack.isPlaying &&
+                                resumableMedia != null &&
+                                resumableMedia.packageName.isNotBlank() &&
+                                resumableMedia.trackTitle.isNotBlank()
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .islandProgressBorder(
-                                        shape = RoundedCornerShape(animatedCornerRadius),
+                                        shape = pillShape,
+                                        baseBorderColor = capsuleBorderColor,
                                         progressState = downloadState,
                                         progress = downloadProg,
                                         maxProgress = downloadMax,
                                         accentColor = accentColor
+                                    )
+                                    .then(
+                                        if (canSwipeToResume) {
+                                            Modifier.pointerInput(canSwipeToResume, resumeSwipeThresholdPx) {
+                                                var dragX = 0f
+                                                var resumed = false
+                                                detectHorizontalDragGestures(
+                                                    onDragStart = {
+                                                        dragX = 0f
+                                                        resumed = false
+                                                    },
+                                                    onHorizontalDrag = { change, dragAmount ->
+                                                        dragX += dragAmount
+                                                        if (!resumed && shouldTriggerIdleSwipeResume(
+                                                                hasResumableMedia = true,
+                                                                isMusicPlaying = false,
+                                                                isExpanded = false,
+                                                                hasActivePriorityEvent = false,
+                                                                dragDistancePx = dragX,
+                                                                thresholdPx = resumeSwipeThresholdPx,
+                                                            )
+                                                        ) {
+                                                            change.consume()
+                                                            resumed = true
+                                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                            onResumeLastMedia()
+                                                        }
+                                                    },
+                                                    onDragEnd = {
+                                                        dragX = 0f
+                                                        resumed = false
+                                                    },
+                                                    onDragCancel = {
+                                                        dragX = 0f
+                                                        resumed = false
+                                                    }
+                                                )
+                                            }
+                                        } else {
+                                            Modifier
+                                        }
                                     )
                                     .islandGestureDetector(
                                         preferences = gesturePreferences,
                                         executor = gestureExecutor,
                                         isMediaIslandActive = false,
                                         onTap = handleSmartCompactTap,
-                                        onSwipeActivity = onSwipeActivity,
+                                        onSwipeActivity = { direction ->
+                                            if (canSwipeToResume &&
+                                                (direction == SwipeDirection.LEFT || direction == SwipeDirection.RIGHT)
+                                            ) {
+                                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                onResumeLastMedia()
+                                            } else {
+                                                onSwipeActivity(direction)
+                                            }
+                                        },
                                         onPressChange = { isPressed = it },
                                         onDragProgress = handleCompactDragProgress,
                                         onDragRelease = handleCompactDragRelease
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                // Optional walking pixel mascot in the idle pill.
-                                if (preferences.mascotEnabled && downloadState == DownloadProgressState.NONE) {
-                                    com.nothing.island.ai.ui.components.MascotPillPreview(
-                                        sprite = com.nothing.island.ai.ui.components.mascotByName(preferences.mascotSpriteName),
-                                        modifier = Modifier.size(
-                                            width = preferences.compactWidthDp.dp,
-                                            height = preferences.compactHeightDp.dp,
-                                        ),
                                     )
-                                }
-                            }
+                            )
                         }
                     } // end Box
                 } // end else (non-dual compact)
@@ -1031,7 +1258,6 @@ fun IslandOverlayView(
                                 modifier = Modifier.fillMaxSize()
                             )
                         } else {
-                            // Fallback when notification expired or unavailable
                             NotificationEmptyFocusedCard(
                                 onCollapse = handleCollapseWithAck,
                                 modifier = Modifier.fillMaxSize()
@@ -1080,6 +1306,7 @@ fun IslandOverlayView(
                         onCollapse = handleCollapseWithAck,
                         onSwipe = onSwipeActivity,
                         onToggleRepeat = onToggleRepeat,
+                        onOpenMediaApp = onOpenMediaApp,
                         isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -1119,6 +1346,27 @@ fun IslandOverlayView(
                             onToggleSpeaker = onToggleSpeaker,
                             isSpeakerOn = isSpeakerOn,
                             isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
+                            isMuted = isMuted,
+                            onToggleMute = onToggleMute,
+                            isOnHold = isOnHold,
+                            onToggleHold = onToggleHold,
+                            isRecording = isRecording,
+                            onToggleRecord = onToggleRecord,
+                            onOpenDialerScreen = onOpenDialerScreen,
+                            controlsExpanded = callControlsExpanded,
+                            onToggleControlsExpanded = {
+                                val next = !callControlsExpanded
+                                callControlsExpanded = next
+                                if (!next) callNumpadExpanded = false
+                            },
+                            numpadExpanded = callNumpadExpanded,
+                            onToggleNumpadExpanded = {
+                                if (!callControlsExpanded) callControlsExpanded = true
+                                callNumpadExpanded = !callNumpadExpanded
+                            },
+                            showMascot = preferences.mascotEnabled,
+                            mascotSpriteName = preferences.mascotSpriteName,
+                            reducedMotionEnabled = preferences.reducedMotionEnabled,
                             modifier = Modifier.fillMaxSize()
                         )
                     }
@@ -1175,6 +1423,7 @@ fun IslandOverlayView(
 }
 }
 }
+}
 
 /**
  * State A: Normal Dashboard Card.
@@ -1201,7 +1450,7 @@ fun DashboardCard(
     isCameraCutoutEnabled: Boolean = false,
     weatherState: com.nothing.island.ai.weather.WeatherState = com.nothing.island.ai.weather.WeatherState.Unavailable()
 ) {
-    val cardShape = if (isCameraCutoutEnabled) com.nothing.island.ai.ui.components.notchedCardShape() else RoundedCornerShape(26.dp)
+    val cardShape = if (isCameraCutoutEnabled) com.nothing.island.ai.ui.components.currentNotchedCardShape() else RoundedCornerShape(26.dp)
     var isConfirmingClear by remember { mutableStateOf(false) }
 
     var totalHeaderDrag by remember { mutableFloatStateOf(0f) }
@@ -2104,4 +2353,19 @@ internal fun resolveFocusedNotificationPresentation(
         return projectedHistory.firstOrNull { it.key == activeNotificationId }
     }
     return projectedHistory.firstOrNull()
+}
+
+/**
+ * Pure policy gating compact idle-pill swipe-to-resume behavior (`>= 28.dp` horizontal drag).
+ */
+internal fun shouldTriggerIdleSwipeResume(
+    hasResumableMedia: Boolean,
+    isMusicPlaying: Boolean,
+    isExpanded: Boolean,
+    hasActivePriorityEvent: Boolean,
+    dragDistancePx: Float,
+    thresholdPx: Float,
+): Boolean {
+    if (!hasResumableMedia || isMusicPlaying || isExpanded || hasActivePriorityEvent) return false
+    return abs(dragDistancePx) >= thresholdPx
 }

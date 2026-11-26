@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -18,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -30,16 +30,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.nothing.island.ai.data.IslandPreferencesRepository
+import com.nothing.island.ai.ui.components.ChibiStageCompanion
+import com.nothing.island.ai.ui.components.ChibiStageMetrics
+import com.nothing.island.ai.ui.components.ChibiState
 import com.nothing.island.ai.ui.components.MascotPicker
-import com.nothing.island.ai.ui.components.MascotPillPreview
 import com.nothing.island.ai.ui.components.MascotSprites
 import com.nothing.island.ai.ui.components.mascotByName
+import com.nothing.island.ai.ui.components.resolveChibiVariant
 import com.nothing.island.ai.ui.theme.NothingCardBackground
 import com.nothing.island.ai.ui.theme.NothingDivider
 import com.nothing.island.ai.ui.theme.NothingMutedText
@@ -61,8 +66,9 @@ fun MascotStudioScreen(
     val prefs by repository.livePreferences.collectAsState()
     val scope = rememberCoroutineScope()
 
-    var selected by remember { mutableStateOf(mascotByName(prefs.mascotSpriteName)) }
-    var enabled by remember { mutableStateOf(prefs.mascotEnabled) }
+    var selected by remember(prefs.mascotSpriteName) { mutableStateOf(mascotByName(prefs.mascotSpriteName)) }
+    var enabled by remember(prefs.mascotEnabled) { mutableStateOf(prefs.mascotEnabled) }
+    var previewState by remember { mutableStateOf(ChibiState.IDLE) }
 
     fun persist() {
         scope.launch { repository.updateMascot(enabled, selected.name) }
@@ -112,26 +118,116 @@ fun MascotStudioScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Live preview
+        // Live transparent stage preview (280x92dp stage + centered black pill + Chibi Companion)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(NothingCardBackground)
-                .border(1.dp, NothingDivider, RoundedCornerShape(16.dp)),
+                .border(1.dp, NothingDivider, RoundedCornerShape(16.dp))
+                .padding(vertical = 16.dp, horizontal = 12.dp),
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                MascotPillPreview(sprite = selected)
-                Spacer(Modifier.height(12.dp))
+                val simPillWidthDp = if (previewState == ChibiState.IDLE) 124f else 200f
+                val simPillHeightDp = 36f
+                val simPillTopDp = 16f
+
+                Box(
+                    modifier = Modifier
+                        .size(width = ChibiStageMetrics.STAGE_WIDTH_DP.dp, height = ChibiStageMetrics.STAGE_HEIGHT_DP.dp)
+                        .background(Color.Transparent),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    ChibiStageCompanion(
+                        state = previewState,
+                        variant = resolveChibiVariant(selected.name),
+                        pillWidthDp = simPillWidthDp,
+                        pillHeightDp = simPillHeightDp,
+                        pillTopDp = simPillTopDp,
+                        batteryPercent = 64,
+                        isCallRinging = previewState == ChibiState.CALL,
+                        notificationKey = if (previewState == ChibiState.NOTIFICATION) "studio_preview" else null,
+                        reducedMotionEnabled = prefs.reducedMotionEnabled,
+                    )
+
+                    // Simulated black pill (zIndex 1f)
+                    Box(
+                        modifier = Modifier
+                            .padding(top = simPillTopDp.dp)
+                            .zIndex(ChibiStageMetrics.CAPSULE_Z_INDEX)
+                            .size(width = simPillWidthDp.dp, height = simPillHeightDp.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(Color.Black)
+                            .border(
+                                width = 1.dp,
+                                color = if (previewState == ChibiState.CHARGING) Color(0xFFD71921) else Color(0x33FFFFFF),
+                                shape = RoundedCornerShape(18.dp),
+                            )
+                            .padding(horizontal = 12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        val badgeLabel = when (previewState) {
+                            ChibiState.IDLE -> "●  CAMERA  ●"
+                            ChibiState.CALL -> "00:14   ANSWER"
+                            ChibiState.MUSIC -> "♪   METROLIST"
+                            ChibiState.NOTIFICATION -> "●   NEW ALERT"
+                            ChibiState.CHARGING -> "⚡ 64% FAST CHG"
+                            ChibiState.PET -> "♥  DOT CHIBI"
+                        }
+                        Text(
+                            text = badgeLabel,
+                            color = if (previewState == ChibiState.CHARGING) Color(0xFFD71921) else Color.White.copy(alpha = 0.72f),
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "${selected.name} · TAP TO JUMP",
+                    text = "${selected.displayName.uppercase()} CHIBI · TAP CHARACTER TO PET",
                     color = NothingSecondaryText,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
                     letterSpacing = 1.sp,
                 )
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    listOf(
+                        ChibiState.IDLE to "IDLE",
+                        ChibiState.CALL to "CALL",
+                        ChibiState.MUSIC to "MUSIC",
+                        ChibiState.NOTIFICATION to "ALERT",
+                        ChibiState.CHARGING to "CHARGE",
+                    ).forEach { (stateOption, label) ->
+                        val active = previewState == stateOption
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (active) NothingPrimaryAccent else NothingTokens.NothingSurfaceLow)
+                                .border(
+                                    1.dp,
+                                    if (active) NothingPrimaryAccent else NothingDivider,
+                                    RoundedCornerShape(8.dp),
+                                )
+                                .clickable { previewState = stateOption }
+                                .padding(horizontal = 10.dp, vertical = 5.dp),
+                        ) {
+                            Text(
+                                text = label,
+                                color = if (active) Color.White else NothingSecondaryText,
+                                fontSize = 9.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
+                }
             }
         }
 

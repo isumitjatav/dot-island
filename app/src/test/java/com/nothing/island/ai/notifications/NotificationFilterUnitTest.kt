@@ -362,4 +362,32 @@ class NotificationFilterUnitTest {
         val overMax = filter.filter(raw, NotificationPreferences.DEFAULTS.copy(displayDurationMs = 15000L))
         assertEquals(10000L, overMax?.timeoutMs)
     }
+
+    @Test
+    fun testSystemAndHardwareUtilityNoiseDropped() {
+        val blockedSamples = listOf(
+            createStandardRaw(key = "sys_android", packageName = "android", title = "USB debugging connected", text = "Tap to turn off USB debugging"),
+            createStandardRaw(key = "sys_ui", packageName = "com.android.systemui", title = "Screen Recording", text = "Recording screen"),
+            createStandardRaw(key = "sys_settings", packageName = "com.android.settings", title = "Battery Saver", text = "Battery Saver is on"),
+            createStandardRaw(key = "sys_provider", packageName = "com.android.providers.contacts", title = "Contacts", text = "Syncing"),
+            RawNotificationData(
+                key = "usb_channel",
+                packageName = "com.nothing.os.utility",
+                title = "USB connection",
+                text = "Tap for more options",
+                channelId = "usb_debugging_channel"
+            ),
+            RawNotificationData(
+                key = "vpn_channel",
+                packageName = "com.example.vpnhost",
+                title = "VPN",
+                text = "VPN is active",
+                channelId = "vpn_status"
+            ),
+        )
+        blockedSamples.forEach { sample ->
+            val result = filter.filter(sample, NotificationPreferences.DEFAULTS)
+            assertNull("System/hardware noise should be dropped: ${sample.key}", result)
+        }
+    }
 }

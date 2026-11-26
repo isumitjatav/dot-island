@@ -77,7 +77,7 @@ fun BatteryExpandedView(
     modifier: Modifier = Modifier,
     isCameraCutoutEnabled: Boolean = false
 ) {
-    val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
+    val cardShape = if (isCameraCutoutEnabled) currentNotchedCardShape() else RoundedCornerShape(26.dp)
     val accentColor = Color(preferences.accentColorHex)
 
     var totalDrag by remember { mutableFloatStateOf(0f) }

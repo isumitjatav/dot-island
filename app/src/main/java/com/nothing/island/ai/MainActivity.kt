@@ -2,7 +2,10 @@ package com.nothing.island.ai
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.BackHandler
@@ -60,13 +63,24 @@ class MainActivity : ComponentActivity() {
     private val hasAccessibilityPermissionState = mutableStateOf(false)
     private val isIgnoringBatteryOptimizationsState = mutableStateOf(false)
 
-    private val requestCallPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
+    private val requestRuntimePermissions = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        if (results[Manifest.permission.ANSWER_PHONE_CALLS] == true) {
             android.util.Log.i("MainActivity", "ANSWER_PHONE_CALLS granted — in-island call controls enabled")
-        } else {
+        } else if (results.containsKey(Manifest.permission.ANSWER_PHONE_CALLS)) {
             android.util.Log.w("MainActivity", "ANSWER_PHONE_CALLS denied — call controls fall back to dialer notification actions")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            results[Manifest.permission.BLUETOOTH_CONNECT] == true
+        ) {
+            android.util.Log.i("MainActivity", "BLUETOOTH_CONNECT granted — refreshing connected audio devices")
+            IslandOverlayController.getInstance(applicationContext)
+                .bluetoothEarbudTracker
+                .refreshConnectedDevices(emitConnectedEvent = false)
+        }
+        if (results[Manifest.permission.READ_CONTACTS] == true) {
+            android.util.Log.i("MainActivity", "READ_CONTACTS granted — saved caller photos enabled")
         }
     }
 
@@ -75,8 +89,35 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
         updateStates()
 
-        if (!CallController.canControlCalls(this)) {
-            requestCallPermission.launch(Manifest.permission.ANSWER_PHONE_CALLS)
+        val missingPermissions = buildList {
+            if (!CallController.canControlCalls(this@MainActivity)) {
+                add(Manifest.permission.ANSWER_PHONE_CALLS)
+            }
+            if (ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.READ_CONTACTS
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.READ_CONTACTS)
+            }
+            if (ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.READ_PHONE_STATE
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.READ_PHONE_STATE)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+                ContextCompat.checkSelfPermission(
+                    this@MainActivity,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                add(Manifest.permission.BLUETOOTH_CONNECT)
+            }
+        }
+        if (missingPermissions.isNotEmpty()) {
+            requestRuntimePermissions.launch(missingPermissions.toTypedArray())
         }
 
         setContent {

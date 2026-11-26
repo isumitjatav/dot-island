@@ -370,7 +370,7 @@ fun NotificationCard(
         }
     }
 
-    val cardShape = if (isCameraCutoutEnabled) notchedCardShape() else RoundedCornerShape(26.dp)
+    val cardShape = if (isCameraCutoutEnabled) currentNotchedCardShape() else RoundedCornerShape(26.dp)
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 50f
     val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current

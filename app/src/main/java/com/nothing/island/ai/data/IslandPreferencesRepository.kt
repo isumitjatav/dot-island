@@ -65,7 +65,11 @@ data class IslandPreferences(
     val mascotSpriteName: String = "CAT",
     val pillBackgroundColorHex: Long = 0xFF000000L,
     val isCameraCutoutEnabled: Boolean = false,
-    val autoHideInGames: Boolean = true
+    val autoHideInGames: Boolean = true,
+    val expandedOffsetX: Float = 0f,
+    val expandedOffsetY: Float = 0f,
+    val expandedNotchWidth: Float = 38f,
+    val expandedNotchDepth: Float = 28f,
 )
 
 /** Context extension for single-instance Preferences DataStore */
@@ -101,7 +105,11 @@ class IslandPreferencesRepository internal constructor(
             accentColorHex = 0xFFD71920L,
             pillBackgroundColorHex = 0xFF000000L,
             isCameraCutoutEnabled = false,
-            autoHideInGames = true
+            autoHideInGames = true,
+            expandedOffsetX = 0f,
+            expandedOffsetY = 0f,
+            expandedNotchWidth = 38f,
+            expandedNotchDepth = 28f,
         )
 
         // Legacy 32 presets gallery names to fall back safely to Nothing Classic
@@ -162,6 +170,10 @@ class IslandPreferencesRepository internal constructor(
         val CAMERA_CUTOUT_ENABLED = booleanPreferencesKey("camera_cutout_enabled")
         val AUTO_HIDE_IN_GAMES = booleanPreferencesKey("auto_hide_in_games")
         val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+        val EXPANDED_OFFSET_X = floatPreferencesKey("expanded_offset_x")
+        val EXPANDED_OFFSET_Y = floatPreferencesKey("expanded_offset_y")
+        val EXPANDED_NOTCH_WIDTH = floatPreferencesKey("expanded_notch_width")
+        val EXPANDED_NOTCH_DEPTH = floatPreferencesKey("expanded_notch_depth")
     }
 
     object NotificationPreferencesKeys {
@@ -491,7 +503,11 @@ class IslandPreferencesRepository internal constructor(
             mascotSpriteName = preferences[PreferencesKeys.MASCOT_SPRITE_NAME] ?: HARDWARE_DEFAULTS.mascotSpriteName,
             pillBackgroundColorHex = safePillBg,
             isCameraCutoutEnabled = preferences[PreferencesKeys.CAMERA_CUTOUT_ENABLED] ?: HARDWARE_DEFAULTS.isCameraCutoutEnabled,
-            autoHideInGames = preferences[PreferencesKeys.AUTO_HIDE_IN_GAMES] ?: HARDWARE_DEFAULTS.autoHideInGames
+            autoHideInGames = preferences[PreferencesKeys.AUTO_HIDE_IN_GAMES] ?: HARDWARE_DEFAULTS.autoHideInGames,
+            expandedOffsetX = preferences[PreferencesKeys.EXPANDED_OFFSET_X] ?: HARDWARE_DEFAULTS.expandedOffsetX,
+            expandedOffsetY = preferences[PreferencesKeys.EXPANDED_OFFSET_Y] ?: HARDWARE_DEFAULTS.expandedOffsetY,
+            expandedNotchWidth = preferences[PreferencesKeys.EXPANDED_NOTCH_WIDTH] ?: HARDWARE_DEFAULTS.expandedNotchWidth,
+            expandedNotchDepth = preferences[PreferencesKeys.EXPANDED_NOTCH_DEPTH] ?: HARDWARE_DEFAULTS.expandedNotchDepth,
         )
     }
 
@@ -614,7 +630,11 @@ class IslandPreferencesRepository internal constructor(
         horizontalOffsetDp: Float = _livePreferences.value.horizontalOffsetDp,
         accentColorHex: Long = _livePreferences.value.accentColorHex,
         presetName: String = _livePreferences.value.presetName,
-        isCameraCutoutEnabled: Boolean = _livePreferences.value.isCameraCutoutEnabled
+        isCameraCutoutEnabled: Boolean = _livePreferences.value.isCameraCutoutEnabled,
+        expandedOffsetX: Float = _livePreferences.value.expandedOffsetX,
+        expandedOffsetY: Float = _livePreferences.value.expandedOffsetY,
+        expandedNotchWidth: Float = _livePreferences.value.expandedNotchWidth,
+        expandedNotchDepth: Float = _livePreferences.value.expandedNotchDepth,
     ) {
         _livePreferences.value = _livePreferences.value.copy(
             compactWidthDp = compactWidthDp,
@@ -625,7 +645,11 @@ class IslandPreferencesRepository internal constructor(
             horizontalOffsetDp = horizontalOffsetDp,
             accentColorHex = accentColorHex,
             presetName = presetName,
-            isCameraCutoutEnabled = isCameraCutoutEnabled
+            isCameraCutoutEnabled = isCameraCutoutEnabled,
+            expandedOffsetX = expandedOffsetX.coerceIn(-60f, 60f),
+            expandedOffsetY = expandedOffsetY.coerceIn(-30f, 30f),
+            expandedNotchWidth = expandedNotchWidth.coerceIn(24f, 64f),
+            expandedNotchDepth = expandedNotchDepth.coerceIn(16f, 48f),
         )
     }
 
@@ -644,7 +668,11 @@ class IslandPreferencesRepository internal constructor(
             horizontalOffsetDp = current.horizontalOffsetDp,
             accentColorHex = current.accentColorHex,
             presetName = current.presetName,
-            isCameraCutoutEnabled = current.isCameraCutoutEnabled
+            isCameraCutoutEnabled = current.isCameraCutoutEnabled,
+            expandedOffsetX = current.expandedOffsetX,
+            expandedOffsetY = current.expandedOffsetY,
+            expandedNotchWidth = current.expandedNotchWidth,
+            expandedNotchDepth = current.expandedNotchDepth,
         )
     }
 
@@ -660,7 +688,11 @@ class IslandPreferencesRepository internal constructor(
         expandedTopMarginDp: Float = _livePreferences.value.expandedTopMarginDp,
         accentColorHex: Long = _livePreferences.value.accentColorHex,
         presetName: String = _livePreferences.value.presetName,
-        isCameraCutoutEnabled: Boolean = _livePreferences.value.isCameraCutoutEnabled
+        isCameraCutoutEnabled: Boolean = _livePreferences.value.isCameraCutoutEnabled,
+        expandedOffsetX: Float = _livePreferences.value.expandedOffsetX,
+        expandedOffsetY: Float = _livePreferences.value.expandedOffsetY,
+        expandedNotchWidth: Float = _livePreferences.value.expandedNotchWidth,
+        expandedNotchDepth: Float = _livePreferences.value.expandedNotchDepth,
     ) {
         try {
             dataStore.edit { preferences ->
@@ -673,9 +705,34 @@ class IslandPreferencesRepository internal constructor(
                 preferences[PreferencesKeys.ACCENT_COLOR_HEX] = accentColorHex
                 preferences[PreferencesKeys.PRESET_NAME] = presetName
                 preferences[PreferencesKeys.CAMERA_CUTOUT_ENABLED] = isCameraCutoutEnabled
+                preferences[PreferencesKeys.EXPANDED_OFFSET_X] = expandedOffsetX.coerceIn(-60f, 60f)
+                preferences[PreferencesKeys.EXPANDED_OFFSET_Y] = expandedOffsetY.coerceIn(-30f, 30f)
+                preferences[PreferencesKeys.EXPANDED_NOTCH_WIDTH] = expandedNotchWidth.coerceIn(24f, 64f)
+                preferences[PreferencesKeys.EXPANDED_NOTCH_DEPTH] = expandedNotchDepth.coerceIn(16f, 48f)
             }
         } catch (e: IOException) {
             Log.e(TAG, "Failed to persist calibration to DataStore", e)
+        }
+    }
+
+    suspend fun resetExpandedCalibration() {
+        _livePreferences.value = _livePreferences.value.copy(
+            expandedOffsetX = HARDWARE_DEFAULTS.expandedOffsetX,
+            expandedOffsetY = HARDWARE_DEFAULTS.expandedOffsetY,
+            expandedNotchWidth = HARDWARE_DEFAULTS.expandedNotchWidth,
+            expandedNotchDepth = HARDWARE_DEFAULTS.expandedNotchDepth,
+            expandedTopMarginDp = HARDWARE_DEFAULTS.expandedTopMarginDp,
+        )
+        try {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.EXPANDED_OFFSET_X] = HARDWARE_DEFAULTS.expandedOffsetX
+                preferences[PreferencesKeys.EXPANDED_OFFSET_Y] = HARDWARE_DEFAULTS.expandedOffsetY
+                preferences[PreferencesKeys.EXPANDED_NOTCH_WIDTH] = HARDWARE_DEFAULTS.expandedNotchWidth
+                preferences[PreferencesKeys.EXPANDED_NOTCH_DEPTH] = HARDWARE_DEFAULTS.expandedNotchDepth
+                preferences[PreferencesKeys.EXPANDED_TOP_MARGIN_DP] = HARDWARE_DEFAULTS.expandedTopMarginDp
+            }
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to reset expanded calibration", e)
         }
     }
 

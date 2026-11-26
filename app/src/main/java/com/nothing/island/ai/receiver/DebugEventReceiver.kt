@@ -65,19 +65,35 @@ class DebugEventReceiver : BroadcastReceiver() {
             }
             ACTION_CALL -> {
                 val isDialing = intent.getBooleanExtra("is_dialing", false)
+                val isRinging = intent.getBooleanExtra("ringing", false)
+                val withPhoto = intent.getBooleanExtra("photo", false)
                 val duration = if (isDialing) 0L else intent.getLongExtra("duration", 8L)
                 val expand = intent.getBooleanExtra("expand", false)
-                controller.eventEngine.emit(
-                    IslandEvent.CallConnected(
-                        id = "debug_call_${System.currentTimeMillis()}",
-                        callId = "debug_call_id",
-                        callerDisplayName = intent.getStringExtra(EXTRA_NAME) ?: "Daisy Williams",
-                        durationSeconds = duration,
-                        isDialing = isDialing,
+                val callerName = intent.getStringExtra(EXTRA_NAME) ?: "Daisy Williams"
+                val demoPhoto = if (withPhoto) createDemoCallerBitmap() else null
+                if (isRinging) {
+                    controller.eventEngine.emit(
+                        IslandEvent.IncomingCallRinging(
+                            id = "debug_ringing_${System.currentTimeMillis()}",
+                            callId = "debug_call_id",
+                            callerDisplayName = callerName,
+                            contactPhoto = demoPhoto,
+                        )
                     )
-                )
+                } else {
+                    controller.eventEngine.emit(
+                        IslandEvent.CallConnected(
+                            id = "debug_call_${System.currentTimeMillis()}",
+                            callId = "debug_call_id",
+                            callerDisplayName = callerName,
+                            durationSeconds = duration,
+                            isDialing = isDialing,
+                            contactPhoto = demoPhoto,
+                        )
+                    )
+                }
                 if (expand) {
-                    controller.repository.expandCall()
+                    controller.expandCall()
                 }
             }
             ACTION_NOTIFICATION -> {
@@ -131,6 +147,18 @@ class DebugEventReceiver : BroadcastReceiver() {
                 )
             }
         }
+    }
+
+    private fun createDemoCallerBitmap(): android.graphics.Bitmap {
+        val bmp = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(android.graphics.Color.rgb(34, 48, 66))
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.rgb(215, 25, 33)
+        }
+        canvas.drawCircle(32f, 24f, 12f, paint)
+        canvas.drawCircle(32f, 56f, 20f, paint)
+        return bmp
     }
 
     companion object {

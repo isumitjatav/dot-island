@@ -91,6 +91,10 @@ fun IslandPreview(
     pillBackgroundColor: Color = NothingTokens.NothingBlack,
     visualizerStyle: MusicVisualizerStyle = MusicVisualizerStyle.VERTICAL_EQUALIZER,
     isCameraCutoutEnabled: Boolean = false,
+    expandedOffsetXDp: Float = 0f,
+    expandedOffsetYDp: Float = 0f,
+    expandedNotchWidthDp: Float = 38f,
+    expandedNotchDepthDp: Float = 28f,
     onModeChanged: ((IslandPreviewMode) -> Unit)? = null,
     // Backward compatibility parameters for legacy callers
     isExpanded: Boolean = false,
@@ -101,6 +105,9 @@ fun IslandPreview(
 ) {
     var currentMode by remember {
         mutableStateOf(if (isExpanded) IslandPreviewMode.MUSIC_EXPANDED else initialMode)
+    }
+    androidx.compose.runtime.LaunchedEffect(initialMode) {
+        currentMode = initialMode
     }
     val haptic = LocalHapticFeedback.current
 
@@ -232,9 +239,21 @@ fun IslandPreview(
                 }
 
                 // Dynamic Overlay Preview Content
+                val previewYOffsetDp = if (currentMode.isExpanded) {
+                    (topOffsetDp + expandedOffsetYDp).coerceAtLeast(0f)
+                } else {
+                    topOffsetDp
+                }
+                androidx.compose.runtime.CompositionLocalProvider(
+                    LocalExpandedNotchConfig provides ExpandedNotchConfig(
+                        notchWidthDp = expandedNotchWidthDp,
+                        notchDepthDp = expandedNotchDepthDp,
+                        expandedOffsetXDp = expandedOffsetXDp,
+                    )
+                ) {
                 Box(
                     modifier = Modifier
-                        .offset(x = horizontalOffsetDp.dp, y = topOffsetDp.dp)
+                        .offset(x = if (currentMode.isExpanded) 0.dp else horizontalOffsetDp.dp, y = previewYOffsetDp.dp)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
@@ -298,6 +317,7 @@ fun IslandPreview(
                             else -> Unit
                         }
                     }
+                }
                 }
             }
 
@@ -425,7 +445,7 @@ private fun PreviewNotifExpanded(
     isCameraCutoutEnabled: Boolean = false,
     theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
 ) {
-    val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
+    val shape = if (isCameraCutoutEnabled) currentNotchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
     val cardBorder = when {
         theme.isGlassmorphic -> Color(0x38FFFFFF)
         theme.isInverted -> Color(0xFFCCCCCC)
@@ -643,7 +663,7 @@ private fun PreviewMusicExpanded(
     isCameraCutoutEnabled: Boolean = false,
     theme: com.nothing.island.ai.ui.theme.IslandSignatureTheme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
 ) {
-    val shape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
+    val shape = if (isCameraCutoutEnabled) currentNotchedCardShape(cornerRadiusDp = 22f) else RoundedCornerShape(22.dp)
     val cardBorder = when {
         theme.isGlassmorphic -> Color(0x38FFFFFF)
         theme.isInverted -> Color(0xFFCCCCCC)

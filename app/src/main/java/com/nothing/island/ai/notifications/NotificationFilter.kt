@@ -34,7 +34,8 @@ data class RawNotificationData(
     val maxProgress: Int = 0,
     val isIndeterminate: Boolean = false,
     val hasProgress: Boolean = false,
-    val progressState: DownloadProgressState = DownloadProgressState.NONE
+    val progressState: DownloadProgressState = DownloadProgressState.NONE,
+    val channelId: String? = null,
 )
 
 /**
@@ -50,6 +51,52 @@ class NotificationFilter(
     constructor(context: Context) : this(context.packageName)
     companion object {
         private const val TAG = "NotificationFilter"
+
+        private val SYSTEM_UTILITY_PACKAGES = setOf(
+            "android",
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.server.telecom",
+            "com.android.bluetooth",
+            "com.android.nfc",
+            "com.android.mtp",
+            "com.android.usb",
+            "com.android.shell",
+        )
+
+        private val SYSTEM_UTILITY_PREFIXES = listOf(
+            "com.android.providers.",
+        )
+
+        private val HARDWARE_NOISE_CHANNELS = listOf(
+            "usb",
+            "adb",
+            "developer",
+            "debugging",
+            "charging",
+            "battery",
+            "vpn",
+            "screen_record",
+            "screenrecord",
+            "screenshot",
+            "do_not_disturb",
+            "zen_mode",
+        )
+
+        private val HARDWARE_NOISE_PHRASES = listOf(
+            "usb debugging",
+            "debugging connected",
+            "charging this device via usb",
+            "usb for file transfer",
+            "tap for more options",
+            "screen recording",
+            "recording screen",
+            "screenshot captured",
+            "vpn is active",
+            "vpn activated",
+            "battery saver is on",
+            "battery saver turned on",
+        )
     }
 
     // Active child notification keys indexed by group key
@@ -89,6 +136,12 @@ class NotificationFilter(
         // 1.3 Telephony Call exclusion (Reserved for Milestone R9 Telephony Engine)
         if (raw.category == Notification.CATEGORY_CALL) {
             Log.d(TAG, "MANDATORY DROP: Telephony call category from $pkg (key=$key)")
+            return null
+        }
+
+        // 1.4 System OS & Hardware utility noise exclusion (USB debugging/charging, Screen Record, VPN, Battery Saver)
+        if (isSystemOrHardwareNoise(raw)) {
+            Log.d(TAG, "MANDATORY DROP: System/hardware utility notification from $pkg (channel=${raw.channelId}, key=$key)")
             return null
         }
 
@@ -313,6 +366,12 @@ class NotificationFilter(
             else -> DownloadProgressState.NONE
         }
 
+        val channelId = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            notification.channelId
+        } else {
+            null
+        }
+
         return RawNotificationData(
             key = sbn.key ?: "${sbn.packageName}_${sbn.id}",
             packageName = sbn.packageName,
@@ -333,8 +392,26 @@ class NotificationFilter(
             maxProgress = maxProgress,
             isIndeterminate = isIndeterminate,
             hasProgress = hasProgress,
-            progressState = progressState
+            progressState = progressState,
+            channelId = channelId,
         )
+    }
+
+    private fun isSystemOrHardwareNoise(raw: RawNotificationData): Boolean {
+        val pkgLower = raw.packageName.lowercase()
+        val isActiveDownloadManager = pkgLower == "com.android.providers.downloads" &&
+            (raw.hasProgress || raw.category == Notification.CATEGORY_PROGRESS)
+        if (!isActiveDownloadManager &&
+            (pkgLower in SYSTEM_UTILITY_PACKAGES || SYSTEM_UTILITY_PREFIXES.any { pkgLower.startsWith(it) })
+        ) {
+            return true
+        }
+        val channelLower = raw.channelId?.lowercase().orEmpty()
+        if (channelLower.isNotEmpty() && HARDWARE_NOISE_CHANNELS.any { channelLower.contains(it) }) {
+            return true
+        }
+        val combinedText = "${raw.title} ${raw.text} ${raw.subText.orEmpty()}".lowercase()
+        return HARDWARE_NOISE_PHRASES.any { combinedText.contains(it) }
     }
 
     internal fun getActiveChildrenForGroup(groupKey: String): Set<String> {

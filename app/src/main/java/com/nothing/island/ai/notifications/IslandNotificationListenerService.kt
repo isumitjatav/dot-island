@@ -1,17 +1,27 @@
 package com.nothing.island.ai.notifications
 
+import android.Manifest
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.app.Notification
+import android.content.pm.PackageManager
 import com.nothing.island.ai.telephony.CallActionRegistry
 import com.nothing.island.ai.telephony.CallNotificationParser
 import com.nothing.island.ai.telephony.CallPhase
 import com.nothing.island.ai.telephony.CallSignal
+import com.nothing.island.ai.telephony.CallerPhotoResolver
+import com.nothing.island.ai.telephony.DialerHeadsUpPolicy
+import com.nothing.island.ai.telephony.TelephonyCallTransition
 import android.content.ComponentName
 import android.content.Context
+import android.graphics.Bitmap
 import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import android.telephony.TelephonyCallback
+import android.telephony.TelephonyManager
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.nothing.island.ai.IslandOverlayController
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.IslandEvent
@@ -55,6 +65,28 @@ class IslandNotificationListenerService : NotificationListenerService() {
 
         val isServiceBound: Boolean
             get() = isConnected && instance != null
+
+        fun hasActiveDialerCallNotification(): Boolean {
+            val service = instance ?: return false
+            return runCatching {
+                service.activeNotifications?.any { sbn ->
+                    sbn != null &&
+                        sbn.notification.category == Notification.CATEGORY_CALL &&
+                        (sbn.key == service.activeCallKey ||
+                            sbn.packageName.lowercase() in DialerHeadsUpPolicy.DIALER_PACKAGES)
+                } == true
+            }.getOrDefault(false)
+        }
+
+        fun clearActiveCallKeyIfMatches(callId: String) {
+            val service = instance ?: return
+            if (service.activeCallKey == callId) {
+                service.activeCallKey = null
+                service.activeCallPhase = null
+                service.activeCallCaller = null
+                service.activeCallPhoto = null
+            }
+        }
 
         /**
          * Safely attempts to request rebinding if the system has unbound the listener
@@ -127,9 +159,25 @@ class IslandNotificationListenerService : NotificationListenerService() {
     // Monotonic sequence counter assigned at callback arrival
     private val ingressSequence = AtomicLong(0L)
 
-    /** R9: notification key of the call currently presented by the island. */
+    /** R9: notification key and phase of the call currently presented by the island. */
     @Volatile
     private var activeCallKey: String? = null
+
+    @Volatile
+    private var activeCallPhase: CallPhase? = null
+
+    @Volatile
+    private var activeCallCaller: String? = null
+
+    @Volatile
+    private var activeCallPhoto: Bitmap? = null
+
+    @Volatile
+    private var currentTelephonyCallState: Int = TelephonyManager.CALL_STATE_IDLE
+
+    private var telephonyCallback: Any? = null
+    @Suppress("DEPRECATION")
+    private var legacyPhoneStateListener: android.telephony.PhoneStateListener? = null
 
     /** Policy & dedupe guard for suppressing redundant Android heads-up notifications without loops. */
     internal val systemSuppressor = SystemNotificationSuppressor()
@@ -160,6 +208,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
         notificationFilter = NotificationFilter(applicationContext)
 
         reconcileActiveNotificationsSilently()
+        registerTelephonyCallStateMonitor()
 
         try {
             IslandOverlayController.getInstance(applicationContext)
@@ -167,6 +216,153 @@ class IslandNotificationListenerService : NotificationListenerService() {
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start media tracking on listener connected", e)
         }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun registerTelephonyCallStateMonitor() {
+        if (ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_PHONE_STATE
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        val tm = applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager ?: return
+        runCatching {
+            @Suppress("DEPRECATION")
+            currentTelephonyCallState = tm.callState
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (telephonyCallback != null) return
+            val callback = object : TelephonyCallback(), TelephonyCallback.CallStateListener {
+                override fun onCallStateChanged(state: Int) {
+                    handleTelephonyStateChanged(state)
+                }
+            }
+            runCatching {
+                tm.registerTelephonyCallback(applicationContext.mainExecutor, callback)
+                telephonyCallback = callback
+                Log.d(TAG, "Registered TelephonyCallback.CallStateListener")
+            }.onFailure { e -> Log.w(TAG, "Failed to register TelephonyCallback", e) }
+        } else {
+            if (legacyPhoneStateListener != null) return
+            @Suppress("DEPRECATION")
+            val listener = object : android.telephony.PhoneStateListener() {
+                @Deprecated("Deprecated in Java")
+                override fun onCallStateChanged(state: Int, phoneNumber: String?) {
+                    handleTelephonyStateChanged(state)
+                }
+            }
+            @Suppress("DEPRECATION")
+            runCatching {
+                tm.listen(listener, android.telephony.PhoneStateListener.LISTEN_CALL_STATE)
+                legacyPhoneStateListener = listener
+            }
+        }
+    }
+
+    private fun unregisterTelephonyCallStateMonitor() {
+        val ctx = runCatching { applicationContext }.getOrNull() ?: return
+        val tm = runCatching { ctx.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager }.getOrNull() ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (telephonyCallback as? TelephonyCallback)?.let { cb ->
+                runCatching { tm.unregisterTelephonyCallback(cb) }
+            }
+            telephonyCallback = null
+        } else {
+            @Suppress("DEPRECATION")
+            legacyPhoneStateListener?.let { l ->
+                runCatching { tm.listen(l, android.telephony.PhoneStateListener.LISTEN_NONE) }
+            }
+            legacyPhoneStateListener = null
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun isTelephonyCallCurrentlyActive(): Boolean {
+        if (currentTelephonyCallState == TelephonyManager.CALL_STATE_RINGING ||
+            currentTelephonyCallState == TelephonyManager.CALL_STATE_OFFHOOK
+        ) {
+            return true
+        }
+        if (ContextCompat.checkSelfPermission(
+                applicationContext,
+                Manifest.permission.READ_PHONE_STATE
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            val tm = applicationContext.getSystemService(Context.TELEPHONY_SERVICE) as? TelephonyManager
+            val live = runCatching {
+                @Suppress("DEPRECATION")
+                tm?.callState
+            }.getOrNull()
+            if (live != null) {
+                currentTelephonyCallState = live
+                return live == TelephonyManager.CALL_STATE_RINGING ||
+                    live == TelephonyManager.CALL_STATE_OFFHOOK
+            }
+        }
+        return false
+    }
+
+    private fun handleTelephonyStateChanged(newState: Int) {
+        val prev = currentTelephonyCallState
+        currentTelephonyCallState = newState
+        val key = activeCallKey ?: return
+        when (DialerHeadsUpPolicy.resolveTelephonyStateTransition(prev, newState, hasActiveCall = true)) {
+            TelephonyCallTransition.END_CALL -> {
+                ingestionScope.launch {
+                    if (activeCallKey == key) {
+                        clearActiveCallAndEmitEnd(key, reason = "TelephonyManager CALL_STATE_IDLE")
+                    }
+                }
+            }
+            TelephonyCallTransition.TRANSITION_TO_OFFHOOK -> {
+                ingestionScope.launch {
+                    if (activeCallKey == key && activeCallPhase == CallPhase.INCOMING) {
+                        val caller = activeCallCaller ?: "Call"
+                        val photo = activeCallPhoto
+                        val nowMs = System.currentTimeMillis()
+                        activeCallPhase = CallPhase.ONGOING
+                        val controller = IslandOverlayController.getInstance(applicationContext)
+                        controller.eventEngine.emit(
+                            IslandEvent.CallConnected(
+                                id = "call_connected_$key",
+                                callId = key,
+                                callerDisplayName = caller,
+                                durationSeconds = 0L,
+                                isDialing = false,
+                                connectedAtMs = nowMs,
+                                contactPhoto = photo,
+                            )
+                        )
+                        controller.startCallTicker(
+                            callId = key,
+                            caller = caller,
+                            contactPhoto = photo,
+                            isDialing = false,
+                            connectedAtMs = nowMs,
+                        )
+                    }
+                }
+            }
+            TelephonyCallTransition.NO_CHANGE -> Unit
+        }
+    }
+
+    private suspend fun clearActiveCallAndEmitEnd(key: String, reason: String) {
+        activeCallKey = null
+        activeCallPhase = null
+        activeCallCaller = null
+        activeCallPhoto = null
+        CallActionRegistry.clear(key)
+        com.nothing.island.ai.telephony.CallController.resetCallStates()
+        val controller = IslandOverlayController.getInstance(applicationContext)
+        controller.stopCallTicker()
+        controller.eventEngine.emit(
+            IslandEvent.CallEnded(id = "call_end_$key", callId = key)
+        )
+        controller.collapse()
+        Log.i(TAG, "R9 call ended for key=$key ($reason)")
     }
 
     override fun onListenerDisconnected() {
@@ -192,140 +388,217 @@ class IslandNotificationListenerService : NotificationListenerService() {
 
             // R9: Route incoming-call notifications straight to the telephony engine.
             // This avoids restricted READ_PHONE_STATE / ANSWER_PHONE_CALLS permissions.
+            val extras = sbn.notification.extras
+            val callPersonObj: android.app.Person? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    extras?.getParcelable(Notification.EXTRA_CALL_PERSON, android.app.Person::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    extras?.getParcelable(Notification.EXTRA_CALL_PERSON)
+                }
+            } else {
+                null
+            }
+            val callPersonName: String? = callPersonObj?.name?.toString()
+            val callPersonUri: String? = callPersonObj?.uri
+                ?: extras?.getString("android.telecom.extra.INCOMING_CALL_ADDRESS")
+                ?: extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+            val callTypeExtra: Int? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && extras?.containsKey(Notification.EXTRA_CALL_TYPE) == true) {
+                extras.getInt(Notification.EXTRA_CALL_TYPE)
+            } else {
+                null
+            }
+            val callActions = sbn.notification.actions.orEmpty()
+            val rawCallActions = callActions.map { action ->
+                val semantic = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) action.semanticAction else 0
+                val iconHint = runCatching {
+                    val icon = action.getIcon()
+                    if (icon != null && icon.type == android.graphics.drawable.Icon.TYPE_RESOURCE) {
+                        val pkg = icon.resPackage ?: sbn.packageName
+                        applicationContext.packageManager
+                            .getResourcesForApplication(pkg)
+                            .getResourceEntryName(icon.resId)
+                    } else {
+                        ""
+                    }
+                }.getOrDefault("")
+                com.nothing.island.ai.telephony.RawCallAction(
+                    title = action.title?.toString().orEmpty(),
+                    intent = action.actionIntent,
+                    semanticAction = semantic,
+                    iconHint = iconHint,
+                )
+            }
+            val callTextExtra = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()
+            val callSubTextExtra = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
+            val matchedActions = CallNotificationParser.matchCallActions(
+                actions = rawCallActions,
+                callText = callTextExtra,
+                callSubText = callSubTextExtra,
+            )
+
+            val callStyleAnswer: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                extras?.getParcelable(Notification.EXTRA_ANSWER_INTENT) ?: matchedActions.answer
+            } else {
+                matchedActions.answer
+            }
+
+            val callStyleDecline: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                extras?.getParcelable(Notification.EXTRA_DECLINE_INTENT) ?: matchedActions.decline
+            } else {
+                matchedActions.decline
+            }
+
+            val callStyleHangUp: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                extras?.getParcelable(Notification.EXTRA_HANG_UP_INTENT) ?: matchedActions.hangUp
+            } else {
+                matchedActions.hangUp
+            }
+
+            val usesChronometer = (extras?.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false) == true) ||
+                (extras?.getBoolean("android.usesChronometer", false) == true)
+            val notificationWhenMs = sbn.notification.`when`
             val callInfo = CallNotificationParser.parse(
                 CallSignal(
                     category = sbn.notification.category,
-                    title = sbn.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString(),
-                    text = sbn.notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString(),
-                    actionTitles = sbn.notification.actions?.mapNotNull { it.title?.toString() } ?: emptyList(),
-                    showChronometer = sbn.notification.extras.getBoolean(Notification.EXTRA_SHOW_CHRONOMETER, false),
-                    subText = sbn.notification.extras.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString(),
+                    title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: callPersonName,
+                    text = callTextExtra,
+                    actionTitles = callActions.mapNotNull { it.title?.toString() },
+                    showChronometer = usesChronometer,
+                    subText = callSubTextExtra,
+                    callType = callTypeExtra,
+                    hasAnswerIntent = callStyleAnswer != null,
+                    notificationWhenMs = notificationWhenMs,
                 )
             )
             if (callInfo != null) {
                 val controller = IslandOverlayController.getInstance(applicationContext)
                 val callPrefs = controller.preferencesRepository.liveCallPreferences.value
-                val callActions = sbn.notification.actions.orEmpty()
-                fun actionFor(vararg keywords: String) = callActions.firstOrNull { action ->
-                    val label = action.title?.toString()?.lowercase().orEmpty()
-                    keywords.any { label.contains(it) }
-                }?.actionIntent
 
-                val callPhoto: android.graphics.Bitmap? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    sbn.notification.extras?.getParcelable(Notification.EXTRA_LARGE_ICON, android.graphics.Bitmap::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    sbn.notification.extras?.getParcelable(Notification.EXTRA_LARGE_ICON)
-                }
+                val callPhoto: Bitmap? = CallerPhotoResolver.resolve(
+                    context = applicationContext,
+                    callerDisplayName = callInfo.callerDisplayName,
+                    phoneNumberOrUri = callPersonUri,
+                    notificationExtras = extras,
+                )
+                activeCallPhoto = callPhoto
 
-                val callStyleAnswer: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    sbn.notification.extras?.getParcelable(Notification.EXTRA_ANSWER_INTENT) ?: actionFor("answer", "accept")
-                } else {
-                    actionFor("answer", "accept")
-                }
-
-                val callStyleDecline: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    sbn.notification.extras?.getParcelable(Notification.EXTRA_DECLINE_INTENT)
-                        ?: actionFor("decline", "reject")
-                } else {
-                    actionFor("decline", "reject")
-                }
-
-                val callStyleHangUp: android.app.PendingIntent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    sbn.notification.extras?.getParcelable(Notification.EXTRA_HANG_UP_INTENT)
-                        ?: actionFor("hang", "end", "disconnect", "cancel")
-                } else {
-                    actionFor("hang", "end", "disconnect", "cancel")
-                }
+                val registeredActions = CallActionRegistry.CallActions(
+                    key = key,
+                    answer = if (callInfo.phase == CallPhase.INCOMING) callStyleAnswer else null,
+                    decline = callStyleDecline,
+                    hangUp = callStyleHangUp ?: callStyleDecline,
+                    packageName = sbn.packageName,
+                    speaker = matchedActions.speaker,
+                    mute = matchedActions.mute,
+                    hold = matchedActions.hold,
+                    record = matchedActions.record,
+                    contentIntent = sbn.notification.contentIntent,
+                )
+                CallActionRegistry.register(registeredActions)
+                com.nothing.island.ai.telephony.CallController.syncFromNotification(
+                    context = applicationContext,
+                    speakerStateHint = matchedActions.speakerStateHint,
+                    muteStateHint = matchedActions.muteStateHint,
+                    holdStateHint = matchedActions.holdStateHint,
+                    recordingStateHint = matchedActions.recordStateHint,
+                )
 
                 when (callInfo.phase) {
                     CallPhase.INCOMING -> {
+                        val isDuplicateRinging = activeCallKey == key &&
+                            activeCallPhase == CallPhase.INCOMING &&
+                            activeCallCaller == callInfo.callerDisplayName
                         activeCallKey = key
-                        CallActionRegistry.register(
-                            CallActionRegistry.CallActions(
-                                key = key,
-                                answer = callStyleAnswer,
-                                decline = callStyleDecline,
-                                hangUp = callStyleHangUp,
-                            )
-                        )
-                        controller.apply {
-                            eventEngine.emit(
-                                IslandEvent.IncomingCallRinging(
-                                    id = key,
-                                    callId = key,
-                                    callerDisplayName = callInfo.callerDisplayName,
-                                    isVideoCall = callInfo.isVideoCall,
-                                    contactPhoto = callPhoto,
+                        activeCallPhase = CallPhase.INCOMING
+                        activeCallCaller = callInfo.callerDisplayName
+                        if (!isDuplicateRinging) {
+                            controller.apply {
+                                eventEngine.emit(
+                                    IslandEvent.IncomingCallRinging(
+                                        id = key,
+                                        callId = key,
+                                        callerDisplayName = callInfo.callerDisplayName,
+                                        isVideoCall = callInfo.isVideoCall,
+                                        contactPhoto = callPhoto,
+                                    )
                                 )
-                            )
-                            // Auto-expand incoming call capsule at top of screen
-                            repository.expandCall()
-                        }
-                        // Suppress duplicate system heads-up call popup so it doesn't cover dynamic island
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                            runCatching {
-                                snoozeNotification(sbn.key, 5_000L)
-                                Log.d(TAG, "Snoozed system incoming call heads-up notification for 5s: ${sbn.key}")
+                                // Auto-expand incoming call capsule once per incoming call
+                                expandCall()
                             }
+                            Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
                         }
-                        Log.i(TAG, "R9 incoming call routed to island: ${callInfo.callerDisplayName}")
                     }
 
                     CallPhase.DIALING -> {
+                        val isDuplicateDialing = activeCallKey == key &&
+                            activeCallPhase == CallPhase.DIALING &&
+                            activeCallCaller == callInfo.callerDisplayName
                         activeCallKey = key
-                        CallActionRegistry.register(
-                            CallActionRegistry.CallActions(
-                                key = key,
-                                answer = null,
-                                decline = callStyleDecline,
+                        activeCallPhase = CallPhase.DIALING
+                        activeCallCaller = callInfo.callerDisplayName
+                        if (!isDuplicateDialing) {
+                            controller.eventEngine.emit(
+                                IslandEvent.CallConnected(
+                                    id = "call_dialing_$key",
+                                    callId = key,
+                                    callerDisplayName = callInfo.callerDisplayName,
+                                    durationSeconds = 0L,
+                                    isDialing = true,
+                                    connectedAtMs = 0L,
+                                    contactPhoto = callPhoto,
+                                )
                             )
-                        )
-                        controller.stopCallTicker()
-                        controller.eventEngine.emit(
-                            IslandEvent.CallConnected(
-                                id = "call_connected_$key",
+                            controller.startCallTicker(
                                 callId = key,
-                                callerDisplayName = callInfo.callerDisplayName,
-                                durationSeconds = 0L,
-                                isDialing = true,
+                                caller = callInfo.callerDisplayName,
                                 contactPhoto = callPhoto,
+                                isDialing = true,
+                                connectedAtMs = 0L,
                             )
-                        )
-                        if (callPrefs.autoExpandCall) {
-                            controller.repository.expandCall()
+                            if (callPrefs.autoExpandCall) {
+                                controller.expandCall()
+                            }
+                            Log.i(TAG, "R9 call dialing/outgoing (usesChronometer=$usesChronometer): ${callInfo.callerDisplayName}")
                         }
-                        Log.i(TAG, "R9 call dialing/outgoing: ${callInfo.callerDisplayName}")
                     }
 
                     CallPhase.ONGOING -> {
                         activeCallKey = key
-                        CallActionRegistry.register(
-                            CallActionRegistry.CallActions(
-                                key = key,
-                                answer = null,
-                                decline = callStyleDecline,
-                            )
-                        )
+                        activeCallPhase = CallPhase.ONGOING
+                        activeCallCaller = callInfo.callerDisplayName
                         val active = controller.priorityManager?.activeEvent as? IslandEvent.CallConnected
                         val wasDialing = active?.isDialing == true
-                        val isAlreadyConnected = active != null && !wasDialing
+                        val connectedAtChanged = active != null && callInfo.connectedAtMs > 0L && active.connectedAtMs != callInfo.connectedAtMs
+                        val isAlreadyConnected = active != null && !wasDialing && !connectedAtChanged
                         if (!isAlreadyConnected) {
+                            val initialDurationSeconds = CallNotificationParser.computeCallDurationSeconds(
+                                isDialing = false,
+                                connectedAtMs = callInfo.connectedAtMs,
+                                nowMs = System.currentTimeMillis(),
+                            )
                             controller.eventEngine.emit(
                                 IslandEvent.CallConnected(
                                     id = "call_connected_$key",
                                     callId = key,
                                     callerDisplayName = callInfo.callerDisplayName,
-                                    durationSeconds = 0L,
+                                    durationSeconds = initialDurationSeconds,
                                     isDialing = false,
+                                    connectedAtMs = callInfo.connectedAtMs,
                                     contactPhoto = callPhoto,
                                 )
                             )
                             if (callPrefs.autoExpandCall) {
-                                controller.repository.expandCall()
+                                controller.expandCall()
                             }
-                            controller.startCallTicker(key, callInfo.callerDisplayName)
-                            Log.i(TAG, "R9 call connected: ${callInfo.callerDisplayName}")
+                            controller.startCallTicker(
+                                callId = key,
+                                caller = callInfo.callerDisplayName,
+                                contactPhoto = callPhoto,
+                                isDialing = false,
+                                connectedAtMs = callInfo.connectedAtMs,
+                            )
+                            Log.i(TAG, "R9 call connected (when=${callInfo.connectedAtMs}, initialSec=$initialDurationSeconds): ${callInfo.callerDisplayName}")
                         }
                     }
                 }
@@ -425,7 +698,19 @@ class IslandNotificationListenerService : NotificationListenerService() {
         }
     }
 
+    override fun onNotificationRemoved(
+        sbn: StatusBarNotification?,
+        rankingMap: RankingMap?,
+        reason: Int,
+    ) {
+        handleNotificationRemoved(sbn, reason)
+    }
+
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
+        handleNotificationRemoved(sbn, removalReason = null)
+    }
+
+    private fun handleNotificationRemoved(sbn: StatusBarNotification?, removalReason: Int?) {
         if (sbn == null) return
 
         ingestionScope.launch {
@@ -439,14 +724,14 @@ class IslandNotificationListenerService : NotificationListenerService() {
             }
 
             if (activeCallKey == key) {
-                activeCallKey = null
-                CallActionRegistry.clear(key)
-                val controller = IslandOverlayController.getInstance(applicationContext)
-                controller.stopCallTicker()
-                controller.eventEngine.emit(
-                    IslandEvent.CallEnded(id = "call_end_$key", callId = key)
+                val shouldEnd = DialerHeadsUpPolicy.shouldEndCallOnNotificationRemoval(
+                    removedKey = key,
+                    activeCallKey = activeCallKey,
+                    removalReason = removalReason,
                 )
-                Log.i(TAG, "R9 call ended for key=$key")
+                if (shouldEnd) {
+                    clearActiveCallAndEmitEnd(key, reason = "notification removed reason=$removalReason")
+                }
             }
 
             try {
@@ -610,6 +895,7 @@ class IslandNotificationListenerService : NotificationListenerService() {
             instance = null
         }
         _connectionState.value = false
+        unregisterTelephonyCallStateMonitor()
         historicalNotificationKeys.clear()
         notificationFilter.reset()
         // ActionBridge cleared on listener disconnect, but history repository is preserved!

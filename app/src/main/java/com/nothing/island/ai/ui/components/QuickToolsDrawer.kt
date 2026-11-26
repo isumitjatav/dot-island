@@ -470,7 +470,7 @@ fun QuickToolsDrawer(
     accentColor: Color = NothingPrimaryAccent,
 ) {
     val scroll = rememberScrollState()
-    val cardShape = if (isCameraCutoutEnabled) notchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
+    val cardShape = if (isCameraCutoutEnabled) currentNotchedCardShape(cornerRadiusDp = 28f) else RoundedCornerShape(28.dp)
     var isEditing by remember { mutableStateOf(false) }
 
     val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current

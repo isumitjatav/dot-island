@@ -433,6 +433,17 @@ fun SettingsScreen(
                         }
                     }
                 )
+
+                PreferenceToggleRow(
+                    title = "Auto-Clear Shade Alerts (Pill-Only Mode)",
+                    subtitle = "Android requires third-party pills to clear eligible alerts from the shade on arrival instead of muting system heads-ups directly. Calls and media stay in shade.",
+                    checked = notifPrefs.hideSystemNotification,
+                    onCheckedChange = { enabled ->
+                        coroutineScope.launch {
+                            preferencesRepository.updateHideSystemNotification(enabled)
+                        }
+                    }
+                )
             }
         }
 

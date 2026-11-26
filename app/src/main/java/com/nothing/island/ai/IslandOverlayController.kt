@@ -43,6 +43,7 @@ import com.nothing.island.ai.media.MediaSessionTracker
 import com.nothing.island.ai.media.MediaTrackState
 import com.nothing.island.ai.media.MusicPreferences
 import com.nothing.island.ai.notifications.IslandNotificationListenerService
+import com.nothing.island.ai.telephony.CallActionRegistry
 import com.nothing.island.ai.notifications.NotificationActionBridge
 import com.nothing.island.ai.notifications.NotificationAutoExpansionPolicy
 import com.nothing.island.ai.notifications.ReplyResult
@@ -101,6 +102,15 @@ class IslandOverlayController private constructor(private val appContext: Contex
         @Volatile
         var isOverlayActive: Boolean = false
             private set
+
+        /**
+         * Returns true while the incoming-call card is actively ringing so no automatic collapse
+         * timer can hide it over the heads-up phone banner underneath.
+         */
+        fun shouldBlockAutoCollapse(state: IslandMasterState): Boolean =
+            state.mode == IslandMode.EXPANDED &&
+                state.expandedViewType == ExpandedViewType.CALL &&
+                state.activeEvent is IslandEvent.IncomingCallRinging
     }
 
     /**
@@ -135,11 +145,26 @@ class IslandOverlayController private constructor(private val appContext: Contex
     private var layoutParams: WindowManager.LayoutParams? = null
 
     val pillBoundsRect = android.graphics.Rect()
+    val mascotBoundsRect = android.graphics.Rect()
 
     fun updatePillBounds(left: Int, top: Int, right: Int, bottom: Int) {
         if (pillBoundsRect.left != left || pillBoundsRect.top != top ||
             pillBoundsRect.right != right || pillBoundsRect.bottom != bottom) {
             pillBoundsRect.set(left, top, right, bottom)
+            composeView?.let { v ->
+                if (v.isAttachedToWindow) {
+                    try {
+                        v.viewTreeObserver.dispatchOnGlobalLayout()
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+    }
+
+    fun updateMascotBounds(left: Int, top: Int, right: Int, bottom: Int) {
+        if (mascotBoundsRect.left != left || mascotBoundsRect.top != top ||
+            mascotBoundsRect.right != right || mascotBoundsRect.bottom != bottom) {
+            mascotBoundsRect.set(left, top, right, bottom)
             composeView?.let { v ->
                 if (v.isAttachedToWindow) {
                     try {
@@ -199,10 +224,13 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             setTouchableInsetsMethod.invoke(insetsInfo, TOUCHABLE_INSETS_REGION)
                             val region = touchableRegionField.get(insetsInfo) as? android.graphics.Region
                             if (region != null) {
-                                if (pillBoundsRect.isEmpty) {
+                                if (pillBoundsRect.isEmpty && mascotBoundsRect.isEmpty) {
                                     region.setEmpty()
                                 } else {
                                     region.set(pillBoundsRect)
+                                    if (!mascotBoundsRect.isEmpty) {
+                                        region.op(mascotBoundsRect, android.graphics.Region.Op.UNION)
+                                    }
                                 }
                             }
                         }
@@ -273,19 +301,71 @@ class IslandOverlayController private constructor(private val appContext: Contex
     /** R9 live call duration: ticks once per second while a call is active. */
     private var callTickerJob: Job? = null
 
-    fun startCallTicker(callId: String, caller: String) {
+    fun startCallTicker(
+        callId: String,
+        caller: String,
+        contactPhoto: android.graphics.Bitmap? = null,
+        isDialing: Boolean = false,
+        connectedAtMs: Long = 0L,
+    ) {
         callTickerJob?.cancel()
-        val startedAt = SystemClock.elapsedRealtime()
+        val nowWallMs = System.currentTimeMillis()
+        val initialAgeMs = if (!isDialing && connectedAtMs > 0L && nowWallMs >= connectedAtMs) {
+            nowWallMs - connectedAtMs
+        } else {
+            0L
+        }
+        val startedAt = SystemClock.elapsedRealtime() - initialAgeMs
         callTickerJob = controllerLifecycleScope.launch {
+            var tickCount = 0L
             while (isActive) {
                 delay(1000L)
-                val seconds = (SystemClock.elapsedRealtime() - startedAt) / 1000
+                tickCount++
+                val seconds = if (isDialing) {
+                    0L
+                } else {
+                    ((SystemClock.elapsedRealtime() - startedAt) / 1000L).coerceAtLeast(0L)
+                }
+                // Every 2 seconds, verify via AudioManager.mode or active dialer notifications
+                // that a call is still active so an orphaned call timer can never get stuck.
+                if (tickCount >= 2L && tickCount % 2L == 0L) {
+                    val audioMode = runCatching {
+                        (appContext.getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager)?.mode
+                    }.getOrNull() ?: android.media.AudioManager.MODE_NORMAL
+                    val hasDialerNotif = com.nothing.island.ai.notifications.IslandNotificationListenerService
+                        .hasActiveDialerCallNotification()
+                    val isSyntheticDebugCall = callId.startsWith("debug_")
+                    if (com.nothing.island.ai.telephony.DialerHeadsUpPolicy.shouldAutoEndStaleCall(
+                            audioMode = audioMode,
+                            hasActiveDialerNotification = hasDialerNotif,
+                            isDebugSyntheticCall = isSyntheticDebugCall,
+                        )
+                    ) {
+                        Log.w(TAG, "Stale call detected by watchdog (audioMode=$audioMode, hasDialerNotif=$hasDialerNotif, callId=$callId) -> ending call")
+                        com.nothing.island.ai.notifications.IslandNotificationListenerService
+                            .clearActiveCallKeyIfMatches(callId)
+                        CallActionRegistry.clear(callId)
+                        CallController.resetCallStates()
+                        eventEngine.emit(IslandEvent.CallEnded(id = "call_watchdog_end_$callId", callId = callId))
+                        collapse()
+                        callTickerJob = null
+                        return@launch
+                    }
+                }
+                val latestPhoto = contactPhoto ?: when (val active = priorityManager?.activeEvent) {
+                    is IslandEvent.CallConnected -> active.contactPhoto
+                    is IslandEvent.IncomingCallRinging -> active.contactPhoto
+                    else -> null
+                }
                 eventEngine.emit(
                     IslandEvent.CallConnected(
-                        id = "call_tick_$callId",
+                        id = if (isDialing) "call_dialing_$callId" else "call_tick_$callId",
                         callId = callId,
                         callerDisplayName = caller,
                         durationSeconds = seconds,
+                        isDialing = isDialing,
+                        connectedAtMs = if (isDialing) 0L else connectedAtMs,
+                        contactPhoto = latestPhoto,
                     )
                 )
             }
@@ -451,6 +531,13 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
     var isHiddenByGameMode: Boolean = false
         private set
+
+    @Volatile
+    var isHiddenBySystemShade: Boolean = false
+        private set
+
+    private val isOverlayHidden: Boolean
+        get() = isHiddenByGameMode || isHiddenBySystemShade
 
     private val componentCallbacks = object : ComponentCallbacks2 {
         override fun onConfigurationChanged(newConfig: Configuration) {
@@ -772,6 +859,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val gesturePrefs by preferencesRepository.liveGesturePreferences.collectAsState()
                         val batteryState by batteryMonitor.batteryState.collectAsState()
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
+                        val resumableMedia by mediaTracker.lastResumableMedia.collectAsState()
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
@@ -792,6 +880,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             batteryPreferences = batteryPrefs,
                             batteryState = batteryState,
                             currentTrack = currentTrack,
+                            resumableMedia = resumableMedia,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
                             projectedHistory = history,
@@ -832,7 +921,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onExpandCall = {
                                 Log.d("IslandTouch", "onExpandCall lambda invoked")
-                                repository.expandCall()
+                                expandCall()
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
@@ -840,14 +929,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     val ringing = priorityManager?.activeEvent as? IslandEvent.IncomingCallRinging
                                     val callId = ringing?.callId ?: "active_call"
                                     val caller = ringing?.callerDisplayName ?: "Call"
+                                    val photo = ringing?.contactPhoto
                                     eventEngine.emit(
                                         IslandEvent.CallConnected(
                                             id = "call_connected_$callId",
                                             callId = callId,
                                             callerDisplayName = caller,
+                                            contactPhoto = photo,
                                         )
                                     )
-                                    startCallTicker(callId, caller)
+                                    startCallTicker(callId, caller, photo)
                                 }
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
@@ -867,6 +958,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     else -> "active_call"
                                 }
                                 CallController.decline(appContext)
+                                CallController.resetCallStates()
                                 stopCallTicker()
                                 eventEngine.emit(IslandEvent.CallEnded(id = "call_end_$callId", callId = callId))
                                 collapse()
@@ -909,6 +1001,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onToggleRepeat = { mode ->
                                 setMediaRepeatMode(mode)
                             },
+                            onOpenMediaApp = {
+                                openMediaApp()
+                            },
+                            onResumeLastMedia = {
+                                resumeLastMedia()
+                            },
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
@@ -921,7 +1019,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             stateManager = stateManager,
                             weatherState = weatherState,
                             onScreenshotResult = { res -> reportScreenshotResult(res) },
-                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
+                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) },
+                            onMascotBoundsChanged = { l, t, r, b -> updateMascotBounds(l, t, r, b) }
                         )
                         }
                     }
@@ -1156,6 +1255,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                         val gesturePrefs by preferencesRepository.liveGesturePreferences.collectAsState()
                         val batteryState by batteryMonitor.batteryState.collectAsState()
                         val currentTrack by mediaTracker.currentTrack.collectAsState()
+                        val resumableMedia by mediaTracker.lastResumableMedia.collectAsState()
                         val history by projectedHistory.collectAsState()
                         val undoState by historyRepository.pendingUndoFlow.collectAsState()
                         val activeInterface by activitySwitcher.currentInterface.collectAsState()
@@ -1176,6 +1276,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             batteryPreferences = batteryPrefs,
                             batteryState = batteryState,
                             currentTrack = currentTrack,
+                            resumableMedia = resumableMedia,
                             activeEvent = masterState.activeEvent,
                             isDualPill = masterState.isDualPill,
                             projectedHistory = history,
@@ -1216,7 +1317,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             },
                             onExpandCall = {
                                 Log.d("IslandTouch", "onExpandCall lambda invoked")
-                                repository.expandCall()
+                                expandCall()
                             },
                             onAnswerCall = {
                                 Log.d("IslandTouch", "onAnswerCall lambda invoked")
@@ -1224,14 +1325,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     val ringing = priorityManager?.activeEvent as? IslandEvent.IncomingCallRinging
                                     val callId = ringing?.callId ?: "active_call"
                                     val caller = ringing?.callerDisplayName ?: "Call"
+                                    val photo = ringing?.contactPhoto
                                     eventEngine.emit(
                                         IslandEvent.CallConnected(
                                             id = "call_connected_$callId",
                                             callId = callId,
                                             callerDisplayName = caller,
+                                            contactPhoto = photo,
                                         )
                                     )
-                                    startCallTicker(callId, caller)
+                                    startCallTicker(callId, caller, photo)
                                 }
                             },
                             onQuickTool = { tool -> handleQuickTool(tool) },
@@ -1251,6 +1354,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                                     else -> "active_call"
                                 }
                                 CallController.decline(appContext)
+                                CallController.resetCallStates()
                                 stopCallTicker()
                                 eventEngine.emit(IslandEvent.CallEnded(id = "call_end_$callId", callId = callId))
                                 collapse()
@@ -1293,6 +1397,12 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             onToggleRepeat = { mode ->
                                 setMediaRepeatMode(mode)
                             },
+                            onOpenMediaApp = {
+                                openMediaApp()
+                            },
+                            onResumeLastMedia = {
+                                resumeLastMedia()
+                            },
                             onSwipeActivity = { direction ->
                                 when (direction) {
                                     com.nothing.island.ai.switcher.SwipeDirection.DOWN -> repository.expandQuickTools()
@@ -1305,7 +1415,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             stateManager = stateManager,
                             weatherState = weatherState,
                             onScreenshotResult = { res -> reportScreenshotResult(res) },
-                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) }
+                            onPillBoundsChanged = { l, t, r, b -> updatePillBounds(l, t, r, b) },
+                            onMascotBoundsChanged = { l, t, r, b -> updateMascotBounds(l, t, r, b) }
                         )
                         }
                     }
@@ -1483,14 +1594,15 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             autoExpandJob = scope.launch {
                                 kotlinx.coroutines.delay(outcome.durationMs)
                                 val stillCurrent = repository.state.value
-                                val canCollapse = NotificationAutoExpansionPolicy.evaluateCollapse(
-                                    currentPresentationId = pm.activePresentationId,
-                                    expectedPresentationId = presentationId,
-                                    mode = stillCurrent.mode,
-                                    expandedViewType = stillCurrent.expandedViewType,
-                                    isUserInteracting = isUserInteractingWithNotification,
-                                    hasActiveNotification = stillCurrent.activeEvent is IslandEvent.NotificationPosted
-                                )
+                                val canCollapse = !shouldBlockAutoCollapse(stillCurrent) &&
+                                    NotificationAutoExpansionPolicy.evaluateCollapse(
+                                        currentPresentationId = pm.activePresentationId,
+                                        expectedPresentationId = presentationId,
+                                        mode = stillCurrent.mode,
+                                        expandedViewType = stillCurrent.expandedViewType,
+                                        isUserInteracting = isUserInteractingWithNotification,
+                                        hasActiveNotification = stillCurrent.activeEvent is IslandEvent.NotificationPosted
+                                    )
                                 if (canCollapse) {
                                     Log.d(TAG, "Notification auto-expand duration expired; collapsing to compact pill.")
                                     collapse()
@@ -1542,16 +1654,17 @@ class IslandOverlayController private constructor(private val appContext: Contex
                             batteryAutoExpandJob = scope.launch {
                                 kotlinx.coroutines.delay(outcome.durationMs)
                                 val stillCurrent = repository.state.value
-                                val canCollapse = BatteryAutoExpansionPolicy.evaluateCollapse(
-                                    currentPresentationId = pm.activePresentationId,
-                                    expectedPresentationId = presentationId,
-                                    mode = stillCurrent.mode,
-                                    expandedViewType = stillCurrent.expandedViewType,
-                                    isUserInteracting = isUserInteractingWithNotification,
-                                    hasActiveBatteryEvent = stillCurrent.activeEvent is IslandEvent.ChargingConnected ||
-                                            stillCurrent.activeEvent is IslandEvent.BatteryStateChanged ||
-                                            stillCurrent.activeEvent is IslandEvent.BatteryWarning
-                                )
+                                val canCollapse = !shouldBlockAutoCollapse(stillCurrent) &&
+                                    BatteryAutoExpansionPolicy.evaluateCollapse(
+                                        currentPresentationId = pm.activePresentationId,
+                                        expectedPresentationId = presentationId,
+                                        mode = stillCurrent.mode,
+                                        expandedViewType = stillCurrent.expandedViewType,
+                                        isUserInteracting = isUserInteractingWithNotification,
+                                        hasActiveBatteryEvent = stillCurrent.activeEvent is IslandEvent.ChargingConnected ||
+                                                stillCurrent.activeEvent is IslandEvent.BatteryStateChanged ||
+                                                stillCurrent.activeEvent is IslandEvent.BatteryWarning
+                                    )
                                 if (canCollapse) {
                                     Log.d(TAG, "Battery auto-expand duration expired; collapsing to compact pill.")
                                     collapse()
@@ -1582,12 +1695,29 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 autoExpandJob = controllerScope?.launch {
                     kotlinx.coroutines.delay((prefs.autoExpandDurationSeconds * 1000).toLong())
                     val current = repository.state.value
-                    if (current.mode == IslandMode.EXPANDED && current.expandedViewType == ExpandedViewType.MUSIC) {
+                    if (!shouldBlockAutoCollapse(current) &&
+                        current.mode == IslandMode.EXPANDED &&
+                        current.expandedViewType == ExpandedViewType.MUSIC
+                    ) {
                         Log.d(TAG, "Music auto-collapse timer expired; collapsing to compact pill.")
                         collapse()
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Expands overlay into State E: Call Card, cancelling any competing auto-collapse timers so
+     * an actively ringing call stays open until answered, declined, or manually collapsed.
+     */
+    fun expandCall() {
+        mainHandler.post {
+            autoExpandJob?.cancel()
+            autoExpandJob = null
+            batteryAutoExpandJob?.cancel()
+            batteryAutoExpandJob = null
+            repository.expandCall()
         }
     }
 
@@ -1628,7 +1758,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
         val wm = activeWindowManager ?: return
         val ctx = activeContext ?: appContext
 
-        val mode = state.mode
+        if (shouldBlockAutoCollapse(state)) {
+            autoExpandJob?.cancel()
+            autoExpandJob = null
+            batteryAutoExpandJob?.cancel()
+            batteryAutoExpandJob = null
+        }
+
+        val isEarbudActive = state.activeEvent is IslandEvent.BluetoothDeviceConnected ||
+                state.activeEvent is IslandEvent.BluetoothDeviceDisconnected
+        val mode = if (isEarbudActive) IslandMode.COLLAPSED else state.mode
         val isModeTransitionFromExpandedToCollapsed = previousOverlayMode == IslandMode.EXPANDED && mode == IslandMode.COLLAPSED
         previousOverlayMode = mode
 
@@ -1639,54 +1778,76 @@ class IslandOverlayController private constructor(private val appContext: Contex
                 state.activeEvent is IslandEvent.ChargingDisconnected ||
                 (state.activeEvent is IslandEvent.BatteryStateChanged && state.activeEvent.isLowBattery) ||
                 (state.activeEvent is IslandEvent.BatteryWarning) ||
-                (activitySwitcher.currentInterface.value == IslandInterface.BATTERY)
-        val isEarbudActive = state.activeEvent is IslandEvent.BluetoothDeviceConnected ||
-                state.activeEvent is IslandEvent.BluetoothDeviceDisconnected
+                (state.mode == IslandMode.EXPANDED && activitySwitcher.currentInterface.value == IslandInterface.BATTERY)
         val isCallActive = state.activeEvent is IslandEvent.IncomingCallRinging ||
                 state.activeEvent is IslandEvent.CallConnected ||
                 state.activeEvent is IslandEvent.CallEnded
+
+        val isChargingCompactVisible = isBatteryActive ||
+            (batteryMonitor.batteryState.value.isCharging &&
+                preferencesRepository.liveBatteryPreferences.value.chargingAnimationEnabled &&
+                !isMediaPlaying)
+
+        val isSystemAlertActive = state.activeEvent is IslandEvent.RingerModeChanged ||
+            state.activeEvent is IslandEvent.TorchStateChanged ||
+            state.activeEvent is IslandEvent.WifiStateChanged ||
+            state.activeEvent is IslandEvent.DndStateChanged ||
+            state.activeEvent is IslandEvent.BatteryThresholdWarning ||
+            (state.activeEvent is IslandEvent.DeviceUnlocked &&
+                state.activeEvent.unlockMethod == com.nothing.island.ai.engine.UnlockMethod.FACE)
 
         val isQuickToolsExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.QUICK_TOOLS
         val isCallExpanded = mode == IslandMode.EXPANDED &&
                 state.expandedViewType == com.nothing.island.ai.ExpandedViewType.CALL
+
+        val compactStageSpec = com.nothing.island.ai.ui.components.computeCompactStageWindowSpec(
+            compactWidthDp = prefs.compactWidthDp,
+            compactHeightDp = prefs.compactHeightDp,
+            mascotEnabled = prefs.mascotEnabled,
+            isDualPill = state.isDualPill,
+            isEarbudActive = isEarbudActive,
+            isSystemAlertActive = isSystemAlertActive,
+            isCallActive = isCallActive,
+            hasActiveNotification = hasActiveNotification,
+            isMusicPlaying = isMediaPlaying,
+            isChargingActive = isChargingCompactVisible,
+        )
+
         val widthDp = if (mode == IslandMode.EXPANDED) {
             if (isCallExpanded) 344f else prefs.expandedWidthDp
         } else {
-            if (state.isDualPill) {
-                220f // Two satellite pills + center camera clearance
-            } else if (isEarbudActive) {
-                320f // Full-width capsule for the earbud pill's horizontal spring expansion
-            } else if (isCallActive) {
-                200f // Sleek unified ~200dp call pill (centered on 36dp cutout)
-            } else if (hasActiveNotification || isMediaPlaying || isBatteryActive) {
-                200f // Symmetrical 200dp expansion for compact notification preview, compact music, or compact battery
-            } else {
-                prefs.compactWidthDp
-            }
+            compactStageSpec.widthDp
         }
 
-        val callExpandedHeightDp = if (prefs.isCameraCutoutEnabled) 120f else 78f
+        val isMascotStageActive = mode != IslandMode.EXPANDED &&
+            !state.isDualPill &&
+            prefs.mascotEnabled
+
+        if (!isMascotStageActive) {
+            mascotBoundsRect.setEmpty()
+        }
+
+        val callExpandedHeightDp = (if (prefs.isCameraCutoutEnabled) 120f else 78f) +
+                if (prefs.mascotEnabled && state.activeEvent !is IslandEvent.CallEnded) 14f else 0f
         val heightDp = if (isQuickToolsExpanded) {
             360f // Room for tiles, shortcuts, contacts and the bottom control row
         } else if (isCallExpanded) {
             callExpandedHeightDp
         } else if (mode == IslandMode.EXPANDED) {
             prefs.expandedHeightDp
-        } else if (isEarbudActive) {
-            132f // Room for the downward spring drop (72dp) plus the 52dp pill
         } else {
-            if (isAccessibilityMode) {
-                prefs.compactHeightDp
-            } else {
-                CutoutDetector.DEFAULT_COMPACT_TOUCH_HEIGHT_DP
-            }
+            compactStageSpec.heightDp
         }
 
-        // Fixed symmetric width: LayoutParams.width is strictly screenWidthPx with x = 0 and TOP | CENTER_HORIZONTAL
-        // so WindowManager never resizes width mid-animation, eliminating all horizontal skewing/jumping.
+        // Tight WindowManager bounds around visible capsule (plus minimal active chibi overhang only)
+        // so 100% of taps outside the pill pass natively to top-bar buttons and apps underneath.
         val screenWidthPx = ctx.resources.displayMetrics.widthPixels
-        val targetWidthPx = screenWidthPx
+        val targetWidthPx = if (mode == IslandMode.EXPANDED) {
+            screenWidthPx
+        } else {
+            CutoutDetector.dpToPx(widthDp, ctx)
+        }
         val targetXPx = 0
 
         val headroomDp = if (mode == IslandMode.EXPANDED) 24f else 0f
@@ -1696,22 +1857,26 @@ class IslandOverlayController private constructor(private val appContext: Contex
             CutoutDetector.dpToPx(heightDp + headroomDp, ctx)
         }
 
-        // Strict Alignment.TopCenter anchor: always anchor window to topMarginDp so there is zero vertical jumping/gap.
-        val targetYPx = CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
+        // Compact mode anchors strictly at prefs.topMarginDp; expanded mode honors expandedOffsetY.
+        val targetYPx = if (mode == IslandMode.EXPANDED) {
+            CutoutDetector.dpToPx((prefs.topMarginDp + prefs.expandedOffsetY).coerceAtLeast(0f), ctx)
+        } else {
+            CutoutDetector.dpToPx(prefs.topMarginDp, ctx)
+        }
 
         val baseFlags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                 if (isAccessibilityMode) WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS else WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
 
         val targetFlags = when {
-            isHiddenByGameMode -> baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            isOverlayHidden -> baseFlags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
             mode == IslandMode.EXPANDED -> baseFlags or WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
             else -> baseFlags
         }
 
-        if (isHiddenByGameMode && view.visibility != View.GONE) {
+        if (isOverlayHidden && view.visibility != View.GONE) {
             view.visibility = View.GONE
-        } else if (!isHiddenByGameMode && view.visibility != View.VISIBLE) {
+        } else if (!isOverlayHidden && view.visibility != View.VISIBLE) {
             view.visibility = View.VISIBLE
         }
 
@@ -1766,6 +1931,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
      * Called whenever a foreground package change is detected.
      */
     fun onForegroundPackageChanged(packageName: String) {
+        if (GameModeDetector.isTransientSystemWindow(packageName)) return
         if (currentForegroundPackage == packageName) return
         currentForegroundPackage = packageName
         evaluateGameMode()
@@ -1804,30 +1970,46 @@ class IslandOverlayController private constructor(private val appContext: Contex
         mainHandler.post {
             if (isHiddenByGameMode == hidden) return@post
             isHiddenByGameMode = hidden
-            val view = composeView ?: return@post
-            val params = layoutParams ?: return@post
-            val wm = activeWindowManager ?: return@post
+            applyCombinedOverlayVisibility(reason = if (hidden) "game_hide(pkg=$currentForegroundPackage)" else "game_restore")
+        }
+    }
 
-            if (hidden) {
-                view.visibility = View.GONE
-                params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                try {
-                    wm.updateViewLayout(view, params)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to update layout params for game hide", e)
-                }
-                Log.i(TAG, "Overlay hidden for game mode (pkg=$currentForegroundPackage, orient=$currentOrientation)")
-            } else {
-                view.visibility = View.VISIBLE
-                params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                try {
-                    wm.updateViewLayout(view, params)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to update layout params for game restore", e)
-                }
-                updateWindowLayout(repository.state.value, preferencesRepository.livePreferences.value)
-                Log.i(TAG, "Overlay restored from game mode (pkg=$currentForegroundPackage, orient=$currentOrientation)")
+    /**
+     * Temporarily hides or restores the overlay when SystemUI Notification Shade / Quick Settings opens.
+     */
+    fun setSystemShadeHidden(hidden: Boolean) {
+        mainHandler.post {
+            if (isHiddenBySystemShade == hidden) return@post
+            isHiddenBySystemShade = hidden
+            applyCombinedOverlayVisibility(reason = if (hidden) "shade_opened" else "shade_closed")
+        }
+    }
+
+    private fun applyCombinedOverlayVisibility(reason: String) {
+        val view = composeView ?: return
+        val params = layoutParams ?: return
+        val wm = activeWindowManager ?: return
+        val shouldHide = isOverlayHidden
+
+        if (shouldHide) {
+            view.visibility = View.GONE
+            params.flags = params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            try {
+                wm.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to hide overlay ($reason)", e)
             }
+            Log.i(TAG, "Overlay hidden ($reason, game=$isHiddenByGameMode, shade=$isHiddenBySystemShade)")
+        } else {
+            view.visibility = View.VISIBLE
+            params.flags = params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+            try {
+                wm.updateViewLayout(view, params)
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to restore overlay ($reason)", e)
+            }
+            updateWindowLayout(repository.state.value, preferencesRepository.livePreferences.value)
+            Log.i(TAG, "Overlay restored ($reason)")
         }
     }
 
@@ -2032,6 +2214,8 @@ class IslandOverlayController private constructor(private val appContext: Contex
         mediaTracker.togglePlayPause()
     }
 
+    fun resumeLastMedia(): Boolean = mediaTracker.resumeLastMedia()
+
     fun skipNextMedia() {
         mediaTracker.skipToNext()
     }
@@ -2046,6 +2230,17 @@ class IslandOverlayController private constructor(private val appContext: Contex
 
     fun setMediaRepeatMode(mode: Int) {
         mediaTracker.setRepeatMode(mode)
+    }
+
+    fun openMediaApp(packageName: String? = null) {
+        val targetPackage = packageName?.takeIf { it.isNotBlank() } ?: mediaTracker.currentTrack.value.packageName
+        val launched = com.nothing.island.ai.media.MediaSessionTracker.launchMediaPlayer(
+            context = appContext,
+            packageName = targetPackage,
+            sessionActivity = mediaTracker.getActiveSessionActivity(),
+        )
+        Log.d(TAG, "openMediaApp: pkg=$targetPackage, launched=$launched")
+        collapse()
     }
 
     fun startMediaTracking(componentName: ComponentName) {

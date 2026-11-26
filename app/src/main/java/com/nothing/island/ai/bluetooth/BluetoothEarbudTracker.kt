@@ -224,7 +224,7 @@ class AndroidBluetoothPlatformBridge(private val context: Context) : BluetoothPl
         if (!hasConnectPermission()) return null
         val address = runCatching { device.address }.getOrNull()?.takeIf { it.isNotBlank() } ?: return null
         if (!isLikelyAudioDevice(device)) return null
-        val name = runCatching { device.name }.getOrNull()
+        val name = resolveDeviceName(device, address)
         val primary = queryBatteryLevelViaReflection(device)
         val left = queryMetadataBatteryViaReflection(device, EarbudBatteryParser.METADATA_UNTETHERED_LEFT_BATTERY)
         val right = queryMetadataBatteryViaReflection(device, EarbudBatteryParser.METADATA_UNTETHERED_RIGHT_BATTERY)
@@ -239,13 +239,31 @@ class AndroidBluetoothPlatformBridge(private val context: Context) : BluetoothPl
     }
 
     @SuppressLint("MissingPermission")
+    internal fun resolveDeviceName(device: BluetoothDevice, address: String?): String? {
+        val direct = runCatching { device.name }
+            .getOrNull()
+            ?.trim()
+            ?.takeIf { it.isNotEmpty() }
+        if (direct != null) return direct
+        if (!hasConnectPermission() || address.isNullOrBlank()) return null
+        val bonded = runCatching { bluetoothManager?.adapter?.bondedDevices }.getOrNull().orEmpty()
+        return bonded.firstOrNull { candidate ->
+            runCatching { candidate.address.equals(address, ignoreCase = true) }.getOrDefault(false)
+        }?.let { match ->
+            runCatching { match.name }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
     private fun isLikelyAudioDevice(device: BluetoothDevice): Boolean {
         val btClass = runCatching { device.bluetoothClass }.getOrNull() ?: return true
         return when (btClass.majorDeviceClass) {
             BluetoothClass.Device.Major.AUDIO_VIDEO,
             BluetoothClass.Device.Major.UNCATEGORIZED -> true
-            else -> btClass.hasService(BluetoothClass.Service.AUDIO) ||
-                btClass.hasService(BluetoothClass.Service.RENDER)
+            else -> runCatching {
+                btClass.hasService(BluetoothClass.Service.AUDIO) ||
+                    btClass.hasService(BluetoothClass.Service.RENDER)
+            }.getOrDefault(false)
         }
     }
 
@@ -377,7 +395,8 @@ class BluetoothEarbudTracker(
             BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
                 val device = extractDevice(intent) ?: return
                 val address = runCatching { device.address }.getOrNull() ?: return
-                val name = runCatching { device.name }.getOrNull()
+                val bridgeImpl = bridge as? AndroidBluetoothPlatformBridge
+                val name = bridgeImpl?.resolveDeviceName(device, address) ?: runCatching { device.name }.getOrNull()
                 onDeviceDisconnected(address = address, nameFallback = name)
             }
 
@@ -390,7 +409,8 @@ class BluetoothEarbudTracker(
                     if (snapshot != null) onDeviceConnected(snapshot)
                 } else if (state == BluetoothProfile.STATE_DISCONNECTED) {
                     val address = runCatching { device.address }.getOrNull() ?: return
-                    val name = runCatching { device.name }.getOrNull()
+                    val bridgeImpl = bridge as? AndroidBluetoothPlatformBridge
+                    val name = bridgeImpl?.resolveDeviceName(device, address) ?: runCatching { device.name }.getOrNull()
                     onDeviceDisconnected(address = address, nameFallback = name)
                 }
             }
@@ -399,7 +419,8 @@ class BluetoothEarbudTracker(
                 val device = extractDevice(intent) ?: return
                 val address = runCatching { device.address }.getOrNull() ?: return
                 val rawLevel = intent.getIntExtra(EarbudBatteryParser.EXTRA_BATTERY_LEVEL, -1)
-                val name = runCatching { device.name }.getOrNull()
+                val bridgeImpl = bridge as? AndroidBluetoothPlatformBridge
+                val name = bridgeImpl?.resolveDeviceName(device, address) ?: runCatching { device.name }.getOrNull()
                 onBatteryUpdated(
                     address = address,
                     nameFallback = name,

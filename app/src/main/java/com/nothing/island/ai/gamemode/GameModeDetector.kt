@@ -57,12 +57,49 @@ class GameModeDetector(
             "com.google.android.systemui"
         )
 
+        val TRANSIENT_SYSTEM_PACKAGES = setOf(
+            "android",
+            "com.android.systemui",
+            "com.google.android.systemui",
+            "com.nothing.gamemode",
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller"
+        )
+
+        val KNOWN_GAME_PREFIXES = listOf(
+            "com.pubg.",
+            "com.tencent.ig",
+            "com.mojang.",
+            "com.activision.",
+            "com.garena.",
+            "com.dts.freefire",
+            "com.supercell.",
+            "com.mihoyo."
+        )
+
         val KNOWN_LAUNCHERS = setOf(
             "com.nothing.launcher",
             "com.google.android.apps.nexuslauncher",
             "com.android.launcher3",
             "com.android.launcher"
         )
+
+        /**
+         * Returns true for transient OS surfaces (SystemUI volume/shade/alerts, IME keyboards,
+         * Nothing GameMode HUD overlay, permission dialogs) so foreground changes never break
+         * active Game Mode auto-hide state.
+         */
+        fun isTransientSystemWindow(packageName: String?): Boolean {
+            if (packageName.isNullOrBlank()) return true
+            val lower = packageName.trim().lowercase()
+            if (lower in TRANSIENT_SYSTEM_PACKAGES) return true
+            return lower.contains("inputmethod") ||
+                lower.contains(".keyboard") ||
+                lower.contains("gboard") ||
+                lower.contains("swiftkey")
+        }
 
         fun queryDefaultLaunchers(packageManager: PackageManager?): Set<String> {
             if (packageManager == null) return KNOWN_LAUNCHERS
@@ -92,9 +129,14 @@ class GameModeDetector(
         if (SYSTEM_PACKAGES.contains(foregroundPackage)) return false
         if (isLauncher(foregroundPackage)) return false
 
-        // 1. Check CATEGORY_GAME (API 26+)
+        // 1. Check CATEGORY_GAME (API 26+) or known game package prefixes
         val category = packageCategoryResolver(foregroundPackage)
         if (category == ApplicationInfo.CATEGORY_GAME) {
+            return true
+        }
+
+        val lowerPkg = foregroundPackage.lowercase()
+        if (KNOWN_GAME_PREFIXES.any { lowerPkg.startsWith(it) }) {
             return true
         }
 

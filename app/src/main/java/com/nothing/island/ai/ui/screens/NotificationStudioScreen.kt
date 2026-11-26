@@ -242,13 +242,13 @@ fun NotificationStudioScreen(
                 )
 
                 NothingSwitchRow(
-                    title = "Hide System (Double) Notification",
-                    description = "Show the alert on the island but remove the duplicate Android heads-up. Calls and ongoing media are never hidden.",
+                    title = "Auto-Clear Shade Alerts",
+                    description = "Pill-Only Mode: Android does not allow third-party apps to mute another app's heads-up banner directly. Enable this to auto-clear eligible alerts from the Android shade as they arrive on Dot Island (calls and ongoing media stay in shade).",
                     checked = notifPrefs.hideSystemNotification,
                     onCheckedChange = { isChecked ->
                         coroutineScope.launch { repository.updateHideSystemNotification(isChecked) }
                     },
-                    badgeText = "NEW"
+                    badgeText = "SHADE"
                 )
 
                 NothingSwitchRow(

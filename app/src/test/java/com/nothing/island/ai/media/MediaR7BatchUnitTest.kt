@@ -297,4 +297,27 @@ class MediaR7BatchUnitTest {
         assertEquals(one, nextMode(all))
         assertEquals(none, nextMode(one))
     }
+
+    @Test
+    fun testShouldEmitMediaPlaybackEvent_ignoresPureProgressTicksOnSameTrack() {
+        val base = MediaTrackState(
+            sessionId = "s1",
+            packageName = "com.metrolist.music",
+            appDisplayName = "Metrolist",
+            trackTitle = "Midnight City",
+            artistName = "M83",
+            isPlaying = true,
+            playbackState = android.media.session.PlaybackState.STATE_PLAYING,
+            durationMs = 240_000L,
+            currentPositionMs = 12_000L,
+        )
+        val sameTrackLaterTick = base.copy(currentPositionMs = 45_000L)
+        assertFalse(MediaSessionTracker.shouldEmitMediaPlaybackEvent(base, sameTrackLaterTick))
+
+        val pausedTrack = base.copy(isPlaying = false, playbackState = android.media.session.PlaybackState.STATE_PAUSED)
+        assertTrue(MediaSessionTracker.shouldEmitMediaPlaybackEvent(base, pausedTrack))
+
+        val nextTrack = base.copy(trackTitle = "Wait")
+        assertTrue(MediaSessionTracker.shouldEmitMediaPlaybackEvent(base, nextTrack))
+    }
 }

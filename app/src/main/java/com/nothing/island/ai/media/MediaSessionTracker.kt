@@ -1,19 +1,26 @@
 package com.nothing.island.ai.media
 
+import android.app.ActivityOptions
+import android.app.PendingIntent
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.media.AudioManager
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import android.util.Log
+import android.view.KeyEvent
 import com.nothing.island.ai.data.IslandPreferencesRepository
 import com.nothing.island.ai.engine.IslandEvent
 import com.nothing.island.ai.engine.IslandEventEngine
@@ -39,6 +46,42 @@ import kotlinx.coroutines.launch
  * - Emits reactive [IslandEvent.MediaPlaybackChanged] to Nothing Island engine.
  * - Maintains an honest playback status: Never fabricates metadata or fake visualizer motion.
  */
+/**
+ * Pure state cache for background resumable playback (retained across PAUSED/STOPPED,
+ * cleared strictly when the system session is destroyed / swiped from Recents).
+ */
+class ResumableMediaCache {
+    private val _state = MutableStateFlow<MediaTrackState?>(null)
+    val state: StateFlow<MediaTrackState?> = _state.asStateFlow()
+
+    fun onTrackObserved(track: MediaTrackState) {
+        if (track == MediaTrackState.EMPTY ||
+            track.packageName.isBlank() ||
+            track.trackTitle.isBlank()
+        ) {
+            return
+        }
+        _state.value = track.copy(
+            isPlaying = false,
+            playbackState = if (track.isPlaying) PlaybackState.STATE_PAUSED else track.playbackState,
+            isHistorical = true,
+        )
+    }
+
+    fun onPlaybackPausedOrStopped(playbackState: Int = PlaybackState.STATE_PAUSED) {
+        val existing = _state.value ?: return
+        _state.value = existing.copy(
+            isPlaying = false,
+            playbackState = playbackState,
+            isHistorical = true,
+        )
+    }
+
+    fun onSessionDestroyed() {
+        _state.value = null
+    }
+}
+
 class MediaSessionTracker(
     private val context: Context,
     private val eventEngine: IslandEventEngine,
@@ -64,6 +107,95 @@ class MediaSessionTracker(
                 ).also { instance = it }
             }
         }
+
+        private const val LAUNCH_TAG = "MediaAppLauncher"
+        const val MEDIA_LAUNCH_FLAGS =
+            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+
+        /**
+         * Returns true only when emitting to [IslandEventEngine] represents a real change in
+         * active track/package/playback state rather than a pure position tick.
+         */
+        fun shouldEmitMediaPlaybackEvent(
+            previous: MediaTrackState?,
+            current: MediaTrackState
+        ): Boolean {
+            if (previous == null || previous == MediaTrackState.EMPTY) return true
+            if (previous.packageName != current.packageName) return true
+            if (previous.trackTitle != current.trackTitle) return true
+            if (previous.artistName != current.artistName) return true
+            if (previous.isPlaying != current.isPlaying) return true
+            val wasStopped = previous.playbackState == PlaybackState.STATE_STOPPED
+            val isStopped = current.playbackState == PlaybackState.STATE_STOPPED
+            return wasStopped != isStopped
+        }
+
+        internal fun resolveMediaLaunchIntentWith(
+            packageName: String,
+            lookupLaunchIntent: (String) -> Intent?,
+            applyFlags: (Intent, Int) -> Unit = { intent, flags -> intent.addFlags(flags) },
+        ): Intent? {
+            if (packageName.isBlank()) return null
+            val rawIntent = lookupLaunchIntent(packageName) ?: return null
+            applyFlags(rawIntent, MEDIA_LAUNCH_FLAGS)
+            return rawIntent
+        }
+
+        fun resolveMediaLaunchIntent(packageManager: PackageManager, packageName: String): Intent? =
+            resolveMediaLaunchIntentWith(
+                packageName = packageName,
+                lookupLaunchIntent = { pkg -> packageManager.getLaunchIntentForPackage(pkg) },
+            )
+
+        fun launchMediaPlayer(
+            context: Context,
+            packageName: String,
+            sessionActivity: PendingIntent? = null,
+        ): Boolean {
+            if (sessionActivity != null) {
+                try {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                        val options = ActivityOptions.makeBasic()
+                            .setPendingIntentBackgroundActivityStartMode(
+                                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                            )
+                            .toBundle()
+                        sessionActivity.send(context, 0, null, null, null, null, options)
+                    } else {
+                        sessionActivity.send()
+                    }
+                    Log.d(LAUNCH_TAG, "Launched media player via sessionActivity for $packageName")
+                    return true
+                } catch (e: Exception) {
+                    Log.w(LAUNCH_TAG, "sessionActivity send failed for $packageName, falling back", e)
+                }
+            }
+
+            if (packageName.isNotBlank()) {
+                try {
+                    val launchIntent = resolveMediaLaunchIntent(context.packageManager, packageName)
+                    if (launchIntent != null) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                            val options = ActivityOptions.makeBasic()
+                                .setPendingIntentBackgroundActivityStartMode(
+                                    ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+                                )
+                                .toBundle()
+                            context.startActivity(launchIntent, options)
+                        } else {
+                            context.startActivity(launchIntent)
+                        }
+                        Log.d(LAUNCH_TAG, "Launched media player via launchIntent for $packageName")
+                        return true
+                    } else {
+                        Log.w(LAUNCH_TAG, "No launch intent resolved for $packageName")
+                    }
+                } catch (e: Exception) {
+                    Log.w(LAUNCH_TAG, "Fallback startActivity failed for $packageName", e)
+                }
+            }
+            return false
+        }
     }
 
     private val mediaSessionManager =
@@ -75,9 +207,20 @@ class MediaSessionTracker(
     private val _currentTrack = MutableStateFlow(MediaTrackState.EMPTY)
     val currentTrack: StateFlow<MediaTrackState> = _currentTrack.asStateFlow()
 
+    private val resumableCache = ResumableMediaCache()
+    val lastResumableMedia: StateFlow<MediaTrackState?> = resumableCache.state
+
     private var activeController: MediaController? = null
+    private var lastResumableController: MediaController? = null
     private var activeControllerCompat: MediaControllerCompat? = null
     private var lastKnownValidTrack: MediaTrackState? = null
+
+    private val resumableDestroyCallback = object : MediaController.Callback() {
+        override fun onSessionDestroyed() {
+            Log.i(TAG, "Cached resumable media session destroyed (app swiped from Recents).")
+            clearResumableSession()
+        }
+    }
 
     private val controllerCompatCallback = object : MediaControllerCompat.Callback() {
         override fun onRepeatModeChanged(repeatMode: Int) {
@@ -167,8 +310,12 @@ class MediaSessionTracker(
         }
 
         if (eligible.isNullOrEmpty()) {
+            val prevController = activeController
             activeController?.unregisterCallback(controllerCallback)
             activeController = null
+            if (prevController != null && prevController == lastResumableController) {
+                runCatching { prevController.registerCallback(resumableDestroyCallback, mainHandler) }
+            }
             setStandbyState()
             return
         }
@@ -181,9 +328,13 @@ class MediaSessionTracker(
         } ?: eligible.first()
 
         if (bestController != activeController) {
+            if (lastResumableController != null && lastResumableController != bestController) {
+                runCatching { lastResumableController?.unregisterCallback(resumableDestroyCallback) }
+            }
             activeController?.unregisterCallback(controllerCallback)
             activeControllerCompat?.unregisterCallback(controllerCompatCallback)
             activeController = bestController
+            lastResumableController = bestController
             activeControllerCompat = try {
                 MediaSessionCompat.Token.fromToken(bestController.sessionToken)?.let { token ->
                     MediaControllerCompat(context, token).also {
@@ -242,11 +393,6 @@ class MediaSessionTracker(
             preferencesRepository.liveMusicPreferences.value.onlyShowWhilePlaying
         } catch (_: Exception) {
             true
-        }
-        if (onlyShowWhilePlaying && !isPlaying) {
-            Log.d(TAG, "onlyShowWhilePlaying is enabled and audio is not playing for $pkg -> standby")
-            setStandbyState()
-            return
         }
         val positionMs = playbackState?.position?.coerceAtLeast(0L) ?: 0L
         val durationMs = metadata?.getLong(MediaMetadata.METADATA_KEY_DURATION)?.coerceAtLeast(0L) ?: 0L
@@ -311,13 +457,31 @@ class MediaSessionTracker(
             repeatMode = repeatMode
         )
 
+        lastResumableController = controller
+        if (!rawTitle.isNullOrBlank()) {
+            resumableCache.onTrackObserved(updatedState)
+        } else {
+            resumableCache.onPlaybackPausedOrStopped(playbackState?.state ?: PlaybackState.STATE_PAUSED)
+        }
+
+        if (onlyShowWhilePlaying && !isPlaying) {
+            Log.d(TAG, "onlyShowWhilePlaying is enabled and audio is not playing for $pkg -> standby (resumable retained)")
+            lastKnownValidTrack = updatedState
+            setStandbyState()
+            return
+        }
+
         val previous = _currentTrack.value
         val trackChanged = !updatedState.isSameTrack(previous)
 
         _currentTrack.value = updatedState
         lastKnownValidTrack = updatedState
 
-        // Emit to Nothing Island event engine
+        if (!shouldEmitMediaPlaybackEvent(previous = previous, current = updatedState)) {
+            return
+        }
+
+        // Emit to Nothing Island event engine only when track metadata or playback state changes
         scope.launch {
             if (isPlaying || playbackState?.state == PlaybackState.STATE_PAUSED) {
                 eventEngine.emit(
@@ -338,13 +502,21 @@ class MediaSessionTracker(
     }
 
     /**
-     * Handles active session destroyed event.
+     * Handles active session destroyed event (e.g., user swipes music app away from Recents).
      */
     private fun handleSessionDestroyed() {
         activeController?.unregisterCallback(controllerCallback)
         activeControllerCompat?.unregisterCallback(controllerCompatCallback)
         activeController = null
         activeControllerCompat = null
+        clearResumableSession()
+    }
+
+    private fun clearResumableSession() {
+        runCatching { lastResumableController?.unregisterCallback(resumableDestroyCallback) }
+        lastResumableController = null
+        lastKnownValidTrack = null
+        resumableCache.onSessionDestroyed()
         setStandbyState()
     }
 
@@ -380,12 +552,56 @@ class MediaSessionTracker(
     // =========================================================================
 
     fun play() {
-        try {
-            activeController?.transportControls?.play()
-            Log.d(TAG, "Transport action: play")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to execute play", e)
+        resumeLastMedia()
+    }
+
+    /**
+     * Resumes playback via the cached/active [MediaController.TransportControls.play],
+     * falling back to targeted [KeyEvent.KEYCODE_MEDIA_PLAY] if transport controls are unavailable.
+     */
+    fun resumeLastMedia(): Boolean {
+        val controller = activeController ?: lastResumableController
+        val targetPackage = _lastResumableMediaPackage()
+        if (controller != null) {
+            try {
+                controller.transportControls.play()
+                Log.d(TAG, "Transport action: play via controller ($targetPackage)")
+                return true
+            } catch (e: Exception) {
+                Log.w(TAG, "Controller transportControls.play failed; falling back to KEYCODE_MEDIA_PLAY", e)
+            }
         }
+        return dispatchMediaPlayKeyFallback(targetPackage)
+    }
+
+    private fun _lastResumableMediaPackage(): String =
+        lastResumableMedia.value?.packageName
+            ?.takeIf { it.isNotBlank() }
+            ?: _currentTrack.value.packageName
+
+    private fun dispatchMediaPlayKeyFallback(targetPackage: String): Boolean {
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val eventTime = SystemClock.uptimeMillis()
+        var dispatched = false
+        if (audioManager != null) {
+            runCatching {
+                audioManager.dispatchMediaKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY, 0))
+                audioManager.dispatchMediaKeyEvent(KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY, 0))
+                dispatched = true
+                Log.d(TAG, "Fallback KEYCODE_MEDIA_PLAY dispatched via AudioManager")
+            }.onFailure { e -> Log.w(TAG, "AudioManager KEYCODE_MEDIA_PLAY dispatch failed", e) }
+        }
+        if (targetPackage.isNotBlank()) {
+            runCatching {
+                val upIntent = Intent(Intent.ACTION_MEDIA_BUTTON).apply {
+                    setPackage(targetPackage)
+                    putExtra(Intent.EXTRA_KEY_EVENT, KeyEvent(eventTime, eventTime, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY, 0))
+                }
+                context.sendBroadcast(upIntent)
+                dispatched = true
+            }
+        }
+        return dispatched
     }
 
     fun pause() {
@@ -458,6 +674,9 @@ class MediaSessionTracker(
     fun injectTrackForTesting(state: MediaTrackState) {
         _currentTrack.value = state
         lastKnownValidTrack = state
+        if (state != MediaTrackState.EMPTY && state.trackTitle.isNotBlank()) {
+            resumableCache.onTrackObserved(state)
+        }
         scope.launch {
             if (state.isPlaying) {
                 eventEngine.emit(
@@ -491,6 +710,11 @@ class MediaSessionTracker(
             Log.w(TAG, "Failed to execute setRepeatMode", e)
         }
     }
+
+    fun getActiveSessionActivity(): PendingIntent? =
+        activeController?.sessionActivity
+            ?: activeControllerCompat?.sessionActivity
+            ?: _currentTrack.value.sessionActivity
 
     fun release() {
         try {

@@ -52,6 +52,10 @@ data class IslandMasterState(
             tag = if (activeEvent != null) "EVENT P$activePriority" else "M3 ENGINE"
         )
     }
+
+    val isEarbudActive: Boolean
+        get() = activeEvent is IslandEvent.BluetoothDeviceConnected ||
+            activeEvent is IslandEvent.BluetoothDeviceDisconnected
 }
 
 /**
@@ -103,8 +107,12 @@ class IslandStateRepository(
                 Log.d(TAG, "State transition -> Event ${event.id} (P$priority, $presentationId)")
                 val deadline = if (event.timeoutMs > 0L) System.currentTimeMillis() + event.timeoutMs else null
                 val presentation = derivePresentationDetails(event)
+                val isEarbudEvent = event is IslandEvent.BluetoothDeviceConnected ||
+                    event is IslandEvent.BluetoothDeviceDisconnected
 
                 current.copy(
+                    // Earbud connection events are strictly compact pills and must never stay/open in EXPANDED mode
+                    mode = if (isEarbudEvent) IslandMode.COLLAPSED else current.mode,
                     activeEvent = event,
                     activePriority = priority,
                     presentationId = presentationId,
@@ -112,7 +120,8 @@ class IslandStateRepository(
                     subtitle = presentation.subtitle,
                     statusText = presentation.statusText,
                     isRecordingActive = event is IslandEvent.RecordingStateChanged && event.isRecording,
-                    timeoutDeadlineMs = deadline
+                    timeoutDeadlineMs = deadline,
+                    isAutoExpanded = if (isEarbudEvent) false else current.isAutoExpanded,
                 )
             }
         }
@@ -273,6 +282,14 @@ class IslandStateRepository(
      */
     fun toggleMode() {
         _state.update { current ->
+            if (current.isEarbudActive) {
+                Log.d(TAG, "Earbud pill active -> keeping mode COLLAPSED")
+                return@update current.copy(
+                    mode = IslandMode.COLLAPSED,
+                    selectedNotificationKey = null,
+                    isAutoExpanded = false
+                )
+            }
             val nextMode = if (current.mode == IslandMode.COLLAPSED) {
                 IslandMode.EXPANDED
             } else {

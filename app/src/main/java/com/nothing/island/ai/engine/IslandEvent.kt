@@ -145,7 +145,9 @@ sealed interface IslandEvent {
                 val o = other as CallConnected
                 callId == o.callId &&
                         callerDisplayName == o.callerDisplayName &&
-                        durationSeconds == o.durationSeconds
+                        durationSeconds == o.durationSeconds &&
+                        isDialing == o.isDialing &&
+                        connectedAtMs == o.connectedAtMs
             }
             is CallEnded -> {
                 val o = other as CallEnded
@@ -363,6 +365,7 @@ sealed interface IslandEvent {
         val callerDisplayName: String,
         val durationSeconds: Long = 0L,
         val isDialing: Boolean = false,
+        val connectedAtMs: Long = 0L,
         val contactPhoto: android.graphics.Bitmap? = null
     ) : IslandEvent
 

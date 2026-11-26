@@ -15,18 +15,20 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Headphones
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,12 +88,24 @@ internal fun formatEarbudBatteryDetailText(event: IslandEvent.BluetoothDeviceCon
     return if (parts.isNotEmpty()) parts.joinToString(" · ") else null
 }
 
+internal fun normalizeEarbudDisplayName(deviceName: String?): String =
+    deviceName?.trim()?.takeIf { it.isNotEmpty() } ?: "Bluetooth Audio"
+
+internal fun formatEarbudStatusBadge(event: IslandEvent.BluetoothDeviceConnected): String {
+    val snapshot = EarbudBatteryParser.sanitizeSnapshot(
+        primary = event.batteryLevelPercentage,
+        left = event.leftBatteryPercentage,
+        right = event.rightBatteryPercentage,
+        caseLevel = event.caseBatteryPercentage,
+    )
+    val pct = snapshot.representativePercent()
+    return if (pct != null) "$pct%" else "CONNECTED"
+}
+
 /**
- * Two-stage springy compact earbud pill:
- *  1. Springs downward smoothly into view.
- *  2. Widens to reveal device name, optional L/R/Case telemetry, and battery ring.
- *
- * Unknown battery values are rendered honestly as "--" with a muted track instead of faking 100%.
+ * Compact centered Bluetooth headphones / earbuds pill (`height = 38.dp`, `widthIn(min = 188.dp, max = 236.dp)`).
+ * Renders inside the visible overlay capsule without dropping off-screen, showing `#D71921`/white headphones
+ * iconography, normalized device name, and battery percentage (or `CONNECTED` badge when unavailable).
  */
 @Composable
 fun EarbudConnectionView(
@@ -103,54 +117,21 @@ fun EarbudConnectionView(
         primary = event.batteryLevelPercentage,
         left = event.leftBatteryPercentage,
         right = event.rightBatteryPercentage,
-        caseLevel = event.caseBatteryPercentage
+        caseLevel = event.caseBatteryPercentage,
     )
     val representativeBattery = snapshot.representativePercent()
-    val hasBattery = representativeBattery != null
-    val sweepFraction = if (representativeBattery != null) (representativeBattery / 100f).coerceIn(0f, 1f) else 0f
+    val badgeText = formatEarbudStatusBadge(event)
     val detailLine = formatEarbudBatteryDetailText(event)
-    val safeName = event.deviceName.ifBlank { "Bluetooth Audio" }
-
-    var dropped by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        dropped = true
-    }
-
-    val dropY by animateDpAsState(
-        targetValue = if (dropped) 72.dp else 0.dp,
-        animationSpec = spring(
-            dampingRatio = 0.72f,
-            stiffness = 460f,
-        ),
-        label = "earbudDropY",
-    )
-    val pillWidth by animateDpAsState(
-        targetValue = if (dropped) 320.dp else 124.dp,
-        animationSpec = spring(
-            dampingRatio = 0.74f,
-            stiffness = 420f,
-        ),
-        label = "earbudWidth",
-    )
-    val pillHeight = 56.dp
-
-    val pulse = rememberInfiniteTransition(label = "earbudPulse")
-    val ringAlpha by pulse.animateFloat(
-        initialValue = 0.75f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1100, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "earbudRingAlpha",
-    )
+    val safeName = normalizeEarbudDisplayName(event.deviceName)
+    val nothingRed = Color(0xFFD71921)
+    val pillShape = RoundedCornerShape(19.dp)
 
     val a11yDescription = buildString {
         append("$safeName connected")
         if (representativeBattery != null) {
             append(", battery $representativeBattery percent")
         } else {
-            append(", battery level unavailable")
+            append(", connected badge shown")
         }
         if (detailLine != null) {
             append(", $detailLine")
@@ -159,128 +140,117 @@ fun EarbudConnectionView(
 
     Box(
         modifier = modifier
-            .offset { IntOffset(0, dropY.roundToPx()) }
-            .width(pillWidth)
-            .heightIn(min = pillHeight)
-            .clip(RoundedCornerShape(20.dp))
-            .background(NothingPrimaryBackground)
-            .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
+            .widthIn(min = 188.dp, max = 236.dp)
+            .height(38.dp)
+            .clip(pillShape)
+            .background(Color.Black)
+            .border(1.dp, nothingRed, pillShape)
             .semantics { contentDescription = a11yDescription }
             .clickable(onClick = onTap)
-            .padding(horizontal = 20.dp, vertical = 6.dp),
+            .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(modifier = Modifier.requiredSize(34.dp)) {
-                drawEarbuds(this, NothingPrimaryText)
-            }
-            Spacer(Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = if (detailLine != null) "CONNECTED · $detailLine" else "CONNECTED",
-                    color = NothingSecondaryText,
-                    fontSize = 10.5.sp,
-                    lineHeight = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    letterSpacing = 0.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    softWrap = false,
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(nothingRed.copy(alpha = 0.20f))
+                    .border(1.dp, nothingRed, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Headphones,
+                    contentDescription = "Bluetooth Audio",
+                    tint = Color.White,
+                    modifier = Modifier.size(13.dp),
                 )
+            }
+
+            Text(
+                text = safeName,
+                color = NothingPrimaryText,
+                fontSize = 11.5.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                softWrap = false,
+                modifier = Modifier.weight(1f),
+            )
+
+            val badgeColor = when {
+                representativeBattery != null && representativeBattery <= 15 -> Color(0xFFE6AA43)
+                representativeBattery != null -> NothingSuccess
+                else -> nothingRed
+            }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(badgeColor.copy(alpha = 0.22f))
+                    .border(1.dp, badgeColor.copy(alpha = 0.75f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = safeName,
-                    color = NothingPrimaryText,
-                    fontSize = 16.5.sp,
-                    lineHeight = 22.sp,
+                    text = badgeText,
+                    color = Color.White,
+                    fontSize = 9.5.sp,
+                    lineHeight = 12.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     softWrap = false,
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Box(modifier = Modifier.requiredSize(38.dp), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val stroke = 3.dp.toPx()
-                    val inset = stroke / 2
-                    val arcSize = Size(size.width - stroke, size.height - stroke)
-                    drawArc(
-                        color = NothingDivider,
-                        startAngle = -90f,
-                        sweepAngle = 360f,
-                        useCenter = false,
-                        topLeft = Offset(inset, inset),
-                        size = arcSize,
-                        style = Stroke(width = stroke),
-                    )
-                    if (representativeBattery != null) {
-                        drawArc(
-                            color = (if (representativeBattery <= 15) Color(0xFFE6AA43) else NothingSuccess).copy(alpha = ringAlpha),
-                            startAngle = -90f,
-                            sweepAngle = 360f * sweepFraction,
-                            useCenter = false,
-                            topLeft = Offset(inset, inset),
-                            size = arcSize,
-                            style = Stroke(width = stroke, cap = StrokeCap.Round),
-                        )
-                    }
-                }
-                Text(
-                    text = if (representativeBattery != null) "$representativeBattery" else "--",
-                    color = if (representativeBattery != null) NothingPrimaryText else NothingMutedText,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    fontFamily = FontFamily.Monospace,
                 )
             }
         }
     }
 }
 
-/** Disconnected variant: springs up and shows a dimmed compact pill. */
+/** Disconnected variant: compact centered pill without dropping below the capsule window. */
 @Composable
 fun EarbudDisconnectedView(
     event: IslandEvent.BluetoothDeviceDisconnected,
     onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val safeName = event.deviceName.ifBlank { "Bluetooth Audio" }
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { shown = true }
-    val dropY by animateDpAsState(
-        targetValue = if (shown) 72.dp else 0.dp,
-        animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
-        label = "earbudOffDropY",
-    )
+    val safeName = normalizeEarbudDisplayName(event.deviceName)
+    val pillShape = RoundedCornerShape(19.dp)
     Box(
         modifier = modifier
-            .offset { IntOffset(0, dropY.roundToPx()) }
-            .width(200.dp)
-            .height(40.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(NothingPrimaryBackground)
-            .border(1.dp, NothingDivider, RoundedCornerShape(20.dp))
+            .widthIn(min = 188.dp, max = 236.dp)
+            .height(38.dp)
+            .clip(pillShape)
+            .background(Color.Black)
+            .border(1.dp, NothingDivider, pillShape)
             .semantics { contentDescription = "$safeName disconnected" }
             .clickable(onClick = onTap)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(modifier = Modifier.requiredSize(22.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Canvas(modifier = Modifier.requiredSize(18.dp)) {
                 drawEarbuds(this, NothingSecondaryText)
             }
-            Spacer(Modifier.width(8.dp))
             Text(
-                text = "$safeName disconnected",
+                text = "$safeName off",
                 color = NothingSecondaryText,
                 fontSize = 11.sp,
-                lineHeight = 16.sp,
+                lineHeight = 14.sp,
                 fontFamily = FontFamily.Monospace,
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
+                modifier = Modifier.weight(1f),
             )
         }
     }

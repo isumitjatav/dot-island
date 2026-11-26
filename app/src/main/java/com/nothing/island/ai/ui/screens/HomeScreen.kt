@@ -351,6 +351,22 @@ fun HomeScreen(
                     if (hasNotificationPermission) "Connected" else "Permission required",
                     if (hasNotificationPermission) NothingSuccess else NothingPrimaryAccent
                 )
+                val mascotSprite = com.nothing.island.ai.ui.components.mascotByName(prefs.mascotSpriteName)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToDestination(IslandDestination.MascotStudio) },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = "Pixel Companion", color = NothingSecondaryText, fontSize = 12.sp, fontFamily = FontFamily.SansSerif)
+                    Text(
+                        text = if (prefs.mascotEnabled) "${mascotSprite.displayName} • Active" else "Standby • Tap to enable",
+                        color = if (prefs.mascotEnabled) NothingSuccess else NothingMutedText,
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
                 ModuleStatusRow("Charging & Battery", "UI Integration Pending (M4.4)", NothingMutedText)
                 ModuleStatusRow("Gemini AI Engine", "Not configured (M5)", NothingMutedText)
             }

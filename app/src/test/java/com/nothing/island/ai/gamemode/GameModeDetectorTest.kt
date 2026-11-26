@@ -184,4 +184,20 @@ class GameModeDetectorTest {
         assertFalse("Blank package must not hide overlay", detector.shouldHideOverlay(true, ""))
         assertFalse("Whitespace package must not hide overlay", detector.shouldHideOverlay(true, "   "))
     }
+
+    @Test
+    fun testTransientSystemWindowsIgnored_gameModePersists() {
+        assertTrue(GameModeDetector.isTransientSystemWindow("com.android.systemui"))
+        assertTrue(GameModeDetector.isTransientSystemWindow("com.nothing.gamemode"))
+        assertTrue(GameModeDetector.isTransientSystemWindow("com.google.android.inputmethod.latin"))
+        assertFalse(GameModeDetector.isTransientSystemWindow("com.pubg.imobile"))
+    }
+
+    @Test
+    fun testKnownGamePrefixesDetectedEvenWithoutCategory() {
+        assertTrue(detector.isGame("com.pubg.imobile", Configuration.ORIENTATION_PORTRAIT))
+        assertTrue(detector.isGame("com.tencent.ig", Configuration.ORIENTATION_PORTRAIT))
+        assertTrue(detector.isGame("com.dts.freefireth", Configuration.ORIENTATION_PORTRAIT))
+        assertTrue(detector.isGame("com.activision.callofduty.shooter", Configuration.ORIENTATION_PORTRAIT))
+    }
 }

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -65,7 +67,10 @@ fun MusicCompactView(
     var totalDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 35f
 
-    var liveProgress by remember(trackState.currentPositionMs, trackState.durationMs, trackState.isPlaying) {
+    val latestPositionMs by rememberUpdatedState(trackState.currentPositionMs)
+    val latestSpeed by rememberUpdatedState(trackState.playbackSpeed)
+
+    var liveProgress by remember(trackState.packageName, trackState.trackTitle, trackState.durationMs, trackState.isPlaying) {
         val initialPos = if (trackState.durationMs > 0L) {
             trackState.currentPositionMs.coerceIn(0L, trackState.durationMs)
         } else 0L
@@ -74,11 +79,11 @@ fun MusicCompactView(
         )
     }
 
-    LaunchedEffect(trackState.isPlaying, trackState.currentPositionMs, trackState.durationMs, trackState.playbackSpeed) {
+    LaunchedEffect(trackState.packageName, trackState.trackTitle, trackState.isPlaying, trackState.durationMs) {
         if (trackState.isPlaying && trackState.durationMs > 0L) {
-            val basePositionMs = trackState.currentPositionMs
+            val basePositionMs = latestPositionMs
             val durationMs = trackState.durationMs
-            val playbackSpeed = if (trackState.playbackSpeed > 0f) trackState.playbackSpeed else 1.0f
+            val playbackSpeed = if (latestSpeed > 0f) latestSpeed else 1.0f
             val startRealtime = SystemClock.elapsedRealtime()
 
             while (true) {
@@ -93,7 +98,7 @@ fun MusicCompactView(
             }
         } else {
             liveProgress = if (trackState.durationMs > 0L) {
-                (trackState.currentPositionMs.toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
+                (latestPositionMs.toFloat() / trackState.durationMs.toFloat()).coerceIn(0f, 1f)
             } else {
                 0f
             }
@@ -108,7 +113,8 @@ fun MusicCompactView(
 
     Box(
         modifier = modifier
-            .width(200.dp)
+            .widthIn(min = 196.dp, max = 236.dp)
+            .width(224.dp)
             .height(36.dp)
             .clip(pillShape)
             .background(theme.pillBackgroundColor)
@@ -149,15 +155,16 @@ fun MusicCompactView(
             )
         }
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Left Wing: 73dp (Album Artwork + Status)
+            // 1. Left Wing: Album Artwork + playing pulse dot
             Box(
                 modifier = Modifier
-                    .width(73.dp)
-                    .fillMaxHeight()
-                    .padding(start = 8.dp),
+                    .width(42.dp)
+                    .fillMaxHeight(),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -172,7 +179,7 @@ fun MusicCompactView(
                         glowIntensity = preferences.glowIntensity
                     )
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
 
                     if (trackState.isPlaying) {
                         Box(
@@ -185,15 +192,14 @@ fun MusicCompactView(
                 }
             }
 
-            // 2. Center Zone: 54dp empty clearance (camera punch-hole)
-            Spacer(modifier = Modifier.width(54.dp))
+            // 2. Center Zone: Camera punch-hole dead-zone clearance
+            Spacer(modifier = Modifier.width(48.dp))
 
-            // 3. Right Wing: 73dp (Visualizer + Track title)
+            // 3. Right Wing: Equalizer + legible track title
             Box(
                 modifier = Modifier
-                    .width(73.dp)
-                    .fillMaxHeight()
-                    .padding(end = 8.dp),
+                    .weight(1f)
+                    .fillMaxHeight(),
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Row(
@@ -203,8 +209,8 @@ fun MusicCompactView(
                     // Mini live visualizer
                     Box(
                         modifier = Modifier
-                            .width(28.dp)
-                            .height(16.dp)
+                            .width(22.dp)
+                            .height(14.dp)
                     ) {
                         MusicVisualizerHost(
                             style = preferences.visualizerStyle,
@@ -214,7 +220,7 @@ fun MusicCompactView(
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(5.dp))
 
                     // Concise track label
                     Text(
@@ -224,10 +230,11 @@ fun MusicCompactView(
                             "PAUSED"
                         },
                         color = if (trackState.isPlaying) theme.textColorPrimary else theme.textColorSecondary,
-                        fontSize = 10.sp,
+                        fontSize = 10.5.sp,
                         fontFamily = theme.bodyFont,
                         fontWeight = theme.bodyFontWeight,
                         maxLines = 1,
+                        softWrap = false,
                         overflow = TextOverflow.Ellipsis
                     )
                 }

@@ -48,12 +48,44 @@ class IslandAccessibilityService : AccessibilityService() {
         }
     }
 
+    @Volatile
+    private var lastShadeClosedAtElapsedMs: Long = 0L
+
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        val type = event?.eventType ?: return
+        if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            type == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) {
             val pkg = event.packageName?.toString()
-            if (!pkg.isNullOrBlank()) {
-                val controller = IslandOverlayController.getInstance(this)
-                controller.onForegroundPackageChanged(pkg)
+            val cls = event.className?.toString()
+            val textSummary = buildString {
+                event.contentDescription?.let { append(it).append(' ') }
+                event.text?.forEach { append(it).append(' ') }
+            }.trim().ifEmpty { null }
+            val controller = IslandOverlayController.getInstance(this)
+            val nowMs = android.os.SystemClock.elapsedRealtime()
+            val shadeTransition = com.nothing.island.ai.gamemode.SystemUiShadeDetector.detectShadeTransition(
+                eventType = type,
+                eventPackage = pkg,
+                eventClassName = cls,
+                eventText = textSummary,
+                ownPackageName = packageName,
+                isShadeCurrentlyOpen = controller.isHiddenBySystemShade,
+                nowMs = nowMs,
+                lastShadeClosedAtMs = lastShadeClosedAtElapsedMs,
+            )
+            when (shadeTransition) {
+                com.nothing.island.ai.gamemode.SystemShadeTransition.SHADE_OPENED ->
+                    controller.setSystemShadeHidden(true)
+                com.nothing.island.ai.gamemode.SystemShadeTransition.SHADE_CLOSED -> {
+                    lastShadeClosedAtElapsedMs = nowMs
+                    controller.setSystemShadeHidden(false)
+                }
+                com.nothing.island.ai.gamemode.SystemShadeTransition.IGNORE -> Unit
+            }
+
+            if (!com.nothing.island.ai.gamemode.GameModeDetector.isTransientSystemWindow(pkg)) {
+                controller.onForegroundPackageChanged(pkg!!)
             }
         }
     }

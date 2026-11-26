@@ -122,6 +122,19 @@ class IslandPriorityManager(
                         return@withLock
                     }
 
+                    // In-place update for identical active media track/playback state: avoids transition flicker
+                    if (current is IslandEvent.MediaPlaybackChanged &&
+                        event is IslandEvent.MediaPlaybackChanged &&
+                        current.packageName == event.packageName &&
+                        current.trackTitle == event.trackTitle &&
+                        current.artistName == event.artistName &&
+                        current.isPlaying == event.isPlaying
+                    ) {
+                        activeEvent = event
+                        onStateResolved(event, event.priority, activePresentationId)
+                        return@withLock
+                    }
+
                     Log.d(TAG, "EQUAL PRIORITY: Replacing current presentation with new event ${event.id} (P$newPriority)")
                     activateEventLocked(event)
                 }
