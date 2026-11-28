@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -55,9 +56,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -526,6 +529,11 @@ fun IslandOverlayView(
             ExpandedViewType.MUSIC -> {
                 targetWidth = preferences.expandedWidthDp.dp
                 targetHeight = (preferences.expandedHeightDp + 22f).dp
+                targetCornerRadius = 28.dp
+            }
+            ExpandedViewType.NOTIFICATION_FOCUSED -> {
+                targetWidth = preferences.expandedWidthDp.dp
+                targetHeight = (preferences.expandedHeightDp + 24f).dp
                 targetCornerRadius = 28.dp
             }
             else -> {
@@ -1110,59 +1118,21 @@ fun IslandOverlayView(
                         ExpandedViewType.NOTIFICATION_FOCUSED -> {
                     // =========================================================================
                     // STATE B: NOTIFICATION-FOCUSED VIEW
-                    // Triggered by tapping an active notification or selecting from Dashboard history.
+                    // Non-destructive horizontal swipe pagination across active/recent notifications.
                     // STRICT INVARIANT: ZERO clock or weather displayed!
                     // =========================================================================
-                    val presentationToRender = remember(selectedNotificationKey, activeNotification, projectedHistory) {
-                        resolveFocusedNotificationPresentation(
-                            selectedNotificationKey = selectedNotificationKey,
-                            activeNotificationId = activeNotification?.id,
-                            projectedHistory = projectedHistory
-                        )
-                    }
+                    val totalPages = projectedHistory.size
+                    var notificationPageIndex by remember(projectedHistory.size) { mutableIntStateOf(0) }
+                    val safeIndex = if (totalPages > 0) notificationPageIndex.coerceIn(0, totalPages - 1) else 0
 
-                    var totalNotifDragX by remember { mutableFloatStateOf(0f) }
-                    var totalNotifDragY by remember { mutableFloatStateOf(0f) }
-                    val swipeThresholdPx = 60f
+                    val presentationToRender = if (projectedHistory.isNotEmpty()) {
+                        projectedHistory[safeIndex]
+                    } else null
+
+                    val pageIndicatorText = if (totalPages > 1) "${safeIndex + 1}/$totalPages" else null
 
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(
-                                if (!notificationPreferences.swipeToDismissEnabled) {
-                                    Modifier.pointerInput(Unit) {
-                                        detectDragGestures(
-                                            onDragStart = {
-                                                totalNotifDragX = 0f
-                                                totalNotifDragY = 0f
-                                            },
-                                            onDrag = { change, dragAmount ->
-                                                change.consume()
-                                                totalNotifDragX += dragAmount.x
-                                                totalNotifDragY += dragAmount.y
-                                            },
-                                            onDragEnd = {
-                                                val absX = abs(totalNotifDragX)
-                                                val absY = abs(totalNotifDragY)
-                                                if (absY > absX && totalNotifDragY >= swipeThresholdPx) {
-                                                    onSwipeActivity(SwipeDirection.DOWN)
-                                                } else if (absY > absX && totalNotifDragY <= -swipeThresholdPx) {
-                                                    handleCollapseWithAck()
-                                                } else if (absX > absY && absX >= swipeThresholdPx) {
-                                                    val dir = if (totalNotifDragX < 0) SwipeDirection.LEFT else SwipeDirection.RIGHT
-                                                    onSwipeActivity(dir)
-                                                }
-                                                totalNotifDragX = 0f
-                                                totalNotifDragY = 0f
-                                            },
-                                            onDragCancel = {
-                                                totalNotifDragX = 0f
-                                                totalNotifDragY = 0f
-                                            }
-                                        )
-                                    }
-                                } else Modifier
-                            )
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         // Reference-style slide-down: the card drops out of the
                         // capsule with a spring, and fades/slides in. Skipped when
@@ -1218,7 +1188,18 @@ fun IslandOverlayView(
                                 onExecuteAction = onExecuteAction,
                                 onSendReply = onSendReply,
                                 onInputFocusChanged = onInputFocusChanged,
-                                isCameraCutoutEnabled = preferences.isCameraCutoutEnabled
+                                isCameraCutoutEnabled = preferences.isCameraCutoutEnabled,
+                                pageIndicator = pageIndicatorText,
+                                onPageNext = {
+                                    if (totalPages > 1) {
+                                        notificationPageIndex = (safeIndex + 1) % totalPages
+                                    }
+                                },
+                                onPagePrevious = {
+                                    if (totalPages > 1) {
+                                        notificationPageIndex = (safeIndex - 1 + totalPages) % totalPages
+                                    }
+                                }
                             )
                         } else if (activeNotification != null) {
                             NotificationCard(
@@ -1365,6 +1346,32 @@ fun IslandOverlayView(
                     val overlayScope = rememberCoroutineScope()
                     val prefsRepo = remember(context) { com.nothing.island.ai.data.IslandPreferencesRepository.getInstance(context) }
 
+                    // Live ContentObserver for system brightness changes (e.g. from native Quick Settings slider)
+                    DisposableEffect(context) {
+                        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+                            override fun onChange(selfChange: Boolean) {
+                                super.onChange(selfChange)
+                                bri = getQuickBrightnessPercent()
+                            }
+                        }
+                        try {
+                            context.contentResolver.registerContentObserver(
+                                android.provider.Settings.System.getUriFor(android.provider.Settings.System.SCREEN_BRIGHTNESS),
+                                false,
+                                observer
+                            )
+                        } catch (e: Exception) {
+                            Log.w("IslandOverlayView", "Failed to register brightness observer", e)
+                        }
+                        onDispose {
+                            try {
+                                context.contentResolver.unregisterContentObserver(observer)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                    }
+
                     com.nothing.island.ai.ui.components.QuickToolsDrawer(
                         tools = qt.ALL.filter { id -> id in enabledQuickTools }.map { id ->
                             val spec = com.nothing.island.ai.ui.components.QuickToolExecutor.describeTool(id)
@@ -1441,13 +1448,13 @@ fun DashboardCard(
     var totalHeaderDrag by remember { mutableFloatStateOf(0f) }
     val swipeThresholdPx = 60f
 
-    // Live clock ticker updating on exact seconds
+    // Live clock ticker updating on exact seconds (12-hour format with AM/PM)
     val currentTimeText by produceState(
-        initialValue = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        initialValue = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
     ) {
         while (true) {
             val now = System.currentTimeMillis()
-            value = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now))
+            value = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(now))
             val delayMs = 1000L - (now % 1000L)
             kotlinx.coroutines.delay(delayMs)
         }
@@ -1695,7 +1702,8 @@ fun DashboardCard(
                             state = listState,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .simpleVerticalScrollbar(listState),
+                                .simpleVerticalScrollbar(listState)
+                                .padding(end = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             items(
@@ -2150,18 +2158,23 @@ fun DashboardHistoryItemRow(
             }
         }
         Spacer(modifier = Modifier.width(6.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.wrapContentWidth()
+        ) {
             Text(
                 text = relativeTime,
                 color = NothingMutedText,
                 fontSize = 9.5.sp,
-                fontFamily = FontFamily.Monospace
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                softWrap = false
             )
             if (onDismiss != null) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(24.dp)
                         .clip(RoundedCornerShape(6.dp))
                         .background(Color(0xFF1E1E1E))
                         .clickable { onDismiss() },
@@ -2217,12 +2230,32 @@ fun NotificationEmptyFocusedCard(
     modifier: Modifier = Modifier
 ) {
     val cardShape = RoundedCornerShape(26.dp)
+    var dragX by remember { mutableFloatStateOf(0f) }
     Box(
         modifier = modifier
             .fillMaxSize()
             .clip(cardShape)
             .background(NothingBlack)
             .border(width = 1.dp, color = NothingBorder, shape = cardShape)
+            .pointerInput(Unit) {
+                detectTapGestures(onTap = { onCollapse() })
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { dragX = 0f },
+                    onHorizontalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragX += dragAmount
+                    },
+                    onDragEnd = {
+                        if (abs(dragX) > 40f) {
+                            onCollapse()
+                        }
+                        dragX = 0f
+                    },
+                    onDragCancel = { dragX = 0f }
+                )
+            }
     ) {
         Column(
             modifier = Modifier

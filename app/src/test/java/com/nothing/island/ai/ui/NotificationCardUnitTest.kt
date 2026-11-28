@@ -279,4 +279,54 @@ class NotificationCardUnitTest {
 
         assertEquals("supercalculator", state.appDisplayName)
     }
+
+    @Test
+    fun testTwelveHourClockFormatPattern() {
+        val calendar = java.util.Calendar.getInstance(java.util.Locale.US)
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 22)
+        calendar.set(java.util.Calendar.MINUTE, 31)
+        val formatted = java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(calendar.time)
+        assertEquals("10:31 PM", formatted)
+
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 9)
+        calendar.set(java.util.Calendar.MINUTE, 5)
+        val morningFormatted = java.text.SimpleDateFormat("h:mm a", java.util.Locale.US).format(calendar.time)
+        assertEquals("9:05 AM", morningFormatted)
+    }
+
+    @Test
+    fun testNonDestructivePaginationWrapAround() {
+        val totalPages = 3
+        var pageIndex = 0
+
+        // Swipe left (next page)
+        pageIndex = (pageIndex + 1) % totalPages
+        assertEquals(1, pageIndex)
+
+        pageIndex = (pageIndex + 1) % totalPages
+        assertEquals(2, pageIndex)
+
+        // Wrap-around to start
+        pageIndex = (pageIndex + 1) % totalPages
+        assertEquals(0, pageIndex)
+
+        // Swipe right (previous page with wrap-around)
+        pageIndex = (pageIndex - 1 + totalPages) % totalPages
+        assertEquals(2, pageIndex)
+
+        pageIndex = (pageIndex - 1 + totalPages) % totalPages
+        assertEquals(1, pageIndex)
+    }
+
+    @Test
+    fun testExtractNotificationTextFallsBackToBigTextWhenPrimaryEmpty() {
+        val bigText = "This is the full expanded message content from BigText style with lots of details."
+
+        val result = com.nothing.island.ai.notifications.IslandNotificationListenerService.extractNotificationText(
+            primaryText = "   ",
+            bigText = bigText
+        )
+
+        assertEquals("Full BigText must be used when primary text is blank", bigText, result)
+    }
 }

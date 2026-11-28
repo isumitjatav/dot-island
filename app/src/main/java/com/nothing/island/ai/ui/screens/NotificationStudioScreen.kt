@@ -270,6 +270,68 @@ fun NotificationStudioScreen(
                         coroutineScope.launch { repository.updateNotificationHideSensitive(isChecked) }
                     }
                 )
+
+                // Silence System Pop-ups Card (Double-banner prevention)
+                val areHeadsUpDisabled = remember {
+                    try {
+                        android.provider.Settings.Global.getInt(context.contentResolver, "heads_up_notifications_enabled", 1) == 0
+                    } catch (_: Exception) {
+                        false
+                    }
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Silence System Pop-ups",
+                            color = NothingTokens.NothingTextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (areHeadsUpDisabled) "System heads-up banners disabled (Dot Island exclusive)" else "Disable 'Pop on screen' on Phone & Messages to prevent double banners",
+                            color = NothingTokens.NothingTextSecondary,
+                            fontSize = 11.5.sp
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (areHeadsUpDisabled) NothingTokens.NothingSurfaceMedium else NothingRed)
+                            .clickable {
+                                val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, "com.google.android.dialer")
+                                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    try {
+                                        val fallback = android.content.Intent(android.provider.Settings.ACTION_SETTINGS).apply {
+                                            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                        }
+                                        context.startActivity(fallback)
+                                    } catch (_: Exception) {}
+                                }
+                            }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = if (areHeadsUpDisabled) "MUTED" else "CONFIGURE",
+                            color = if (areHeadsUpDisabled) NothingTokens.NothingTextSecondary else androidx.compose.ui.graphics.Color.White,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
 

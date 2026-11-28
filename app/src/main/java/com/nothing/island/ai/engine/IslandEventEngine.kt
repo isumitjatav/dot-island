@@ -83,6 +83,18 @@ class IslandEventEngine(
         val now = System.currentTimeMillis()
         val isCritical = event.priority >= IslandPriority.SAFETY_ALERT // >= 70 (Call, Emergency, Low Battery)
 
+        // Filter out telecom/dialer notifications from spawning a generic message pill
+        if (event is IslandEvent.NotificationPosted) {
+            val isDialerOrTelecom = event.category == android.app.Notification.CATEGORY_CALL ||
+                event.packageName == "com.android.server.telecom" ||
+                event.packageName == "com.google.android.dialer" ||
+                event.packageName == "com.android.dialer"
+            if (isDialerOrTelecom) {
+                Log.d(TAG, "Suppressed telecom/dialer notification from spawning generic message pill: pkg=${event.packageName}")
+                return false
+            }
+        }
+
         // 1. Non-critical events pass through coalescing and semantic deduplication
         if (!isCritical) {
             // 2. High-frequency media position update coalescing

@@ -428,23 +428,16 @@ class IslandOverlayController private constructor(private val appContext: Contex
         }
     }
 
-    /** Sets screen brightness percentage (0.0f to 1.0f). */
+    /** Sets screen brightness percentage (0.0f to 1.0f). Writes to Settings.System; never touches params.screenBrightness. */
     fun setScreenBrightnessPercent(percent: Float) {
         val clamped = percent.coerceIn(0.01f, 1f)
         try {
-            val params = layoutParams
-            val wm = activeWindowManager
-            val view = composeView
-            if (params != null && wm != null && view != null) {
-                params.screenBrightness = clamped
-                wm.updateViewLayout(view, params)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to update window brightness", e)
-        }
-
-        try {
             if (android.provider.Settings.System.canWrite(appContext)) {
+                android.provider.Settings.System.putInt(
+                    appContext.contentResolver,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+                    android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL
+                )
                 val intVal = kotlin.math.round(clamped * 255f).toInt().coerceIn(1, 255)
                 android.provider.Settings.System.putInt(
                     appContext.contentResolver,
@@ -672,6 +665,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     x = 0
                     y = topMarginPx
+                    screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
@@ -1065,6 +1059,7 @@ class IslandOverlayController private constructor(private val appContext: Contex
                     gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
                     x = 0
                     y = topMarginPx
+                    screenBrightness = WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                         layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS

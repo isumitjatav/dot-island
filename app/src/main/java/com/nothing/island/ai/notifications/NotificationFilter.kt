@@ -133,9 +133,13 @@ class NotificationFilter(
             return null
         }
 
-        // 1.3 Telephony Call exclusion (Reserved for Milestone R9 Telephony Engine)
-        if (raw.category == Notification.CATEGORY_CALL) {
-            Log.d(TAG, "MANDATORY DROP: Telephony call category from $pkg (key=$key)")
+        // 1.3 Telephony Call & Dialer exclusion (Reserved for Milestone R9 Telephony Engine)
+        val isDialerOrTelecom = raw.category == Notification.CATEGORY_CALL ||
+            raw.packageName == "com.android.server.telecom" ||
+            raw.packageName == "com.google.android.dialer" ||
+            raw.packageName == "com.android.dialer"
+        if (isDialerOrTelecom) {
+            Log.d(TAG, "MANDATORY DROP: Telephony call category or dialer from $pkg (key=$key)")
             return null
         }
 
@@ -323,10 +327,9 @@ class NotificationFilter(
         val title = extras?.getCharSequence(Notification.EXTRA_TITLE)?.toString()
             ?: extras?.getCharSequence("android.title")?.toString()
             ?: ""
-        val text = extras?.getCharSequence(Notification.EXTRA_TEXT)?.toString()
-            ?: extras?.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
-            ?: extras?.getCharSequence("android.text")?.toString()
-            ?: ""
+        val text = IslandNotificationListenerService.extractNotificationText(extras).ifEmpty {
+            extras?.getCharSequence("android.text")?.toString() ?: ""
+        }
         val subText = extras?.getCharSequence(Notification.EXTRA_SUB_TEXT)?.toString()
 
         val isOngoing = sbn.isOngoing ||

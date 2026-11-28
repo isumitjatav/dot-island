@@ -114,6 +114,12 @@ fun SettingsScreen(
         android.Manifest.permission.RECORD_AUDIO
     ) == android.content.pm.PackageManager.PERMISSION_GRANTED
 
+    val areHeadsUpDisabled = try {
+        Settings.Global.getInt(context.contentResolver, "heads_up_notifications_enabled", 1) == 0
+    } catch (_: Exception) {
+        false
+    }
+
     // Persistent Preferences from DataStore
     val preferencesRepository = remember { IslandPreferencesRepository.getInstance(context) }
     val coroutineScope = rememberCoroutineScope()
@@ -311,6 +317,28 @@ fun SettingsScreen(
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
                         context.startActivity(intent)
+                    }
+                )
+
+                PermissionStatusRow(
+                    title = "Silence System Pop-ups",
+                    subtitle = if (areHeadsUpDisabled) "System heads-up banners disabled (Dot Island exclusive)" else "Disable native 'Pop on screen' banners on Phone/Messages apps",
+                    isGranted = areHeadsUpDisabled,
+                    onGrantClick = {
+                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, "com.google.android.dialer")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            try {
+                                val fallback = Intent(Settings.ACTION_SETTINGS).apply {
+                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                }
+                                context.startActivity(fallback)
+                            } catch (_: Exception) {}
+                        }
                     }
                 )
             }

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,11 +19,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.roundToInt
 import androidx.compose.foundation.shape.CircleShape
@@ -249,7 +253,10 @@ fun NotificationCard(
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
     onInputFocusChanged: ((Boolean) -> Unit)? = null,
-    isCameraCutoutEnabled: Boolean = false
+    isCameraCutoutEnabled: Boolean = false,
+    pageIndicator: String? = null,
+    onPageNext: (() -> Unit)? = null,
+    onPagePrevious: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val resolvedAppLabel = appName ?: remember(event.packageName) {
@@ -287,7 +294,10 @@ fun NotificationCard(
         onExecuteAction = onExecuteAction,
         onSendReply = onSendReply,
         onInputFocusChanged = onInputFocusChanged,
-        isCameraCutoutEnabled = isCameraCutoutEnabled
+        isCameraCutoutEnabled = isCameraCutoutEnabled,
+        pageIndicator = pageIndicator,
+        onPageNext = onPageNext,
+        onPagePrevious = onPagePrevious
     )
 }
 
@@ -321,7 +331,10 @@ fun NotificationCard(
     onExecuteAction: ((String, Int) -> Unit)? = null,
     onSendReply: ((String, Int, String) -> ReplyResult)? = null,
     onInputFocusChanged: ((Boolean) -> Unit)? = null,
-    isCameraCutoutEnabled: Boolean = false
+    isCameraCutoutEnabled: Boolean = false,
+    pageIndicator: String? = null,
+    onPageNext: (() -> Unit)? = null,
+    onPagePrevious: (() -> Unit)? = null
 ) {
     val state = remember(packageName, title, text, subText, timestamp, previewMode, appName, progress, maxProgress, isIndeterminate, hasProgress, progressState) {
         NotificationCardResolver.resolve(
@@ -371,8 +384,9 @@ fun NotificationCard(
     }
 
     val cardShape = if (isCameraCutoutEnabled) currentNotchedCardShape() else RoundedCornerShape(26.dp)
-    var totalDrag by remember { mutableFloatStateOf(0f) }
-    val swipeThresholdPx = 50f
+    var dragX by remember { mutableFloatStateOf(0f) }
+    var dragY by remember { mutableFloatStateOf(0f) }
+    val swipeThresholdPx = 40f
     val theme = com.nothing.island.ai.ui.theme.LocalIslandTheme.current
 
     Box(
@@ -382,30 +396,50 @@ fun NotificationCard(
             .background(theme.pillBackgroundColor)
             .border(width = 1.dp, color = theme.borderColor, shape = cardShape)
             .then(
-                if (swipeToDismissEnabled && onDismiss != null && notificationKey != null) {
-                    Modifier.pointerInput(notificationKey) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { totalDrag = 0f },
-                            onHorizontalDrag = { change, dragAmount ->
-                                change.consume()
-                                totalDrag += dragAmount
-                            },
-                            onDragEnd = {
-                                if (kotlin.math.abs(totalDrag) > swipeThresholdPx) {
-                                    onDismiss(notificationKey)
+                Modifier.pointerInput(notificationKey) {
+                    detectDragGestures(
+                        onDragStart = {
+                            dragX = 0f
+                            dragY = 0f
+                        },
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            dragX += dragAmount.x
+                            dragY += dragAmount.y
+                        },
+                        onDragEnd = {
+                            val absX = kotlin.math.abs(dragX)
+                            val absY = kotlin.math.abs(dragY)
+                            if (absX > absY && absX >= swipeThresholdPx) {
+                                // Non-destructive pagination across active/recent notifications
+                                if (dragX < 0) {
+                                    onPageNext?.invoke()
+                                } else {
+                                    onPagePrevious?.invoke()
                                 }
-                                totalDrag = 0f
-                            },
-                            onDragCancel = { totalDrag = 0f }
-                        )
-                    }
-                } else Modifier
+                            } else if (absY > absX && dragY <= -swipeThresholdPx) {
+                                // Upward swipe -> explicit dismiss
+                                if (onDismiss != null && notificationKey != null) {
+                                    onDismiss(notificationKey)
+                                } else {
+                                    onCollapse?.invoke()
+                                }
+                            }
+                            dragX = 0f
+                            dragY = 0f
+                        },
+                        onDragCancel = {
+                            dragX = 0f
+                            dragY = 0f
+                        }
+                    )
+                }
             )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // 1. Top Punch-hole clearance spacer (36dp camera punch hole + 6dp safety margin)
@@ -447,6 +481,18 @@ fun NotificationCard(
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
+
+                // Page indicator (e.g., "1/3") shown before COLLAPSE button
+                if (pageIndicator != null) {
+                    Text(
+                        text = pageIndicator,
+                        color = theme.textColorSecondary,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 8.dp)
+                    )
+                }
 
                 // Header controls (CLEAR ALL, DISMISS, COLLAPSE, or formatted timestamp)
                 Row(
@@ -563,7 +609,10 @@ fun NotificationCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(max = 110.dp)
+                            .verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         // Title (Sender Name, e.g. "ALEX")
@@ -571,27 +620,25 @@ fun NotificationCard(
                             Text(
                                 text = state.title.uppercase(),
                                 color = theme.textColorPrimary,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontFamily = theme.displayFont,
                                 fontWeight = theme.displayFontWeight,
-                                lineHeight = 22.sp,
+                                lineHeight = 20.sp,
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
 
-                        // Body content (e.g. "ON MY WAY")
+                        // Body content (e.g. "ON MY WAY") - fully readable via vertical scroll
                         if (!state.body.isNullOrBlank()) {
                             Text(
-                                text = state.body.uppercase(),
+                                text = state.body,
                                 color = if (theme.isInverted) Color(0xFF222222) else NothingWhite.copy(alpha = 0.85f),
-                                fontSize = 13.sp,
+                                fontSize = 12.5.sp,
                                 fontFamily = theme.bodyFont,
                                 fontWeight = FontWeight.Medium,
-                                lineHeight = 18.sp,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                lineHeight = 17.sp
                             )
                         }
 
@@ -600,12 +647,9 @@ fun NotificationCard(
                             Text(
                                 text = state.subText,
                                 color = theme.textColorSecondary,
-                                fontSize = 10.5.sp,
-                                lineHeight = 14.sp,
-                                fontFamily = theme.bodyFont,
-                                maxLines = 1,
-                                softWrap = false,
-                                overflow = TextOverflow.Ellipsis
+                                fontSize = 10.sp,
+                                lineHeight = 13.sp,
+                                fontFamily = theme.bodyFont
                             )
                         }
                     }
@@ -860,10 +904,10 @@ fun NotificationCard(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(17.dp))
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(if (isPrimary && theme == com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC) theme.primaryButtonBackground else actionPillBg)
-                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(16.dp))
                                     .clickable {
                                         replyingActionIndex = if (replyActionIndex >= 0) replyActionIndex else 0
                                         replyStatus = null
@@ -901,10 +945,10 @@ fun NotificationCard(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(17.dp))
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(openBg)
-                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(16.dp))
                                     .clickable { onOpenContent?.invoke(notificationKey) },
                                 contentAlignment = Alignment.Center
                             ) {
@@ -923,10 +967,10 @@ fun NotificationCard(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .height(34.dp)
-                                    .clip(RoundedCornerShape(17.dp))
+                                    .height(32.dp)
+                                    .clip(RoundedCornerShape(16.dp))
                                     .background(actionPillBg)
-                                    .border(1.dp, actionPillBorder, RoundedCornerShape(17.dp))
+                                    .border(1.dp, actionPillBorder, RoundedCornerShape(16.dp))
                                     .clickable { onDismiss?.invoke(notificationKey) },
                                 contentAlignment = Alignment.Center
                             ) {

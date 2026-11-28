@@ -107,10 +107,42 @@ class IslandNotificationListenerService : NotificationListenerService() {
 
         internal fun extractNotificationText(extras: android.os.Bundle?): String {
             if (extras == null) return ""
-            return extractNotificationText(
-                primaryText = extras.getCharSequence(Notification.EXTRA_TEXT),
-                bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
-            )
+            val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()?.trim()
+            if (!bigText.isNullOrEmpty()) return bigText
+
+            val primaryText = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.trim()
+            if (!primaryText.isNullOrEmpty()) return primaryText
+
+            // Fallback to MessagingStyle messages
+            if (extras.containsKey(Notification.EXTRA_MESSAGES)) {
+                val parcelableArray = extras.getParcelableArray(Notification.EXTRA_MESSAGES)
+                if (!parcelableArray.isNullOrEmpty()) {
+                    val lines = mutableListOf<String>()
+                    for (item in parcelableArray) {
+                        if (item is android.os.Bundle) {
+                            val line = item.getCharSequence("text")?.toString()?.trim()
+                            if (!line.isNullOrEmpty()) lines.add(line)
+                        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && item is Notification.MessagingStyle.Message) {
+                            val line = item.text?.toString()?.trim()
+                            if (!line.isNullOrEmpty()) lines.add(line)
+                        }
+                    }
+                    if (lines.isNotEmpty()) {
+                        return lines.joinToString("\n")
+                    }
+                }
+            }
+
+            // Fallback to InboxStyle text lines
+            val textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+            if (!textLines.isNullOrEmpty()) {
+                val lines = textLines.mapNotNull { it?.toString()?.trim()?.ifEmpty { null } }
+                if (lines.isNotEmpty()) {
+                    return lines.joinToString("\n")
+                }
+            }
+
+            return ""
         }
 
         internal fun extractNotificationText(primaryText: CharSequence?, bigText: CharSequence?): String {
@@ -608,9 +640,26 @@ class IslandNotificationListenerService : NotificationListenerService() {
             // 1. Silent check: Do not emit alerts for historical notifications cataloged at connection time
             val isHistorical = isHistorical(key)
 
+            // Suppress telecom/dialer notifications from spawning a duplicate generic message pill
+            val isTelecomOrCall = sbn.notification.category == Notification.CATEGORY_CALL ||
+                sbn.packageName == "com.android.server.telecom" ||
+                sbn.packageName == "com.google.android.dialer" ||
+                sbn.packageName == "com.android.dialer"
+            if (isTelecomOrCall) {
+                Log.d(TAG, "Suppressed telecom/dialer notification from generic flow: pkg=${sbn.packageName}")
+                return@launch
+            }
+
             try {
                 val controller = IslandOverlayController.getInstance(applicationContext)
                 val historyRepo = controller.historyRepository
+
+                // Suppress message popup if user currently has this messaging app open in the foreground
+                val fgPkg = controller.currentForegroundPackage
+                if (fgPkg != null && fgPkg == sbn.packageName) {
+                    Log.d(TAG, "Suppressed message popup: user already has $fgPkg in foreground")
+                    return@launch
+                }
 
                 // 2. Validate event freshness and history eligibility BEFORE touching ActionBridge
                 if (!historyRepo.isFresh(key, postTime, seq)) {
@@ -664,33 +713,9 @@ class IslandNotificationListenerService : NotificationListenerService() {
                     val isGroupSummary = (notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0
                     val hasMediaStyle = notification.extras?.containsKey(Notification.EXTRA_MEDIA_SESSION) == true ||
                         notification.category == Notification.CATEGORY_TRANSPORT
-                    val suppressionDecision = systemSuppressor.evaluate(
-                        candidate = SuppressionCandidate(
-                            key = key,
-                            postTime = postTime,
-                            category = notification.category,
-                            isClearable = sbn.isClearable,
-                            isOngoing = sbn.isOngoing ||
-                                (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 ||
-                                (notification.flags and Notification.FLAG_FOREGROUND_SERVICE) != 0,
-                            isGroupSummary = isGroupSummary,
-                            hasMediaStyle = hasMediaStyle,
-                            acceptedByIsland = accepted
-                        ),
-                        preferences = prefs
-                    )
-                    if (suppressionDecision == SuppressionDecision.CANCEL) {
-                        try {
-                            systemSuppressor.recordSelfCancellation(key = key, postTime = postTime)
-                            cancelNotification(key)
-                            Log.i(TAG, "Hide System Notification: heads-up cancelled key=$key")
-                        } catch (e: Exception) {
-                            systemSuppressor.consumeSelfCancelledRemoval(key)
-                            Log.w(TAG, "Failed to cancel redundant notification key=$key", e)
-                        }
-                    } else if (prefs.hideSystemNotification) {
-                        Log.d(TAG, "Hide System Notification skipped ($suppressionDecision) for key=$key")
-                    }
+                    // Dot Island v1.2.0: Never call cancelNotification on arrival so inline REPLY
+                    // (RemoteInput) and OPEN intents keep working reliably.
+                    Log.d(TAG, "Notification arrival processed without cancelNotification: key=$key")
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error processing incoming notification for key=$key", e)

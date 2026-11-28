@@ -11,9 +11,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -123,14 +126,16 @@ fun NotificationExpandedCard(
                 }
             }
 
-            // 3. Body: Message Container (Tap to Open)
+            // 3. Body: Message Container (Tap to Open, Scrollable)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .heightIn(max = 110.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(NothingDarkGray)
                     .clickable { onOpenContent(event.id) }
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
@@ -147,9 +152,7 @@ fun NotificationExpandedCard(
                         text = event.text,
                         color = NothingWhite.copy(alpha = 0.85f),
                         fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        fontFamily = FontFamily.Monospace
                     )
                 }
                 if (!event.subText.isNullOrBlank()) {
@@ -157,9 +160,7 @@ fun NotificationExpandedCard(
                         text = event.subText,
                         color = NothingMutedText,
                         fontSize = 9.sp,
-                        fontFamily = FontFamily.Monospace,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontFamily = FontFamily.Monospace
                     )
                 }
             }
