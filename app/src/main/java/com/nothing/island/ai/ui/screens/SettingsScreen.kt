@@ -1,11 +1,8 @@
 package com.nothing.island.ai.ui.screens
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
-import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,8 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -38,19 +33,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import com.nothing.island.ai.CutoutGeometry
-import com.nothing.island.ai.IslandOverlayService
 import com.nothing.island.ai.OverlayPermissionManager
-import com.nothing.island.ai.notifications.IslandNotificationListenerService
 import com.nothing.island.ai.data.IslandPreferencesRepository
+import com.nothing.island.ai.notifications.IslandNotificationListenerService
 import com.nothing.island.ai.ui.components.IslandCard
+import com.nothing.island.ai.ui.components.NothingSwitch
+import com.nothing.island.ai.ui.components.ProminentDisclosureDialog
+import com.nothing.island.ai.ui.components.ProminentDisclosureType
 import com.nothing.island.ai.ui.components.SectionHeader
 import com.nothing.island.ai.ui.theme.NothingDivider
 import com.nothing.island.ai.ui.theme.NothingElevatedSurface
@@ -60,36 +57,55 @@ import com.nothing.island.ai.ui.theme.NothingPrimaryBackground
 import com.nothing.island.ai.ui.theme.NothingPrimaryText
 import com.nothing.island.ai.ui.theme.NothingSecondaryText
 import com.nothing.island.ai.ui.theme.NothingSuccess
-import com.nothing.island.ai.ui.theme.NothingWarning
 import kotlinx.coroutines.launch
 
+data class InstalledAppItem(
+    val categoryName: String,
+    val packageName: String,
+    val appLabel: String
+)
+
+/**
+ * Clean Settings Screen
+ *
+ * Implements:
+ * 1. App Permissions (Display Over Other Apps, Notification Access, Battery Optimization)
+ * 2. Display & Touch Behaviour (Auto-Hide in Games, Haptic Feedback, Reduced Motion)
+ * 3. Battery & Charging Alerts (Battery Intelligence, Auto-Expand on Plugged, Temp Warning)
+ * 4. Replay Welcome Guide
+ * 5. Version
+ */
 @Composable
 fun SettingsScreen(
-    geometry: CutoutGeometry,
-    onNavigateBack: () -> Unit,
+    geometry: CutoutGeometry? = null,
+    onNavigateBack: () -> Unit = {},
     onReopenOnboarding: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
-    var activeDisclosure by remember {
-        mutableStateOf<com.nothing.island.ai.ui.components.ProminentDisclosureType?>(null)
-    }
+    val preferencesRepository = remember { IslandPreferencesRepository.getInstance(context) }
+    val prefs by preferencesRepository.livePreferences.collectAsState()
+    val batteryPrefs by preferencesRepository.liveBatteryPreferences.collectAsState()
+    val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+
+    var activeDisclosure by remember { mutableStateOf<ProminentDisclosureType?>(null) }
 
     activeDisclosure?.let { type ->
-        com.nothing.island.ai.ui.components.ProminentDisclosureDialog(
+        ProminentDisclosureDialog(
             type = type,
             onAcceptAndContinue = {
                 activeDisclosure = null
                 when (type) {
-                    com.nothing.island.ai.ui.components.ProminentDisclosureType.ACCESSIBILITY -> {
-                        context.startActivity(OverlayPermissionManager.createAccessibilitySettingsIntent())
-                    }
-                    com.nothing.island.ai.ui.components.ProminentDisclosureType.NOTIFICATION_LISTENER -> {
+                    ProminentDisclosureType.NOTIFICATION_LISTENER -> {
                         context.startActivity(
                             com.nothing.island.ai.notifications.NotificationPermissionManager
                                 .createNotificationAccessIntent(context)
                         )
+                    }
+                    ProminentDisclosureType.ACCESSIBILITY -> {
+                        context.startActivity(OverlayPermissionManager.createAccessibilitySettingsIntent())
                     }
                 }
             },
@@ -97,10 +113,8 @@ fun SettingsScreen(
         )
     }
 
-    // Real Permission Queries
-    val hasAccessibility = OverlayPermissionManager.isAccessibilityServiceEnabled(context)
+    // Live permission states
     val hasOverlay = OverlayPermissionManager.hasOverlayPermission(context)
-    val hasNotificationPermission = OverlayPermissionManager.hasNotificationPermission(context)
     val hasNotificationListener = OverlayPermissionManager.hasNotificationListenerPermission(context)
     val isNotificationListenerConnected by IslandNotificationListenerService.connectionState.collectAsState()
 
@@ -108,25 +122,6 @@ fun SettingsScreen(
     val isIgnoringBatteryOptimizations = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
         powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: false
     } else true
-
-    val hasRecordAudio = ContextCompat.checkSelfPermission(
-        context,
-        android.Manifest.permission.RECORD_AUDIO
-    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-    val areHeadsUpDisabled = try {
-        Settings.Global.getInt(context.contentResolver, "heads_up_notifications_enabled", 1) == 0
-    } catch (_: Exception) {
-        false
-    }
-
-    // Persistent Preferences from DataStore
-    val preferencesRepository = remember { IslandPreferencesRepository.getInstance(context) }
-    val coroutineScope = rememberCoroutineScope()
-    val prefs by preferencesRepository.livePreferences.collectAsState()
-    val notifPrefs by preferencesRepository.liveNotificationPreferences.collectAsState()
-    val batteryPrefs by preferencesRepository.liveBatteryPreferences.collectAsState()
-    val callPrefs by preferencesRepository.liveCallPreferences.collectAsState()
 
     Column(
         modifier = modifier
@@ -136,339 +131,155 @@ fun SettingsScreen(
             .padding(horizontal = 18.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Top Bar with Back Button
+        // Top Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(9.dp)
+                            .clip(CircleShape)
+                            .background(NothingPrimaryAccent)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "SETTINGS",
+                        color = NothingPrimaryText,
+                        fontSize = 18.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp
+                    )
+                }
+                Text(
+                    text = "PREFERENCES & PERMISSIONS",
+                    color = NothingMutedText,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.sp
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
                     .background(NothingElevatedSurface)
                     .border(1.dp, NothingDivider, RoundedCornerShape(10.dp))
-                    .clickable { onNavigateBack() }
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onNavigateBack()
+                    }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "← BACK",
+                    text = "DONE",
                     color = NothingPrimaryText,
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold
                 )
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column {
-                Text(
-                    text = "SETTINGS & PERMISSIONS",
-                    color = NothingPrimaryText,
-                    fontSize = 16.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text = "SYSTEM GATEWAYS & HARDWARE DIAGNOSTICS",
-                    color = NothingMutedText,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ACCESSIBILITY OVERLAY ANCHOR (R4.6)
-        SectionHeader(title = "ACCESSIBILITY OVERLAY ANCHOR (R4.6)")
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        IslandCard {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Accessibility Overlay Host",
-                            color = NothingPrimaryText,
-                            fontSize = 13.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (hasAccessibility) "ACTIVE (TYPE_ACCESSIBILITY_OVERLAY)" else "DISABLED (Using Fallback)",
-                            color = if (hasAccessibility) NothingSuccess else NothingWarning,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (hasAccessibility) NothingElevatedSurface else NothingPrimaryAccent)
-                            .clickable {
-                                activeDisclosure = com.nothing.island.ai.ui.components.ProminentDisclosureType.ACCESSIBILITY
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = if (hasAccessibility) "SETTINGS" else "ENABLE",
-                            color = if (hasAccessibility) NothingPrimaryText else Color.White,
-                            fontSize = 11.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                Text(
-                    text = "Enables hardware-level touch interaction directly across the camera punch-hole (AOSP Layer 24000). Sits above the status bar without touch swallowing.",
-                    color = NothingMutedText,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    lineHeight = 15.sp
-                )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NothingElevatedSurface)
-                        .padding(10.dp)
-                ) {
-                    Text(
-                        text = "ZERO-DATA PRIVACY CONTRACT:\n• canRetrieveWindowContent = false (No screen reading)\n• canPerformGestures = false (No touch injection)\n• canRequestFilterKeyEvents = false (No keylogging)\n• Zero accessibility data is collected or transmitted.",
-                        color = NothingSecondaryText,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        lineHeight = 14.sp
-                    )
-                }
             }
         }
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // PERMISSIONS REGISTRY
-        SectionHeader(title = "SYSTEM PERMISSIONS REGISTRY")
-
+        // 1. APP PERMISSIONS
+        SectionHeader(
+            title = "APP PERMISSIONS",
+            badgeText = "REQUIRED",
+            badgeColor = NothingPrimaryAccent
+        )
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                PermissionStatusRow(
+                // Overlay Permission
+                PermissionRow(
                     title = "Display Over Other Apps",
                     subtitle = "Required to anchor the floating pill over applications",
                     isGranted = hasOverlay,
-                    onGrantClick = {
+                    onGrant = {
                         val intent = OverlayPermissionManager.createOverlayPermissionIntent(context)
                         context.startActivity(intent)
                     }
                 )
 
-                PermissionStatusRow(
-                    title = "Notification Posting",
-                    subtitle = "Maintains persistent foreground service on Android 13+",
-                    isGranted = hasNotificationPermission,
-                    onGrantClick = {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    }
-                )
-
-                PermissionStatusRow(
-                    title = "Notification Listener Access",
-                    subtitle = if (isNotificationListenerConnected) "Service active & connected (Milestone R6)" else "Allows reading incoming alerts & media metadata (R6)",
+                // Notification & Music Access
+                PermissionRow(
+                    title = "Notification & Music Access",
+                    subtitle = if (isNotificationListenerConnected) "Connected — alerts and media active" else "Allows reading incoming alerts and music metadata",
                     isGranted = hasNotificationListener,
-                    onGrantClick = {
-                        activeDisclosure = com.nothing.island.ai.ui.components.ProminentDisclosureType.NOTIFICATION_LISTENER
+                    onGrant = {
+                        activeDisclosure = ProminentDisclosureType.NOTIFICATION_LISTENER
                     }
                 )
 
-                PermissionStatusRow(
+                // Battery Optimization
+                PermissionRow(
                     title = "Battery Optimization Exemption",
-                    subtitle = "Prevents system background termination during deep sleep",
+                    subtitle = "Prevents system background termination during sleep",
                     isGranted = isIgnoringBatteryOptimizations,
-                    onGrantClick = {
+                    onGrant = {
                         OverlayPermissionManager.launchBatteryOptimizationSettings(context)
                     }
                 )
-
-                PermissionStatusRow(
-                    title = "Microphone Access (RECORD_AUDIO)",
-                    subtitle = "Required for audio waveform visualizer (M5)",
-                    isGranted = hasRecordAudio,
-                    onGrantClick = {
-                        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.parse("package:${context.packageName}")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        context.startActivity(intent)
-                    }
-                )
-
-                PermissionStatusRow(
-                    title = "Silence System Pop-ups",
-                    subtitle = if (areHeadsUpDisabled) "System heads-up banners disabled (Dot Island exclusive)" else "Disable native 'Pop on screen' banners on Phone/Messages apps",
-                    isGranted = areHeadsUpDisabled,
-                    onGrantClick = {
-                        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                            putExtra(Settings.EXTRA_APP_PACKAGE, "com.google.android.dialer")
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
-                        try {
-                            context.startActivity(intent)
-                        } catch (_: Exception) {
-                            try {
-                                val fallback = Intent(Settings.ACTION_SETTINGS).apply {
-                                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                                }
-                                context.startActivity(fallback)
-                            } catch (_: Exception) {}
-                        }
-                    }
-                )
             }
         }
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // QUICK CONTROLS — live customizable preview
-        SectionHeader(title = "QUICK CONTROLS — CUSTOMIZE", badgeText = "LIVE", badgeColor = NothingPrimaryAccent)
-        Spacer(modifier = Modifier.height(6.dp))
-        com.nothing.island.ai.ui.components.QuickControlsPreview()
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Tapping a tile adds/removes it from the island's quick controls drawer.",
-            color = NothingSecondaryText,
-            fontSize = 10.sp,
-            fontFamily = FontFamily.Monospace
+        // 2. DISPLAY & TOUCH BEHAVIOUR
+        SectionHeader(
+            title = "DISPLAY & TOUCH",
+            badgeText = "EXPERIENCE",
+            badgeColor = NothingPrimaryAccent
         )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // GENERAL PREFERENCES
-        SectionHeader(title = "GENERAL PREFERENCES")
-
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PreferenceToggleRow(
-                    title = "Hide During Games",
-                    subtitle = "Automatically hides the island during gaming or landscape fullscreen to avoid covering controls.",
+                // Auto-Hide in Games
+                SettingToggleRow(
+                    title = "Auto-Hide in Fullscreen Games",
+                    subtitle = "Temporarily hides Dot Island when gaming or viewing fullscreen media to avoid obstructing controls.",
                     checked = prefs.autoHideInGames,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateAutoHideInGames(enabled)
+                            preferencesRepository.updateAutoHideInGames(isChecked)
                         }
                     }
                 )
 
-                PreferenceToggleRow(
-                    title = "Camera Cutout Notch",
-                    subtitle = "Wrap expanded cards around the front camera lens (reference style). When disabled, cards use classic smooth rounded corners.",
-                    checked = prefs.isCameraCutoutEnabled,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateCameraCutoutEnabled(enabled)
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
+                // Haptic Feedback
+                SettingToggleRow(
                     title = "Haptic Vibration Feedback",
-                    subtitle = "Subtle tactile click when expanding or collapsing",
+                    subtitle = "Subtle tactile vibration feedback when interacting with island pills and controls.",
                     checked = prefs.hapticFeedbackEnabled,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateHapticFeedback(enabled)
+                            preferencesRepository.updateHapticFeedback(isChecked)
                         }
                     }
                 )
 
-                PreferenceToggleRow(
+                // Reduced Motion
+                SettingToggleRow(
                     title = "Reduced Motion Animations",
-                    subtitle = "Simplifies transition dynamics to conserve battery",
+                    subtitle = "Simplifies transition dynamics from spring physics to subtle fades to conserve battery.",
                     checked = prefs.reducedMotionEnabled,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateReducedMotion(enabled)
-                        }
-                    }
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(text = "Visual Theme", color = NothingPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text(text = "Active interface color scheme", color = NothingMutedText, fontSize = 11.sp)
-                    }
-                    Text(
-                        text = "NOTHING MONOCHROME",
-                        color = NothingPrimaryAccent,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // NOTIFICATION BEHAVIOUR & SYNC (R6 / R7.1)
-        SectionHeader(title = "NOTIFICATION BEHAVIOUR & SYNC")
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        IslandCard {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PreferenceToggleRow(
-                    title = "Automatically expand for notifications",
-                    subtitle = "Open Dot Island when a new eligible notification arrives.",
-                    checked = notifPrefs.autoExpandOnNotification,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateNotificationAutoExpand(enabled)
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
-                    title = "Sync Dismissals with Android",
-                    subtitle = "Dismissing or clearing alerts in Dot Island also cancels them from the Android notification shade. When disabled, only local island history is cleared.",
-                    checked = notifPrefs.syncDismissWithAndroid,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateSyncDismissWithAndroid(enabled)
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
-                    title = "Auto-Clear Shade Alerts (Pill-Only Mode)",
-                    subtitle = "Android requires third-party pills to clear eligible alerts from the shade on arrival instead of muting system heads-ups directly. Calls and media stay in shade.",
-                    checked = notifPrefs.hideSystemNotification,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateHideSystemNotification(enabled)
+                            preferencesRepository.updateReducedMotion(isChecked)
                         }
                     }
                 )
@@ -477,115 +288,48 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // BATTERY & CHARGING INTELLIGENCE (Milestone R8)
-        SectionHeader(title = "BATTERY & CHARGING INTELLIGENCE")
-
+        // 3. BATTERY & CHARGING ALERTS
+        SectionHeader(
+            title = "BATTERY & CHARGING ALERTS",
+            badgeText = "SMART",
+            badgeColor = NothingPrimaryAccent
+        )
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PreferenceToggleRow(
+                SettingToggleRow(
                     title = "Battery & Charging Intelligence",
-                    subtitle = "Dynamic battery status, charging telemetry, and low-power alerts.",
+                    subtitle = "Dynamic battery status, charging animations, and low-power notifications.",
                     checked = batteryPrefs.enabled,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateBatteryEnabled(enabled)
+                            preferencesRepository.updateBatteryEnabled(isChecked)
                         }
                     }
                 )
 
-                PreferenceToggleRow(
-                    title = "Automatically expand when plugged in",
-                    subtitle = "Open Dot Island charging intelligence card when charger is connected.",
+                SettingToggleRow(
+                    title = "Auto-Expand on Plugged In",
+                    subtitle = "Open Dot Island charging intelligence card automatically when charger is connected.",
                     checked = batteryPrefs.autoExpandOnPlugged,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateBatteryAutoExpandOnPlugged(enabled)
+                            preferencesRepository.updateBatteryAutoExpandOnPlugged(isChecked)
                         }
                     }
                 )
 
-                PreferenceToggleRow(
+                SettingToggleRow(
                     title = "Temperature Safety Warning",
-                    subtitle = "Show urgent safety alert if battery exceeds safety limits (45°C).",
+                    subtitle = "Show urgent safety alert on the island if battery temperature exceeds 45°C.",
                     checked = batteryPrefs.temperatureWarningEnabled,
-                    onCheckedChange = { enabled ->
+                    onCheckedChange = { isChecked ->
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         coroutineScope.launch {
-                            preferencesRepository.updateBatteryTempWarningEnabled(enabled)
-                        }
-                    }
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column {
-                        Text(text = "Low Battery Alert Threshold", color = NothingPrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                        Text(text = "Threshold to trigger safety alert", color = NothingMutedText, fontSize = 11.sp)
-                    }
-                    Text(
-                        text = "${batteryPrefs.lowBatteryThreshold}%",
-                        color = NothingPrimaryAccent,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // TELEPHONY & LIVE CALLS (Milestone R9)
-        SectionHeader(title = "TELEPHONY & LIVE CALLS")
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        IslandCard {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PreferenceToggleRow(
-                    title = "Live Call Island",
-                    subtitle = "Show active calls and incoming ringing in Dot Island.",
-                    checked = callPrefs.systemCallEnabled,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateCallPreferences(callPrefs.copy(systemCallEnabled = enabled))
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
-                    title = "Auto-Expand Call Card",
-                    subtitle = "When disabled, calls appear as a sleek compact capsule around the camera. Enable to automatically expand into a full card on connect.",
-                    checked = callPrefs.autoExpandCall,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateCallPreferences(callPrefs.copy(autoExpandCall = enabled))
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
-                    title = "Double Incoming Call Actions",
-                    subtitle = "Show the red end-call button on the compact pill.",
-                    checked = callPrefs.doubleIncomingCallActions,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateCallPreferences(callPrefs.copy(doubleIncomingCallActions = enabled))
-                        }
-                    }
-                )
-
-                PreferenceToggleRow(
-                    title = "VoIP & Other Apps Calls",
-                    subtitle = "Display calls from third-party communication apps (WhatsApp, Telegram, etc.).",
-                    checked = callPrefs.otherAppsCalls,
-                    onCheckedChange = { enabled ->
-                        coroutineScope.launch {
-                            preferencesRepository.updateCallPreferences(callPrefs.copy(otherAppsCalls = enabled))
+                            preferencesRepository.updateBatteryTempWarningEnabled(isChecked)
                         }
                     }
                 )
@@ -594,64 +338,55 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // HARDWARE & RUNTIME DIAGNOSTICS
-        SectionHeader(title = "HARDWARE & RUNTIME DIAGNOSTICS")
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        IslandCard {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                DiagItem("Hardware Model", "${Build.MODEL} (${Build.DEVICE})")
-                DiagItem("Android Version", "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})")
-                DiagItem("Target SDK", "36 (Android 14+ FGS Compliant)")
-                DiagItem("Display Resolution", "1224 x 2720 px @ 480 dpi")
-                DiagItem("Density Scale Factor", "${geometry.density}x")
-                DiagItem("Punch-Hole Center", "X: ${geometry.centerXDp.toInt()}dp, Y: ${geometry.centerYDp.toInt()}dp")
-                DiagItem("Cutout Safe Inset Top", "${geometry.safeInsetTopDp.toInt()} dp (${geometry.safeInsetTopPx} px)")
-                DiagItem("Overlay Service State", if (IslandOverlayService.isRunning) "RUNNING" else "STOPPED")
-                DiagItem("Application Package", "com.nothing.island.ai")
-                DiagItem("Milestone Stage", "M4.1 (Design System)")
-            }
-        }
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        // ABOUT CARD
-        SectionHeader(title = "SETUP & ONBOARDING")
-
+        // 4. REPLAY WELCOME GUIDE
+        SectionHeader(
+            title = "ONBOARDING & SETUP",
+            badgeText = "GUIDE",
+            badgeColor = NothingPrimaryAccent
+        )
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "3-Step Onboarding Wizard",
+                        text = "Replay Welcome Guide",
                         color = NothingPrimaryText,
-                        fontSize = 13.sp,
+                        fontSize = 14.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Review prominent disclosures, cutout alignment & battery guard",
-                        color = NothingMutedText,
-                        fontSize = 11.sp
+                        text = "Step through the 15-second setup guide and permission checker again.",
+                        color = NothingSecondaryText,
+                        fontSize = 12.sp,
+                        lineHeight = 16.sp
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(NothingElevatedSurface)
                         .border(1.dp, NothingDivider, RoundedCornerShape(8.dp))
-                        .clickable { onReopenOnboarding() }
-                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onReopenOnboarding()
+                        }
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "OPEN",
+                        text = "REPLAY",
                         color = NothingPrimaryText,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
@@ -663,118 +398,85 @@ fun SettingsScreen(
 
         Spacer(modifier = Modifier.height(18.dp))
 
-        // ABOUT CARD
+        // 5. VERSION & PRIVACY
         SectionHeader(title = "ABOUT DOT ISLAND")
-
         Spacer(modifier = Modifier.height(6.dp))
 
         IslandCard {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Dot Island v1.2.0",
+                        color = NothingPrimaryText,
+                        fontSize = 14.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NothingElevatedSurface)
+                            .border(1.dp, NothingDivider, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "OFFLINE ONLY",
+                            color = NothingSuccess,
+                            fontSize = 9.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
                 Text(
-                    text = "Dot Island v1.1.0",
-                    color = NothingPrimaryText,
-                    fontSize = 14.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Native Android companion for Nothing Phone (4a). Designed with pure AMOLED minimalism, precision camera cutout alignment, and zero bloat.",
+                    text = "Smart dynamic camera punch-hole island for Android. Designed with Apple-grade spring physics, Nothing industrial dot aesthetics, and zero internet permissions.",
                     color = NothingSecondaryText,
                     fontSize = 12.sp,
-                    fontFamily = FontFamily.SansSerif,
                     lineHeight = 16.sp
                 )
+
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "PRIVACY: All notification parsing, audio visualizer processing, and cutout calibration run 100% on-device. Zero advertising telemetry.",
-                    color = NothingMutedText,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "100% On-Device • Zero Analytics",
+                        color = NothingMutedText,
+                        fontSize = 10.5.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(28.dp))
     }
 }
 
 @Composable
-fun PermissionStatusRow(
-    title: String,
-    subtitle: String,
-    isGranted: Boolean,
-    onGrantClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                color = NothingPrimaryText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                fontFamily = FontFamily.SansSerif
-            )
-            Text(
-                text = subtitle,
-                color = NothingMutedText,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.SansSerif
-            )
-        }
-
-        Spacer(modifier = Modifier.width(8.dp))
-
-        if (isGranted) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NothingElevatedSurface)
-                    .border(1.dp, NothingSuccess.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-            ) {
-                Text(
-                    text = "ACTIVE",
-                    color = NothingSuccess,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NothingPrimaryAccent)
-                    .clickable { onGrantClick() }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text(
-                    text = "GRANT",
-                    color = Color.White,
-                    fontSize = 10.sp,
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun PreferenceToggleRow(
+private fun SettingToggleRow(
     title: String,
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onCheckedChange(!checked)
+            }
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -783,33 +485,100 @@ fun PreferenceToggleRow(
             Text(
                 text = title,
                 color = NothingPrimaryText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                fontFamily = FontFamily.SansSerif
+                fontSize = 13.5.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = NothingMutedText,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.SansSerif
+                color = NothingSecondaryText,
+                fontSize = 11.5.sp,
+                lineHeight = 15.sp
             )
         }
 
-        com.nothing.island.ai.ui.components.NothingSwitch(
+        Spacer(modifier = Modifier.width(12.dp))
+
+        NothingSwitch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = {
+                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                onCheckedChange(it)
+            }
         )
     }
 }
 
 @Composable
-fun DiagItem(label: String, value: String) {
+private fun PermissionRow(
+    title: String,
+    subtitle: String,
+    isGranted: Boolean,
+    onGrant: () -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = label, color = NothingMutedText, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-        Text(text = value, color = NothingPrimaryText, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    color = NothingPrimaryText,
+                    fontSize = 13.5.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
+                )
+                if (isGranted) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "✓",
+                        color = NothingSuccess,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                color = NothingSecondaryText,
+                fontSize = 11.5.sp,
+                lineHeight = 15.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isGranted) NothingElevatedSurface else NothingPrimaryAccent)
+                .border(
+                    1.dp,
+                    if (isGranted) NothingSuccess.copy(alpha = 0.5f) else NothingPrimaryAccent,
+                    RoundedCornerShape(8.dp)
+                )
+                .clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    if (!isGranted) {
+                        onGrant()
+                    }
+                }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = if (isGranted) "ALLOWED" else "GRANT",
+                color = if (isGranted) NothingSuccess else Color.White,
+                fontSize = 10.5.sp,
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }

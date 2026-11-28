@@ -33,11 +33,38 @@ class PlayComplianceAndOnboardingUnitTest {
     }
 
     @Test
-    fun testOnboardingStepTitlesMapAllThreeSteps() {
-        assertEquals("OVERLAY PERMISSION", onboardingStepTitle(0))
-        assertEquals("DISCLOSURES & ACCESS", onboardingStepTitle(1))
-        assertEquals("CALIBRATION & BATTERY", onboardingStepTitle(2))
-        assertEquals("OVERLAY PERMISSION", onboardingStepTitle(-1))
-        assertEquals("CALIBRATION & BATTERY", onboardingStepTitle(9))
+    fun testOnboardingStepTitlesMapTwoSteps() {
+        assertEquals("FLOATING PILL DISPLAY", onboardingStepTitle(0))
+        assertEquals("NOTIFICATION & MUSIC ACCESS", onboardingStepTitle(1))
+        assertEquals("FLOATING PILL DISPLAY", onboardingStepTitle(-1))
+        assertEquals("NOTIFICATION & MUSIC ACCESS", onboardingStepTitle(9))
+    }
+
+    @Test
+    fun testInstalledAppItemDataModel() {
+        val item = com.nothing.island.ai.ui.screens.InstalledAppItem(
+            categoryName = "WhatsApp",
+            packageName = "com.whatsapp",
+            appLabel = "WhatsApp"
+        )
+        assertEquals("WhatsApp", item.categoryName)
+        assertEquals("com.whatsapp", item.packageName)
+        assertEquals("WhatsApp", item.appLabel)
+    }
+
+    @Test
+    fun testLiquidGlassThreeTabNavigation() {
+        val tabs = com.nothing.island.ai.navigation.IslandDestination.bottomNavDestinations
+        assertEquals(3, tabs.size)
+        assertEquals(com.nothing.island.ai.navigation.IslandDestination.Home, tabs[0])
+        assertEquals(com.nothing.island.ai.navigation.IslandDestination.Style, tabs[1])
+        assertEquals(com.nothing.island.ai.navigation.IslandDestination.Alerts, tabs[2])
+    }
+
+    @Test
+    fun testAppleGradeSpringPhysicsDefaults() {
+        val theme = com.nothing.island.ai.ui.theme.IslandSignatureTheme.NOTHING_CLASSIC
+        assertEquals(0.72f, theme.springDampingRatio, 0.001f)
+        assertEquals(380f, theme.springStiffness, 0.001f)
     }
 }

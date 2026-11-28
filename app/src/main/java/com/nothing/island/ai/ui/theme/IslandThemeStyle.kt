@@ -71,7 +71,7 @@ enum class IslandSignatureTheme(
     val isGlassmorphic: Boolean = false,
     val isInverted: Boolean = false,
     val springDampingRatio: Float = 0.72f,
-    val springStiffness: Float = 420f
+    val springStiffness: Float = 380f
 ) {
     NOTHING_CLASSIC(
         id = "nothing_classic",
@@ -93,7 +93,7 @@ enum class IslandSignatureTheme(
         bodyFontWeight = FontWeight.Normal,
         compactProgressColor = Color(0xFFD71921),
         springDampingRatio = 0.72f,
-        springStiffness = 420f
+        springStiffness = 380f
     ),
 
     GLYPH_ARC(

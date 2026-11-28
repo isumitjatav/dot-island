@@ -38,10 +38,14 @@ import com.nothing.island.ai.navigation.IslandDestination
 import com.nothing.island.ai.ui.theme.NothingTokens
 
 /**
- * Nothing OS 3.x Studio Bottom Navigation Bar
+ * Liquid Glass 3-Tab Floating Navigation Bar
  *
- * Implements a 5-destination navigation bar (HOME, NOTIFS, MUSIC, BATTERY, STUDIOS)
- * with tactile haptic feedback, animated active indicator pills, and surgical Nothing Red dots.
+ * Floating translucent pill bottom bar containing 3 tabs:
+ * - Home
+ * - Style
+ * - Alerts
+ *
+ * Styled with specular highlights, frosted translucent glass, and tactile feedback.
  */
 @Composable
 fun NothingBottomNavigation(
@@ -54,83 +58,113 @@ fun NothingBottomNavigation(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(NothingTokens.NothingSurfaceLow)
-            .border(
-                width = 1.dp,
-                color = NothingTokens.NothingBorderSubtle,
-                shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
-            )
-            .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-            .padding(horizontal = 6.dp, vertical = 8.dp)
+            .padding(horizontal = 24.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
+        // Floating Translucent Glass Pill Container
+        val pillShape = RoundedCornerShape(32.dp)
+        Box(
+            modifier = Modifier
+                .clip(pillShape)
+                .background(Color(0xE018181C)) // Translucent frosted dark glass
+                .border(
+                    width = 1.2.dp,
+                    color = Color(0x38FFFFFF), // Specular liquid glass rim
+                    shape = pillShape
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp)
         ) {
-            IslandDestination.bottomNavDestinations.forEach { destination ->
-                val isSelected = currentDestination.route == destination.route ||
-                        (destination is IslandDestination.Studios &&
-                                IslandDestination.studioHubDestinations.any { it.route == currentDestination.route })
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IslandDestination.bottomNavDestinations.forEach { destination ->
+                    val isSelected = when (destination) {
+                        is IslandDestination.Home -> currentDestination.route == IslandDestination.Home.route
+                        is IslandDestination.Style -> currentDestination.route == IslandDestination.Style.route ||
+                                currentDestination.route == IslandDestination.ThemeStudio.route ||
+                                currentDestination.route == IslandDestination.MascotStudio.route ||
+                                currentDestination.route == IslandDestination.Studios.route
+                        is IslandDestination.Alerts -> currentDestination.route == IslandDestination.Alerts.route ||
+                                currentDestination.route == IslandDestination.Notifications.route ||
+                                currentDestination.route == IslandDestination.Music.route ||
+                                currentDestination.route == IslandDestination.Battery.route
+                        else -> currentDestination.route == destination.route
+                    }
 
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) NothingTokens.NothingTextPrimary else NothingTokens.NothingTextTertiary,
-                    animationSpec = tween(durationMillis = 180),
-                    label = "NavTextColor"
-                )
+                    val textColor by animateColorAsState(
+                        targetValue = if (isSelected) NothingTokens.NothingTextPrimary else NothingTokens.NothingTextTertiary,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "NavTextColor"
+                    )
 
-                val pillBg by animateColorAsState(
-                    targetValue = if (isSelected) NothingTokens.NothingSurfaceMedium else Color.Transparent,
-                    animationSpec = tween(durationMillis = 180),
-                    label = "NavPillBg"
-                )
+                    val pillBg by animateColorAsState(
+                        targetValue = if (isSelected) Color(0xFF2B2B30) else Color.Transparent,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "NavPillBg"
+                    )
 
-                val borderColor by animateColorAsState(
-                    targetValue = if (isSelected) NothingTokens.NothingBorderSubtle else Color.Transparent,
-                    animationSpec = tween(durationMillis = 180),
-                    label = "NavBorderColor"
-                )
+                    val borderColor by animateColorAsState(
+                        targetValue = if (isSelected) Color(0x30FFFFFF) else Color.Transparent,
+                        animationSpec = tween(durationMillis = 180),
+                        label = "NavBorderColor"
+                    )
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(pillBg)
-                        .border(1.dp, borderColor, RoundedCornerShape(12.dp))
-                        .semantics { role = Role.Tab }
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            if (!isSelected) {
-                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                onDestinationSelected(destination)
+                    val tabGlyph = when (destination) {
+                        is IslandDestination.Home -> "●"
+                        is IslandDestination.Style -> "✦"
+                        is IslandDestination.Alerts -> "⚡"
+                        else -> "●"
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(pillBg)
+                            .border(1.dp, borderColor, RoundedCornerShape(20.dp))
+                            .semantics { role = Role.Tab }
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
+                                if (!isSelected) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    onDestinationSelected(destination)
+                                }
                             }
-                        }
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        if (isSelected) {
-                            Box(
-                                modifier = Modifier
-                                    .size(5.dp)
-                                    .clip(CircleShape)
-                                    .background(NothingTokens.NothingRed)
-                            )
-                            Spacer(modifier = Modifier.width(5.dp))
-                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.dp)
+                                        .clip(CircleShape)
+                                        .background(NothingTokens.NothingRed)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                            } else {
+                                Text(
+                                    text = tabGlyph,
+                                    color = NothingTokens.NothingTextTertiary,
+                                    fontSize = 10.sp
+                                )
+                                Spacer(modifier = Modifier.width(5.dp))
+                            }
 
-                        Text(
-                            text = destination.shortLabel,
-                            color = textColor,
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            letterSpacing = 0.5.sp
-                        )
+                            Text(
+                                text = destination.shortLabel,
+                                color = textColor,
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                letterSpacing = 0.6.sp
+                            )
+                        }
                     }
                 }
             }

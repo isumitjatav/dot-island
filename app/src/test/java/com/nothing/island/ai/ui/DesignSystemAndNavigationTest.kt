@@ -43,19 +43,15 @@ class DesignSystemAndNavigationTest {
     @Test
     fun testPrimaryBottomNavDestinations() {
         val destinations = IslandDestination.bottomNavDestinations
-        assertEquals(5, destinations.size)
+        assertEquals(3, destinations.size)
 
         assertEquals(IslandDestination.Home, destinations[0])
-        assertEquals(IslandDestination.Notifications, destinations[1])
-        assertEquals(IslandDestination.Music, destinations[2])
-        assertEquals(IslandDestination.Battery, destinations[3])
-        assertEquals(IslandDestination.Studios, destinations[4])
+        assertEquals(IslandDestination.Style, destinations[1])
+        assertEquals(IslandDestination.Alerts, destinations[2])
 
         assertEquals("home", IslandDestination.Home.route)
-        assertEquals("notifications", IslandDestination.Notifications.route)
-        assertEquals("music", IslandDestination.Music.route)
-        assertEquals("battery", IslandDestination.Battery.route)
-        assertEquals("studios", IslandDestination.Studios.route)
+        assertEquals("style", IslandDestination.Style.route)
+        assertEquals("alerts", IslandDestination.Alerts.route)
     }
 
     @Test

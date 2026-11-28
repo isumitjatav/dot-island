@@ -500,6 +500,22 @@ class IslandOverlayController private constructor(private val appContext: Contex
     val stateManager: IslandStateManager = IslandStateManager.getInstance()
     val gameModeDetector = GameModeDetector(appContext)
 
+    // R9: InCallService for native call handling (Dialer Role)
+    private var islandInCallService: com.nothing.island.ai.telephony.IslandInCallService? = null
+
+    fun getInCallService(): com.nothing.island.ai.telephony.IslandInCallService? = islandInCallService
+
+    fun setInCallService(service: com.nothing.island.ai.telephony.IslandInCallService) {
+        islandInCallService = service
+        islandInCallService?.setEventEngine(eventEngine)
+        Log.d(TAG, "IslandInCallService registered with EventEngine")
+    }
+
+    fun clearInCallService() {
+        islandInCallService = null
+        Log.d(TAG, "IslandInCallService cleared")
+    }
+
     var currentForegroundPackage: String? = null
         private set
 

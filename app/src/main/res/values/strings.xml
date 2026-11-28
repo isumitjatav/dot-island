@@ -6,4 +6,5 @@
     <string name="accessibility_service_summary">Enables touch interaction around the camera punch-hole.</string>
     <string name="notification_listener_service_label">Dot Island Notification Service</string>
     <string name="notification_listener_service_description">Allows Dot Island to display incoming alerts and media metadata around the camera punch-hole.</string>
+    <string name="incall_service_label">Dot Island In-Call Service</string>
 </resources>

@@ -125,6 +125,14 @@ class IslandAccessibilityService : AccessibilityService() {
         }
         isRunning = false
         instance = null
+
+        // Automatically restore system heads-up notifications when accessibility service unbinds
+        try {
+            com.nothing.island.ai.notifications.SystemHeadsUpController(this).restoreSystemHeadsUp()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore system heads-up on unbind", e)
+        }
+
         return super.onUnbind(intent)
     }
 

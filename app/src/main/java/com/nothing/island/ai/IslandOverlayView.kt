@@ -638,14 +638,14 @@ fun IslandOverlayView(
             gestureScope.launch {
                 dragTranslationX.animateTo(
                     targetValue = 0f,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                     initialVelocity = (vx * 0.22f).coerceIn(-1200f, 1200f)
                 )
             }
             gestureScope.launch {
                 dragTranslationY.animateTo(
                     targetValue = 0f,
-                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 460f),
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                     initialVelocity = (vy * 0.22f).coerceIn(-1200f, 1200f)
                 )
             }
@@ -1871,7 +1871,7 @@ fun SwipeableHistoryItem(
                                 coroutineScope.launch {
                                     offsetX.animateTo(
                                         targetValue = 0f,
-                                        animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f)
+                                        animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f)
                                     )
                                 }
                             }
@@ -1904,7 +1904,7 @@ fun SwipeableHistoryItem(
                                 }
                                 offsetX.animateTo(
                                     targetValue = target,
-                                    animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f),
+                                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                                     initialVelocity = vx
                                 )
                                 onDismiss()
@@ -1913,7 +1913,7 @@ fun SwipeableHistoryItem(
                             coroutineScope.launch {
                                 offsetX.animateTo(
                                     targetValue = 0f,
-                                    animationSpec = spring(dampingRatio = 0.86f, stiffness = 540f),
+                                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 380f),
                                     initialVelocity = vx
                                 )
                             }

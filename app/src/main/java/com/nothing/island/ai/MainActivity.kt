@@ -18,16 +18,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.nothing.island.ai.battery.ChargingAnimationStyle
 import com.nothing.island.ai.data.IslandPreferencesRepository
@@ -41,6 +51,7 @@ import com.nothing.island.ai.ui.screens.GeometryStudioScreen
 import com.nothing.island.ai.ui.screens.GestureStudioScreen
 import com.nothing.island.ai.ui.screens.HomeScreen
 import com.nothing.island.ai.ui.screens.MusicStudioScreen
+import com.nothing.island.ai.ui.screens.StyleScreen
 import com.nothing.island.ai.ui.theme.IslandSignatureTheme
 import com.nothing.island.ai.ui.theme.LocalIslandTheme
 import com.nothing.island.ai.ui.screens.NotificationStudioScreen
@@ -81,6 +92,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         handleIntent(intent)
@@ -190,28 +202,28 @@ class MainActivity : ComponentActivity() {
                             )
                         } else {
 
-                    // Intelligent Back Navigation:
-                    // Sub-studios return to Studios Hub; Primary tabs return to Home
-                    BackHandler(enabled = currentDestination.value != IslandDestination.Home) {
-                        if (IslandDestination.studioHubDestinations.contains(currentDestination.value)) {
-                            currentDestination.value = IslandDestination.Studios
+                    val showSettingsSheet = remember { mutableStateOf(false) }
+
+                    // Back Navigation: dismiss Settings sheet if open, otherwise return to Home
+                    BackHandler(enabled = showSettingsSheet.value || currentDestination.value != IslandDestination.Home) {
+                        if (showSettingsSheet.value) {
+                            showSettingsSheet.value = false
                         } else {
                             currentDestination.value = IslandDestination.Home
                         }
                     }
 
-                    Column(
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(NothingTokens.NothingBlack)
                             .statusBarsPadding()
-                            .navigationBarsPadding()
                     ) {
                         // Screen Container with Crossfade Transitions
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxWidth()
+                                .fillMaxSize()
+                                .padding(bottom = 64.dp)
                         ) {
                             Crossfade(
                                 targetState = currentDestination.value,
@@ -219,7 +231,7 @@ class MainActivity : ComponentActivity() {
                                 label = "ScreenTransition"
                             ) { destination ->
                                 when (destination) {
-                                    // 5 Primary Destinations
+                                    // 3 Primary Destinations
                                     is IslandDestination.Home -> {
                                         HomeScreen(
                                             hasOverlayPermission = hasOverlayPermissionState.value,
@@ -247,11 +259,31 @@ class MainActivity : ComponentActivity() {
                                             },
                                             onNavigateToDestination = { newDest ->
                                                 currentDestination.value = newDest
+                                            },
+                                            onOpenSettings = {
+                                                showSettingsSheet.value = true
                                             }
                                         )
                                     }
+                                    is IslandDestination.Style,
+                                    is IslandDestination.ThemeStudio,
+                                    is IslandDestination.MascotStudio -> {
+                                        StyleScreen()
+                                    }
+                                    is IslandDestination.Alerts,
                                     is IslandDestination.Notifications -> {
                                         NotificationStudioScreen()
+                                    }
+                                    is IslandDestination.Settings -> {
+                                        SettingsScreen(
+                                            geometry = geometry,
+                                            onNavigateBack = {
+                                                currentDestination.value = IslandDestination.Home
+                                            },
+                                            onReopenOnboarding = {
+                                                reopenOnboarding.value = true
+                                            }
+                                        )
                                     }
                                     is IslandDestination.Music -> {
                                         MusicStudioScreen()
@@ -266,84 +298,90 @@ class MainActivity : ComponentActivity() {
                                             }
                                         )
                                     }
-
-                                    // Studios Sub-Screens
-                                    is IslandDestination.ThemeStudio -> {
-                                        ThemeStudioScreen(
-                                            onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
-                                            }
-                                        )
-                                    }
                                     is IslandDestination.AnimationStudio -> {
                                         AnimationStudioScreen(
                                             onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
+                                                currentDestination.value = IslandDestination.Home
                                             }
                                         )
                                     }
                                     is IslandDestination.GestureStudio -> {
                                         GestureStudioScreen(
                                             onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
+                                                currentDestination.value = IslandDestination.Home
                                             }
                                         )
                                     }
                                     is IslandDestination.PeripheralsStudio -> {
                                         PeripheralsStudioScreen(
                                             onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
-                                            }
-                                        )
-                                    }
-                                    is IslandDestination.MascotStudio -> {
-                                        com.nothing.island.ai.ui.screens.MascotStudioScreen(
-                                            onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
+                                                currentDestination.value = IslandDestination.Home
                                             }
                                         )
                                     }
                                     is IslandDestination.GeometryStudio -> {
                                         GeometryStudioScreen(
                                             onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
-                                            }
-                                        )
-                                    }
-                                    is IslandDestination.Settings -> {
-                                        SettingsScreen(
-                                            geometry = geometry,
-                                            onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
-                                            },
-                                            onReopenOnboarding = {
-                                                reopenOnboarding.value = true
+                                                currentDestination.value = IslandDestination.Home
                                             }
                                         )
                                     }
                                     is IslandDestination.CallStudio -> {
                                         com.nothing.island.ai.ui.screens.CallStudioScreen(
                                             onNavigateBack = {
-                                                currentDestination.value = IslandDestination.Studios
+                                                currentDestination.value = IslandDestination.Home
                                             }
                                         )
                                     }
-
                                 }
                             }
                         }
 
-                        // Bottom Navigation Bar (Surfaced for 5 Primary Destinations)
-                        if (IslandDestination.bottomNavDestinations.contains(currentDestination.value)) {
+                        // Floating Translucent Pill Bottom Navigation Bar (Surfaced for Primary Tabs)
+                        if (IslandDestination.bottomNavDestinations.contains(currentDestination.value) ||
+                            currentDestination.value is IslandDestination.Notifications ||
+                            currentDestination.value is IslandDestination.ThemeStudio ||
+                            currentDestination.value is IslandDestination.MascotStudio
+                        ) {
                             NothingBottomNavigation(
                                 currentDestination = currentDestination.value,
                                 onDestinationSelected = { dest ->
                                     currentDestination.value = dest
-                                }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .navigationBarsPadding()
                             )
                         }
-                    }
+
+                        // Minimal Settings Sheet
+                        if (showSettingsSheet.value) {
+                            ModalBottomSheet(
+                                onDismissRequest = { showSettingsSheet.value = false },
+                                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                                containerColor = Color(0xFF141414),
+                                dragHandle = {
+                                    Box(
+                                        modifier = Modifier
+                                            .padding(vertical = 12.dp)
+                                            .size(width = 38.dp, height = 4.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0x60FFFFFF))
+                                    )
+                                }
+                            ) {
+                                SettingsScreen(
+                                    geometry = geometry,
+                                    onNavigateBack = { showSettingsSheet.value = false },
+                                    onReopenOnboarding = {
+                                        showSettingsSheet.value = false
+                                        reopenOnboarding.value = true
+                                    }
+                                )
+                            }
                         }
+                    }
+                }
                 }
             }
         }

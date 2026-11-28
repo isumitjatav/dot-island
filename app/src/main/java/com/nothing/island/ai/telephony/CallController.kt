@@ -92,6 +92,15 @@ object CallController {
 
     @SuppressLint("MissingPermission")
     fun answer(context: Context): Boolean {
+        // 1. Prefer native InCallService when holding ROLE_DIALER
+        IslandInCallService.instance?.let { inCall ->
+            if (inCall.hasActiveCalls()) {
+                if (inCall.answerActiveCall()) {
+                    Log.d(TAG, "Answered through IslandInCallService")
+                    return true
+                }
+            }
+        }
         if (CallActionRegistry.answer(context)) {
             Log.d(TAG, "Answered through CallActionRegistry PendingIntent")
             return true
@@ -114,6 +123,15 @@ object CallController {
     @SuppressLint("MissingPermission")
     fun decline(context: Context): Boolean {
         val appCtx = context.applicationContext ?: context
+        // 1. Prefer native InCallService when holding ROLE_DIALER
+        IslandInCallService.instance?.let { inCall ->
+            if (inCall.hasActiveCalls()) {
+                if (inCall.declineActiveCall()) {
+                    Log.d(TAG, "Declined through IslandInCallService")
+                    return true
+                }
+            }
+        }
         if (CallActionRegistry.decline(appCtx) || CallActionRegistry.hangUp(appCtx)) {
             Log.d(TAG, "Declined/hung up through CallActionRegistry PendingIntent")
             return true

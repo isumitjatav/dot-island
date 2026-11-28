@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.app.KeyguardManager
 import android.app.Notification
+import android.content.Context
 import android.content.pm.PackageManager
 import com.nothing.island.ai.telephony.CallActionRegistry
 import com.nothing.island.ai.telephony.CallNotificationParser
@@ -13,7 +14,6 @@ import com.nothing.island.ai.telephony.CallerPhotoResolver
 import com.nothing.island.ai.telephony.DialerHeadsUpPolicy
 import com.nothing.island.ai.telephony.TelephonyCallTransition
 import android.content.ComponentName
-import android.content.Context
 import android.graphics.Bitmap
 import android.os.Build
 import android.service.notification.NotificationListenerService
@@ -400,6 +400,12 @@ class IslandNotificationListenerService : NotificationListenerService() {
     override fun onListenerDisconnected() {
         Log.i(TAG, "IslandNotificationListenerService disconnected.")
         cleanupListenerState()
+        // Automatically restore system heads-up notifications so user is never stuck
+        try {
+            SystemHeadsUpController(applicationContext).restoreSystemHeadsUp()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore system heads-up on disconnect", e)
+        }
         super.onListenerDisconnected()
     }
 

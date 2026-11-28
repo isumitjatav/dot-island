@@ -200,6 +200,13 @@ class IslandOverlayService : Service() {
         controller?.detach()
         controller = null
 
+        // Automatically restore system heads-up notifications when service stops
+        try {
+            com.nothing.island.ai.notifications.SystemHeadsUpController(this).restoreSystemHeadsUp()
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to restore system heads-up on service destroy", e)
+        }
+
         super.onDestroy()
     }
 
